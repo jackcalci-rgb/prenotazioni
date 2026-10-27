@@ -9,7 +9,8 @@ $C['_logo_cid'] = is_file(__DIR__ . '/email-logo.png') ? 'dvor-logo@osteriadvor'
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 
-const COLLS = ['bookings', 'events', 'overrides', 'settings'];
+const COLLS = ['bookings', 'events', 'overrides', 'settings', 'blacklist'];
+const STAFF_ONLY = ['blacklist']; // staff only, also for reading
 const GUEST_FIELDS = ['date', 'time', 'party', 'status', 'createdAt', 'source', 'example'];
 const GUEST_UPDATABLE = ['status', 'cancelledAt', 'date', 'time', 'movedAt', 'retained'];
 
@@ -330,8 +331,21 @@ function sendMail(array $C, string $to, array $m): void {
   }
 }
 function logMail(string $line): void { @file_put_contents(dataDir() . '/mail.log', date('c') . ' ' . $line . "\n", FILE_APPEND); }
+/* a guest marked no-show before, matched by phone (last 9 digits) or email */
+function blacklisted(array $b): ?array {
+  $p = preg_replace('/\D/', '', (string)($b['phone'] ?? '')); $p = strlen($p) >= 6 ? substr($p, -9) : '';
+  $e = strtolower(trim((string)($b['email'] ?? '')));
+  if ($p === '' && $e === '') return null;
+  foreach (load('blacklist') as $x) {
+    $xp = preg_replace('/\D/', '', (string)($x['phone'] ?? '')); $xp = strlen($xp) >= 6 ? substr($xp, -9) : '';
+    if (($p !== '' && $xp === $p) || ($e !== '' && strtolower(trim((string)($x['email'] ?? ''))) === $e)) return $x;
+  }
+  return null;
+}
 function notifyStaff(array $C, array $b, string $what): void {
   if (empty($C['notify_to'])) return;
+  $bl = blacklisted($b);
+  if ($bl) $what = '⚠ LISTA NERA (' . (int)($bl['count'] ?? 1) . ' no show) · ' . $what;
   $txt = "$what\n\n{$b['date']} {$b['time']} · {$b['party']} persone\n{$b['name']} · {$b['phone']} · {$b['email']}\n"
     . 'Menù: carta ' . (int)($b['menuCarta'] ?? 0) . ', degustazione ' . (int)($b['menuTasting'] ?? 0) . "\n"
     . (!empty($b['notes']) ? "Note: {$b['notes']}\n" : '') . (!empty($b['discount']) ? "Sconto {$b['discount']}%\n" : '') . (!empty($b['eventTitle']) ? "Evento: {$b['eventTitle']}\n" : '');
@@ -401,6 +415,7 @@ switch ($op) {
 
   case 'get': {
     $coll = (string)($in['coll'] ?? ''); checkColl($coll);
+    if (in_array($coll, STAFF_ONLY, true) && !$staff) fail('not_granted', 'Solo staff', 403);
     $rows = load($coll); $res = [];
     foreach ($rows as $id => $doc) {
       if (!matches($doc, is_array($in['where'] ?? null) ? $in['where'] : [])) continue;
@@ -412,6 +427,7 @@ switch ($op) {
 
   case 'getdoc': {
     [$coll, $id] = splitPath((string)($in['path'] ?? ''));
+    if (in_array($coll, STAFF_ONLY, true) && !$staff) fail('not_granted', 'Solo staff', 403);
     $rows = load($coll);
     if (!isset($rows[$id])) out(['exists' => false]);
     out(['exists' => true, 'data' => $coll === 'bookings' ? redact($rows[$id], $staff, $cid) : $rows[$id]]);

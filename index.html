@@ -122,6 +122,13 @@ th{font-weight:400;color:var(--muted);font-size:.75rem;letter-spacing:.1em;text-
 .tbl{border:1px solid var(--line);border-radius:6px;padding:.15rem .5rem;font-size:.8rem;background:var(--card);white-space:nowrap}
 .tbl b{font-variant-numeric:tabular-nums;color:var(--wine);margin-right:.25rem}
 .tbl.ex{border-style:dashed}
+.tbl.in{background:var(--ok-bg);border-color:var(--ok)}
+.tbl.ns{text-decoration:line-through;opacity:.6}
+.tbl.bl{border-color:var(--bad);color:var(--bad)}
+.arr{display:flex;flex-wrap:wrap;gap:.3rem;align-items:center}
+.blr{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.5rem;align-items:center;border-bottom:1px solid var(--line);padding:.5rem 0}
+#blbox summary{cursor:pointer;list-style:none}
+#blbox[open] summary{margin-bottom:.5rem}
 @media (max-width:520px){.tlr{grid-template-columns:3rem 1fr}.tlr .tbls{grid-column:1/-1}}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem}
 .copy{white-space:pre-wrap;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:.6rem;font-size:.85rem}
@@ -300,6 +307,11 @@ a.btn{display:inline-block;text-decoration:none;font:400 .8rem var(--sans);lette
       <div class="board" id="board"></div>
     </div>
     <div class="card stack" id="dayview"></div>
+    <details class="card stack" id="blbox">
+      <summary><h2 style="display:inline">Lista nera</h2> <span class="pill s-closed" id="bl-count">0</span></summary>
+      <p class="small muted">Ospiti segnati «No show». Quando uno di loro prenota di nuovo, con lo stesso telefono o la stessa email, lo vedi segnalato in rosso e l'email allo staff lo indica nell'oggetto.</p>
+      <div id="bl-list" class="stack"></div>
+    </details>
     <div class="card stack" id="eventsbox">
       <h2>Eventi</h2>
       <p class="small muted">Cene a tema, feste e celebrazioni. Gli ospiti li vedono in cima alla pagina di prenotazione: un clic apre l'anteprima, il pulsante porta alla pagina dell'evento.</p>
@@ -702,6 +714,7 @@ async function boot(){
   claude.use("permissions").then(function(x){perms=x}).catch(function(){});
   claude.use("user").then(async function(u){user=u;if(!user)return;
     try{S.me=await user.id()}catch(e){}try{S.canEditRules=await user.canEdit()}catch(e){}
+    if(S.canEditRules&&db){try{db.collection("blacklist").limit(1000).onSnapshot(applyBlacklist,function(){})}catch(e){}}
     el("s-save").disabled=!S.canEditRules;el("s-ro").hidden=S.canEditRules;render()});
 }
 function noCaps(){el("ai-off").hidden=false;el("chat-form").hidden=true}
@@ -1028,7 +1041,7 @@ function dayPlan(body,d){
     tl.append(h("div",{class:"tlr"+(bk.length?"":" empty")},[
       h("div",{class:"t",text:tm}),
       bk.length?h("div",{class:"c"},[h("div",{text:x.t+" tav · "+x.p+" pers."}),h("span",{class:"meter",title:"In sala: "+inRoom+" su "+cap},[h("i",{style:"width:"+pct+"%"})]),h("div",{class:"muted",text:"in sala "+inRoom+" su "+cap})]):h("div",{class:"c muted",text:inRoom?"in sala "+inRoom:"—"}),
-      h("div",{class:"tbls"},bk.map(function(b){return h("span",{class:"tbl"+(b.example?" ex":""),title:[b.name,b.phone,b.notes].filter(Boolean).join(" · ")},[h("b",{text:String(b.party)}),document.createTextNode((SRC[b.source]?SRC[b.source].split(" ")[0]+" ":"")+(b.name||"Ospite")+(b.notes?" ✎":""))])}))
+      h("div",{class:"tbls"},bk.map(function(b){return h("span",{class:"tbl"+(b.example?" ex":"")+(b.arrival==="in"?" in":b.arrival==="noshow"?" ns":"")+(blFind(b)?" bl":""),title:[b.name,b.phone,b.notes].filter(Boolean).join(" · ")},[h("b",{text:String(b.party)}),document.createTextNode((blFind(b)?"⚠ ":"")+(b.arrival==="in"?"✓ ":"")+(SRC[b.source]?SRC[b.source].split(" ")[0]+" ":"")+(b.name||"Ospite")+(b.notes?" ✎":""))])}))
     ]));
   });
   body.append(tl);
@@ -1040,15 +1053,16 @@ var SRC={phone:"📞 Telefono",whatsapp:"💬 WhatsApp",walkin:"🚶 Di persona"
 function mbInfo(){
   var d=el("mb-date").value,tm=el("mb-time").value,p=+el("mb-party").value||0,info=el("mb-info");
   var dl=el("mb-times");dl.textContent="";if(d)slotsFor(d).forEach(function(x){dl.append(h("option",{value:x}))});
-  if(!d){info.textContent="";return}
-  if(!slotsFor(d).length){info.textContent="⚠ Di solito è giorno di riposo. Puoi comunque registrarla.";return}
-  if(!tm){info.textContent="Orari di arrivo: "+slotsFor(d).join(", ");return}
+  var bl=blFind({phone:el("mb-phone").value,email:el("mb-email").value}),pre=bl?"⚠ In lista nera: "+(bl.name||"")+", "+(bl.count||1)+" no show ("+(bl.dates||[]).join(", ")+"). ":"";
+  if(!d){info.textContent=pre;return}
+  if(!slotsFor(d).length){info.textContent=pre+"⚠ Di solito è giorno di riposo. Puoi comunque registrarla.";return}
+  if(!tm){info.textContent=pre+"Orari di arrivo: "+slotsFor(d).join(", ");return}
   var msg=[],used=inRoomAt(d,tm),busy=seatsUsedAt(d,tm),cap=capFor(d);
   msg.push("Alle "+tm+": "+used+" persone in sala, posti per questo orario "+busy+" su "+cap+".");
   if(busy+p>cap)msg.push("⚠ Con questo tavolo si supera la capienza ("+(busy+p)+" su "+cap+").");
   if(slotsFor(d).indexOf(tm)<0)msg.push("⚠ Orario fuori dagli arrivi online.");
   if(svcOf(tm)==="dinner"){var ds=dinnerState(d);if(ds==="building"||ds==="lastcall")msg.push("Cena: "+SLBL[ds]+" ("+guests(d,"dinner")+"/"+S.settings.minGuests+"). Contando questo tavolo: "+(guests(d,"dinner")+p)+".");else if(ds==="closed")msg.push("⚠ La cena di questo giorno risulta chiusa.")}
-  info.textContent=msg.join(" ");
+  info.textContent=pre+msg.join(" ");
 }
 async function manualBook(ev){
   ev.preventDefault();if(!db)return;
@@ -1064,6 +1078,44 @@ async function manualBook(ev){
     S.selDay=d;S.plRef=d;
   }catch(e){m.textContent="Non salvata: "+((e&&e.message)||e)}
   el("mb-save").disabled=false;
+}
+/* ---------- staff: arrivals, no-shows and the blacklist ---------- */
+function nPhone(x){var d=String(x||"").replace(/\D/g,"");return d.length>=6?d.slice(-9):""}
+function nEmail(x){x=String(x||"").trim().toLowerCase();return x.indexOf("@")>0?x:""}
+function blId(b){var p=nPhone(b.phone),e=nEmail(b.email);return (p?"p"+p:e?"e"+e.replace(/[^a-z0-9]/g,"_"):"n"+String(b.name||"").toLowerCase().replace(/[^a-z0-9]/g,"_")).slice(0,64)}
+function blFind(b){var p=nPhone(b.phone),e=nEmail(b.email);if(!p&&!e)return null;return (S.blacklist||[]).filter(function(x){return (p&&nPhone(x.phone)===p)||(e&&nEmail(x.email)===e)})[0]||null}
+function applyBlacklist(q){S.blacklist=q.docs.map(function(d){return Object.assign({},d.data()||{},{id:d.id})});render()}
+async function setArrival(b,state){
+  if(!db)return;var prev=b.arrival||"";if(prev===state)return;
+  try{
+    await db.doc("bookings/"+b.id).update({arrival:state||"",arrivalAt:state?new Date().toISOString():""});
+    var id=blId(b),ref=db.doc("blacklist/"+id),cur=await ref.get(),x=cur.exists?Object.assign({},cur.data()):null,tag=b.date+" "+b.time;
+    if(state==="noshow"){
+      var dates=((x&&x.dates)||[]).filter(function(d){return d!==tag}).concat([tag]);
+      await ref.set({name:b.name||(x&&x.name)||"",phone:b.phone||(x&&x.phone)||"",email:b.email||(x&&x.email)||"",dates:dates,count:dates.length,last:tag,at:new Date().toISOString()});
+    }else if(prev==="noshow"&&x){
+      var left=(x.dates||[]).filter(function(d){return d!==tag});
+      if(left.length)await ref.update({dates:left,count:left.length});else await ref.delete();
+    }
+  }catch(e){alert("Non salvato: "+((e&&e.message)||e))}
+}
+function arrivalCell(b){
+  if(b.status==="cancelled")return null;
+  var tm=b.arrivalAt?new Date(b.arrivalAt).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}):"";
+  if(b.arrival==="in")return h("div",{class:"arr"},[h("span",{class:"pill s-confirmed",text:"✓ Arrivato "+tm}),h("button",{class:"btn ghost small",type:"button",text:"Correggi",title:"Togli il segno",onclick:function(){setArrival(b,"")}})]);
+  if(b.arrival==="noshow")return h("div",{class:"arr"},[h("span",{class:"pill s-closed",text:"No show"}),h("button",{class:"btn ghost small",type:"button",text:"Correggi",title:"Togli il segno",onclick:function(){setArrival(b,"")}})]);
+  return h("div",{class:"arr"},[h("button",{class:"btn small",type:"button",text:"✓ Arrivato",onclick:function(){setArrival(b,"in")}}),h("button",{class:"btn ghost small",type:"button",text:"No show",onclick:function(){if(confirm("Segnare "+(b.name||"l'ospite")+" come no show e metterlo nella lista nera?"))setArrival(b,"noshow")}})]);
+}
+function renderBlacklist(){
+  var L=(S.blacklist||[]).slice().sort(function(a,b){return String(b.last||"").localeCompare(String(a.last||""))}),box=el("bl-list");
+  el("bl-count").textContent=String(L.length);box.textContent="";
+  if(!L.length){box.append(h("p",{class:"small muted",text:"Nessun ospite in lista nera."}));return}
+  L.forEach(function(x){
+    box.append(h("div",{class:"blr"},[
+      h("div",{},[h("div",{text:(x.name||"Senza nome")+" · "+(x.count||1)+" no show"}),h("div",{class:"small muted",text:[x.phone,x.email].filter(Boolean).join(" · ")}),h("div",{class:"small muted",text:"Date: "+(x.dates||[]).join(", ")})]),
+      h("button",{class:"btn ghost small",type:"button",text:"Togli dalla lista",onclick:function(){if(confirm("Togliere "+(x.name||"questo ospite")+" dalla lista nera?"))db.doc("blacklist/"+x.id).delete().catch(function(){})}})
+    ]));
+  });
 }
 /* ---------- staff ---------- */
 var SLBL={confirmed:"Confermata",building:"In raccolta",lastcall:"Ultima chiamata",closed:"Chiusa",past:"Passata"};
@@ -1111,16 +1163,16 @@ function renderDay(){
     list.forEach(function(b){
       tb.append(h("tr",{},[
         h("td",{class:"num",text:b.time}),h("td",{text:svcOf(b.time)==="dinner"?"Cena":"Pranzo"}),h("td",{class:"num",text:String(b.party)}),h("td",{class:"small",text:(b.menuTasting!=null||b.menuCarta!=null)?("Carta "+(+b.menuCarta||0)+" · Degust. "+(+b.menuTasting||0)):"—"}),
-        h("td",{},[h("div",{text:b.name||""}),h("div",{class:"small muted",text:[b.phone,b.email,b.example?"prova":""].filter(Boolean).join(" · ")})]),
+        h("td",{},[h("div",{text:b.name||""}),blFind(b)?h("span",{class:"pill s-closed",text:"⚠ Lista nera · "+(blFind(b).count||1)+" no show"}):null,h("div",{class:"small muted",text:[b.phone,b.email,b.example?"prova":""].filter(Boolean).join(" · ")})]),
         h("td",{class:"small",text:[b.notes,b.offer?"Offerta: "+b.offer:"",b.discount?"Sconto "+b.discount+"%":"",b.eventTitle?"Evento: "+b.eventTitle:"",b.retained?"Spostata invece di annullare":"",b.source==="assistant"?"Via assistente":"",SRC[b.source]||"",b.insight?"Cosa cercava: "+b.insight:""].filter(Boolean).join(" · ")}),
         h("td",{},[b.status==="cancelled"||!b.email?null:h("a",{class:"btn small"+(b.emailSentAt?" ghost":""),style:"display:inline-block;text-decoration:none;margin-bottom:.3rem",href:mailtoFor(b),text:b.emailSentAt?"✉ Rinvia":"✉ Conferma",onclick:function(ev){if(window.DVOR_RESEND){ev.preventDefault();DVOR_RESEND(b,this)}else markMailed(b)}}),b.emailSentAt?h("div",{class:"small muted",text:"Email inviata"}):null]),
-        h("td",{},[b.status==="cancelled"?h("span",{class:"pill s-closed",text:"Annullata"}):h("button",{class:"btn ghost small",type:"button",text:"Annulla",onclick:function(){setStatus(b,"cancelled")}})])
+        h("td",{},[h("div",{class:"stack",style:"gap:.3rem"},[arrivalCell(b),b.status==="cancelled"?h("span",{class:"pill s-closed",text:"Annullata"}):b.arrival?null:h("button",{class:"btn ghost small",type:"button",style:"align-self:flex-start",text:"Annulla prenotazione",onclick:function(){if(confirm("Annullare la prenotazione di "+(b.name||"questo ospite")+"?"))setStatus(b,"cancelled")}})])])
       ]));
     });
     var tl=list.filter(function(b){return active(b)&&svcOf(b.time)==="lunch"}).reduce(function(x,b){return x+(+b.menuTasting||0)},0),td=list.filter(function(b){return active(b)&&svcOf(b.time)==="dinner"}).reduce(function(x,b){return x+(+b.menuTasting||0)},0);
     box.append(h("p",{class:"small",text:"Menù degustazione: "+tl+" a pranzo, "+td+" a cena."}));
     box.append(h("p",{class:"small muted",text:"L\'email parte da sola a ogni prenotazione, con il file per il calendario. Per le cene in attesa il cliente riceve «prenotazione ricevuta»: quando la cena è confermata premi ✉ Conferma e parte l'email di conferma."}));
-    box.append(h("div",{class:"tablewrap"},[h("table",{},[h("thead",{},[h("tr",{},["Ora","Servizio","Pers.","Menù","Ospite","Note","Email",""].map(function(x){return h("th",{text:x})}))]),tb])]));
+    box.append(h("div",{class:"tablewrap"},[h("table",{},[h("thead",{},[h("tr",{},["Ora","Servizio","Pers.","Menù","Ospite","Note","Email","Arrivo"].map(function(x){return h("th",{text:x})}))]),tb])]));
   }
   if(ds==="closed"){
     var aff=list.filter(function(b){return active(b)&&svcOf(b.time)==="dinner"});
@@ -1168,7 +1220,7 @@ async function clearTest(){
   el("x-clear").disabled=false;
 }
 el("x-fill").addEventListener("click",fillTest);
-el("mb-form").addEventListener("submit",manualBook);["mb-date","mb-time","mb-party"].forEach(function(k){el(k).addEventListener("input",mbInfo)});el("mb-date").value=today();
+el("mb-form").addEventListener("submit",manualBook);["mb-date","mb-time","mb-party","mb-phone","mb-email"].forEach(function(k){el(k).addEventListener("input",mbInfo)});el("mb-date").value=today();
 el("pl-week").addEventListener("click",function(){S.plMode="week";render()});el("pl-day").addEventListener("click",function(){S.plMode="day";S.plRef=S.selDay||S.plRef||today();render()});
 el("pl-prev").addEventListener("click",function(){plMove(-1)});el("pl-next").addEventListener("click",function(){plMove(1)});el("pl-today").addEventListener("click",function(){S.plRef=today();S.selDay=today();render()});
 el("x-clear").addEventListener("click",clearTest);
@@ -1324,7 +1376,7 @@ el("tab-guest").addEventListener("click",function(){setView("guest")});
 el("tab-staff").addEventListener("click",function(){setView("staff")});
 if(location.hash==="#staff")setTimeout(function(){setView("staff")},0);
 
-function render(){try{if(S.view==="staff"){renderPlanner();mbInfo();renderBoard();renderDay();renderEvAdmin()}else{renderMine();renderEvents();renderCal();renderSlots()}}catch(e){dbStatus("Errore di visualizzazione: "+(e&&e.message))}}
+function render(){try{if(S.view==="staff"){renderPlanner();mbInfo();renderBlacklist();renderBoard();renderDay();renderEvAdmin()}else{renderMine();renderEvents();renderCal();renderSlots()}}catch(e){dbStatus("Errore di visualizzazione: "+(e&&e.message))}}
 setInterval(render,60000);
 window.DVOR_LOGIC={check:check,dinnerState:dinnerState,slotsFor:slotsFor,S:S};
 boot();
