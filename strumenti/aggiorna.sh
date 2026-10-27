@@ -8,3 +8,5 @@ sudo -u "$OWNER" git fetch -q origin main
 echo "Novità:"; sudo -u "$OWNER" git log --oneline HEAD..origin/main || true
 sudo -u "$OWNER" git reset -q --hard origin/main
 echo "Aggiornato alla versione $(sudo -u "$OWNER" git log -1 --format='%h · %s · %cd' --date=format:'%d/%m %H:%M')"
+# dalla versione con MySQL: se config.php non ha ancora il database, lo prepara e importa i file JSON
+php -r '$c = require "config.php"; exit(empty($c["db"]["user"]) ? 1 : 0);' || bash "$PUB/strumenti/database.sh"

@@ -37,15 +37,18 @@ if [ ! -f config.php ]; then
   sed -i -E "s#('booking_url' *=> *)'[^']*'#\1'https://prenota.osteriadvor.com'#" config.php
 fi
 
-# 3. archivio dati fuori dalla parte pubblica: eventi e impostazioni dalla prova, niente prenotazioni di prova
+# 3. cartella dati fuori dalla parte pubblica (registro email e file da importare): eventi e impostazioni dalla prova, niente prenotazioni di prova
 mkdir -p "$DIR/prenota-data"
 for f in events.json settings.json overrides.json; do
   [ -f "$OLD/prenota-data/$f" ] && [ ! -f "$DIR/prenota-data/$f" ] && cp "$OLD/prenota-data/$f" "$DIR/prenota-data/$f" || true
 done
 chown -R "$OWNER:$OWNER" "$PUB" "$DIR/prenota-data"; chmod 750 "$DIR/prenota-data"; chmod 640 config.php
 
+# 4. database MySQL: lo crea, scrive l'accesso in config.php e ci copia eventi e impostazioni
+bash "$PUB/strumenti/database.sh"
+
 echo; echo "== Configurazione =="
-grep -E "staff_password|mail_from'|notify_to|reply_to|site_url|booking_url|data_dir|smtp_host|smtp_port" config.php
+grep -E "staff_password|mail_from'|notify_to|reply_to|site_url|booking_url|data_dir|smtp_host|smtp_port|    'name'|    'user'" config.php
 echo; echo "== DNS di osteriadvor.com (da mandare a Claude) =="
 echo "NS:    $(dig +short NS osteriadvor.com @8.8.8.8 | tr '\n' ' ')"
 echo "SPF:   $(dig +short TXT osteriadvor.com @8.8.8.8 | grep -i spf)"

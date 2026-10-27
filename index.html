@@ -870,7 +870,10 @@ async function book(c){
     pb.append(h("div",{class:"proposal stack"},[h("div",{class:"caps",text:"✓ "+t("doneT")}),h("div",{class:"big",text:fmtDay(c.date,true)+" · "+c.time+" · "+c.party+" "+t("people")})]),
       h("p",{class:"small",text:t("mailTo",{e:email})}),h("div",{class:"small caps",text:t("addCal")}),calButtons(bk));
     bubble("bot",t("booked")+": "+fmtDay(c.date,true)+" · "+c.time+" · "+c.party+" "+t("people"));
-  }catch(e){el("b-msg").textContent=t("errSave");el("b-go").disabled=false}
+  }catch(e){
+    /* someone else took the last seats a moment ago: reload and offer the alternatives */
+    if(e&&e.code==="slot_full"){if(window.reloadData)await reloadData();showProposal(check(c.date,c.time,c.party));return}
+    el("b-msg").textContent=t("errSave");el("b-go").disabled=false}
 }
 /* hesitation: many changes, idle on the form, or the pointer leaving the page */
 function noteChange(){S.changes++;if(S.changes>=3)S.pendingNudge=true}

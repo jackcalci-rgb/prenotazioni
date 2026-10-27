@@ -1,6 +1,6 @@
 <?php
 /* Osteria Dvor · prenotazioni · API
-   Archivio su file JSON in data/, email di conferma con file calendario, accesso staff con password. */
+   Archivio nel database MySQL/MariaDB (vedi db.php), email di conferma con file calendario, accesso staff con password. */
 declare(strict_types=1);
 if (!is_file(__DIR__ . '/config.php')) { header('Content-Type: application/json'); http_response_code(500); echo '{"error":{"code":"no_config","message":"Manca config.php: copia config.example.php in config.php e compilalo"}}'; exit; }
 $C = require __DIR__ . '/config.php';
@@ -8,6 +8,10 @@ date_default_timezone_set($C['timezone'] ?? 'Europe/Rome');
 $C['_logo_cid'] = is_file(__DIR__ . '/email-logo.png') ? 'dvor-logo@osteriadvor' : '';
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
+set_exception_handler(function (Throwable $e) {
+  error_log('dvor api: ' . $e->getMessage());
+  http_response_code(500); echo json_encode(['error' => ['code' => $e instanceof PDOException ? 'db_error' : 'server_error', 'message' => 'Errore del server, riprova tra poco']]);
+});
 
 const COLLS = ['bookings', 'events', 'overrides', 'settings', 'blacklist'];
 const STAFF_ONLY = ['blacklist']; // staff only, also for reading
@@ -17,23 +21,88 @@ const GUEST_UPDATABLE = ['status', 'cancelledAt', 'date', 'time', 'movedAt', 're
 function out($x, int $code = 200): void { http_response_code($code); echo json_encode($x, JSON_UNESCAPED_UNICODE); exit; }
 function fail(string $code, string $msg, int $http = 400): void { out(['error' => ['code' => $code, 'message' => $msg]], $http); }
 
-/* ---------- storage ---------- */
-function dataDir(): string { global $C; $d = $C['data_dir'] ?? (__DIR__ . '/data'); if (!is_dir($d)) mkdir($d, 0750, true); return $d; }
-function withLock(callable $fn) {
-  $h = fopen(dataDir() . '/.lock', 'c'); flock($h, LOCK_EX);
-  try { return $fn(); } finally { flock($h, LOCK_UN); fclose($h); }
+/* ---------- storage: MySQL / MariaDB ----------
+   bookings: one row per booking, with date, time, party and status as columns for the seat check; the whole document stays in `data`.
+   docs: events, overrides, settings, blacklist as documents. Tables are created on first start. */
+require_once __DIR__ . '/db.php';
+function dataDir(): string { global $C; $d = $C['data_dir'] ?? (__DIR__ . '/data'); if (!is_dir($d)) mkdir($d, 0750, true); return $d; } // only for mail.log
+function db(): PDO {
+  static $pdo = null; global $C;
+  if ($pdo) return $pdo;
+  try { $pdo = dbConnect($C); dbInstall($pdo); }
+  catch (PDOException $e) { error_log('dvor db: ' . $e->getMessage()); fail('db_error', 'Database non raggiungibile: controlla la sezione db di config.php', 500); }
+  return $pdo;
 }
-function load(string $coll): array {
-  $f = dataDir() . "/$coll.json";
-  if (!is_file($f)) $f = __DIR__ . "/seed/$coll.json"; // first start: events and settings copied from the prototype
-  if (!is_file($f)) return [];
-  $x = json_decode((string)file_get_contents($f), true);
-  return is_array($x) ? $x : [];
+/* runs $fn in a transaction; rows read with FOR UPDATE stay locked until it ends. Retried if two requests collide (deadlock). */
+function tx(callable $fn) {
+  $pdo = db();
+  for ($try = 1; ; $try++) {
+    $pdo->beginTransaction();
+    try { $r = $fn($pdo); $pdo->commit(); return $r; }
+    catch (Throwable $e) {
+      if ($pdo->inTransaction()) $pdo->rollBack();
+      if ($try < 4 && $e instanceof PDOException && in_array($e->errorInfo[1] ?? 0, [1213, 1205], true)) { usleep(random_int(20000, 120000)); continue; }
+      throw $e;
+    }
+  }
 }
-function save(string $coll, array $rows): void {
-  $f = dataDir() . "/$coll.json"; $tmp = $f . '.tmp';
-  file_put_contents($tmp, json_encode($rows, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
-  rename($tmp, $f);
+function load(string $coll, array $where = []): array {
+  if ($coll !== 'bookings') {
+    $q = db()->prepare('SELECT id, data FROM docs WHERE coll = ? ORDER BY n'); $q->execute([$coll]);
+  } else {
+    $sql = 'SELECT id, data FROM bookings'; $args = []; $cond = [];
+    foreach ($where as $w) { // the date filter goes to the database, the rest is checked by matches()
+      if (is_array($w) && count($w) === 3 && $w[0] === 'date' && is_string($w[2]) && in_array($w[1], ['==', '>=', '<=', '>', '<'], true)) { $cond[] = 'bdate ' . ($w[1] === '==' ? '=' : $w[1]) . ' ?'; $args[] = $w[2]; }
+    }
+    if ($cond) $sql .= ' WHERE ' . implode(' AND ', $cond);
+    $q = db()->prepare($sql . ' ORDER BY n'); $q->execute($args);
+  }
+  $rows = [];
+  foreach ($q->fetchAll(PDO::FETCH_NUM) as [$id, $data]) { $x = json_decode((string)$data, true); $rows[$id] = is_array($x) ? $x : []; }
+  return $rows;
+}
+function getDoc(string $coll, string $id, bool $forUpdate = false): ?array {
+  $q = db()->prepare(($coll === 'bookings' ? 'SELECT data FROM bookings WHERE id = ?' : 'SELECT data FROM docs WHERE coll = ? AND id = ?') . ($forUpdate ? ' FOR UPDATE' : ''));
+  $q->execute($coll === 'bookings' ? [$id] : [$coll, $id]);
+  $d = $q->fetchColumn();
+  if ($d === false) return null;
+  $x = json_decode((string)$d, true); return is_array($x) ? $x : [];
+}
+function putDoc(string $coll, string $id, array $doc): void { dbPut(db(), $coll, $id, $doc); }
+function delDoc(string $coll, string $id): void {
+  $q = db()->prepare($coll === 'bookings' ? 'DELETE FROM bookings WHERE id = ?' : 'DELETE FROM docs WHERE coll = ? AND id = ?');
+  $q->execute($coll === 'bookings' ? [$id] : [$coll, $id]);
+}
+/* merge a few fields into a booking that may have changed meanwhile (email outcome after sending) */
+function patchDoc(string $coll, string $id, array $fields, array $drop = []): void {
+  tx(function () use ($coll, $id, $fields, $drop) {
+    $d = getDoc($coll, $id, true); if ($d === null) return;
+    $d = array_merge($d, $fields); foreach ($drop as $k) unset($d[$k]);
+    putDoc($coll, $id, $d);
+  });
+}
+
+/* ---------- seats: the server has the last word, so two guests cannot take the same last seats ---------- */
+function settingsMain(): array {
+  return array_merge(['seats' => 74, 'weekdayPct' => 50, 'weekendPct' => 100, 'overflowPct' => 10, 'holdMin' => 120], getDoc('settings', 'main') ?? []);
+}
+/* same rule as the page: a share of the seats (weekday or weekend) plus the overflow share */
+function capFor(string $date, array $st): int {
+  $we = in_array((int)date('w', strtotime($date)), [0, 6], true);
+  $seats = (int)$st['seats'] ?: 74; $pct = (int)($we ? $st['weekendPct'] : $st['weekdayPct']) ?: 100;
+  return max(1, (int)round($seats * $pct / 100)) + (int)round($seats * (int)$st['overflowPct'] / 100);
+}
+/* call inside tx(): locks the day, then counts the guests at the table at that time */
+function seatsLeft(string $date, string $time, string $exceptId = ''): int {
+  $pdo = db();
+  $pdo->prepare('INSERT IGNORE INTO day_locks (d) VALUES (?)')->execute([$date]);
+  $pdo->prepare('SELECT d FROM day_locks WHERE d = ? FOR UPDATE')->execute([$date]);
+  $st = settingsMain(); $hold = (int)$st['holdMin'] ?: 120;
+  $q = $pdo->prepare("SELECT btime, party FROM bookings WHERE bdate = ? AND status <> 'cancelled' AND id <> ?"); $q->execute([$date, $exceptId]);
+  $toMin = fn($t) => (int)substr($t, 0, 2) * 60 + (int)substr($t, 3, 2);
+  $t0 = $toMin($time); $used = 0;
+  foreach ($q->fetchAll(PDO::FETCH_NUM) as [$t, $p]) { $m = $toMin((string)$t); if ($m < $t0 + $hold && $t0 < $m + $hold) $used += (int)$p; }
+  return capFor($date, $st) - $used;
 }
 function newId(): string { return bin2hex(random_bytes(10)); }
 function splitPath(string $p): array {
@@ -53,13 +122,11 @@ function isStaff(array $C): bool {
 function clientId(): string { $c = $_SERVER['HTTP_X_CLIENT_ID'] ?? ''; return preg_match('/^[A-Za-z0-9_-]{8,64}$/', $c) ? $c : ''; }
 function rateLimit(string $key, int $max, int $windowSec): void {
   $ip = $_SERVER['REMOTE_ADDR'] ?? 'x'; $k = $key . '|' . $ip; $now = time();
-  $over = withLock(function () use ($k, $max, $windowSec, $now) {
-    $r = load('_rate'); $list = array_values(array_filter($r[$k] ?? [], fn($t) => $t > $now - $windowSec));
-    if (count($list) >= $max) return true;
-    $list[] = $now; $r[$k] = $list;
-    foreach ($r as $kk => $v) if (!$v || max($v) < $now - 86400) unset($r[$kk]);
-    save('_rate', $r); return false;
-  });
+  $pdo = db();
+  if (random_int(1, 50) === 1) $pdo->prepare('DELETE FROM rate_hits WHERE ts < ?')->execute([$now - 86400]);
+  $q = $pdo->prepare('SELECT COUNT(*) FROM rate_hits WHERE k = ? AND ts > ?'); $q->execute([$k, $now - $windowSec]);
+  $over = (int)$q->fetchColumn() >= $max;
+  if (!$over) $pdo->prepare('INSERT INTO rate_hits (k, ts) VALUES (?, ?)')->execute([$k, $now]);
   if ($over) fail('rate_limited', 'Troppe richieste, riprova tra poco', 429);
 }
 
@@ -416,9 +483,10 @@ switch ($op) {
   case 'get': {
     $coll = (string)($in['coll'] ?? ''); checkColl($coll);
     if (in_array($coll, STAFF_ONLY, true) && !$staff) fail('not_granted', 'Solo staff', 403);
-    $rows = load($coll); $res = [];
+    $where = is_array($in['where'] ?? null) ? $in['where'] : [];
+    $rows = load($coll, $where); $res = [];
     foreach ($rows as $id => $doc) {
-      if (!matches($doc, is_array($in['where'] ?? null) ? $in['where'] : [])) continue;
+      if (!matches($doc, $where)) continue;
       $res[] = ['id' => (string)$id, 'data' => $coll === 'bookings' ? redact($doc, $staff, $cid) : $doc];
     }
     $lim = (int)($in['limit'] ?? 0); if ($lim > 0) $res = array_slice($res, 0, $lim);
@@ -428,9 +496,9 @@ switch ($op) {
   case 'getdoc': {
     [$coll, $id] = splitPath((string)($in['path'] ?? ''));
     if (in_array($coll, STAFF_ONLY, true) && !$staff) fail('not_granted', 'Solo staff', 403);
-    $rows = load($coll);
-    if (!isset($rows[$id])) out(['exists' => false]);
-    out(['exists' => true, 'data' => $coll === 'bookings' ? redact($rows[$id], $staff, $cid) : $rows[$id]]);
+    $doc = getDoc($coll, $id);
+    if ($doc === null) out(['exists' => false]);
+    out(['exists' => true, 'data' => $coll === 'bookings' ? redact($doc, $staff, $cid) : $doc]);
   }
 
   case 'add': {
@@ -442,16 +510,23 @@ switch ($op) {
       $b = cleanBooking($data, $staff); $b['createdBy'] = $cid;
       $manual = in_array($b['source'], ['phone', 'whatsapp', 'walkin'], true);
       if (!$isTest && !$manual) rateLimit('book', 12, 3600);
-      $id = newId(); $b['id'] = $id;
-      if ($manual) { if (!empty($data['sendMail']) && $b['email'] !== '') mailGuest($C, $b, $b['pending'] ? 'rec' : 'ok'); }
-      elseif (!$isTest) { mailGuest($C, $b, $b['pending'] ? 'rec' : 'ok'); notifyStaff($C, $b, 'Nuova prenotazione'); }
-      unset($b['id']);
-      withLock(function () use ($id, $b) { $r = load('bookings'); $r[$id] = $b; save('bookings', $r); });
+      $id = newId();
+      /* guests are checked against the seats inside the transaction; the staff can always add a table by hand */
+      $full = tx(function () use ($id, $b, $isTest, $manual) {
+        if (!$isTest && !$manual && seatsLeft($b['date'], $b['time']) < $b['party']) return true;
+        putDoc('bookings', $id, $b); return false;
+      });
+      if ($full) fail('slot_full', 'Questo orario si è appena riempito: scegli un altro orario', 409);
+      $b['id'] = $id;
+      if ($manual ? !empty($data['sendMail']) && $b['email'] !== '' : !$isTest) {
+        mailGuest($C, $b, $b['pending'] ? 'rec' : 'ok');
+        patchDoc('bookings', $id, array_intersect_key($b, array_flip(['emailSentAt', 'emailKind', 'emailError'])));
+      }
+      if (!$manual && !$isTest) notifyStaff($C, $b, 'Nuova prenotazione');
       out(['id' => $id]);
     }
     if (!$staff) fail('not_granted', 'Solo staff', 403);
-    $id = newId();
-    withLock(function () use ($coll, $id, $data) { $r = load($coll); $r[$id] = $data; save($coll, $r); });
+    $id = newId(); putDoc($coll, $id, $data);
     out(['id' => $id]);
   }
 
@@ -461,27 +536,37 @@ switch ($op) {
     $data = is_array($in['data'] ?? null) ? $in['data'] : [];
     if ($coll !== 'bookings') {
       if (!$staff) fail('not_granted', 'Solo staff', 403);
-      withLock(function () use ($coll, $id, $data, $op) { $r = load($coll); $r[$id] = $op === 'set' ? $data : array_merge($r[$id] ?? [], $data); save($coll, $r); });
+      tx(function () use ($coll, $id, $data, $op) { putDoc($coll, $id, $op === 'set' ? $data : array_merge(getDoc($coll, $id, true) ?? [], $data)); });
       out(['ok' => true]);
     }
-    $res = withLock(function () use ($id, $data, $staff, $cid, $op) {
-      $r = load('bookings'); if (!isset($r[$id])) return ['err' => 'not_found'];
-      $old = $r[$id];
+    $res = tx(function () use ($id, $data, $staff, $cid, $op) {
+      $old = getDoc('bookings', $id, true); if ($old === null) return ['err' => 'not_found'];
       if (!$staff) {
         if ($cid === '' || ($old['createdBy'] ?? '') !== $cid) return ['err' => 'not_granted'];
         $data = array_intersect_key($data, array_flip(GUEST_UPDATABLE));
       }
       $new = $op === 'set' && $staff ? $data : array_merge($old, $data);
-      $r[$id] = $new; save('bookings', $r);
+      /* a guest who moves the table, or takes back a cancelled one, needs free seats at the new time */
+      $moved = ($old['date'] ?? '') !== ($new['date'] ?? '') || ($old['time'] ?? '') !== ($new['time'] ?? '');
+      $back = ($old['status'] ?? '') === 'cancelled' && ($new['status'] ?? '') !== 'cancelled';
+      if (!$staff && ($new['status'] ?? '') !== 'cancelled' && ($moved || $back)) {
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($new['date'] ?? '')) || !preg_match('/^\d{2}:\d{2}$/', (string)($new['time'] ?? ''))) return ['err' => 'bad_request'];
+        if (seatsLeft($new['date'], $new['time'], $id) < (int)($new['party'] ?? 0)) return ['err' => 'slot_full'];
+      }
+      putDoc('bookings', $id, $new);
       return ['old' => $old, 'new' => $new];
     });
-    if (isset($res['err'])) fail($res['err'], 'Non consentito', $res['err'] === 'not_found' ? 404 : 403);
+    if (isset($res['err'])) {
+      if ($res['err'] === 'slot_full') fail('slot_full', 'Questo orario si è appena riempito: scegli un altro orario', 409);
+      if ($res['err'] === 'bad_request') fail('bad_request', 'Data o ora non valida');
+      fail($res['err'], 'Non consentito', $res['err'] === 'not_found' ? 404 : 403);
+    }
     $old = $res['old']; $b = $res['new']; $b['id'] = $id; $kind = '';
     if (($old['status'] ?? '') !== 'cancelled' && ($b['status'] ?? '') === 'cancelled') { $kind = 'canc'; notifyStaff($C, $b, 'Prenotazione annullata'); }
     elseif (($old['date'] ?? '') !== ($b['date'] ?? '') || ($old['time'] ?? '') !== ($b['time'] ?? '')) { $kind = 'moved'; $b['seq'] = (int)($old['seq'] ?? 0) + 1; notifyStaff($C, $b, 'Prenotazione spostata'); }
     if ($kind !== '') {
-      mailGuest($C, $b, $kind); unset($b['id']);
-      withLock(function () use ($id, $b) { $r = load('bookings'); if (isset($r[$id])) { $r[$id] = array_merge($r[$id], array_intersect_key($b, array_flip(['emailSentAt', 'emailKind', 'emailError', 'seq']))); save('bookings', $r); } });
+      mailGuest($C, $b, $kind);
+      patchDoc('bookings', $id, array_intersect_key($b, array_flip(['emailSentAt', 'emailKind', 'emailError', 'seq'])));
     }
     out(['ok' => true]);
   }
@@ -489,18 +574,18 @@ switch ($op) {
   case 'delete': {
     [$coll, $id] = splitPath((string)($in['path'] ?? ''));
     if (!$staff) fail('not_granted', 'Solo staff', 403);
-    withLock(function () use ($coll, $id) { $r = load($coll); unset($r[$id]); save($coll, $r); });
+    delDoc($coll, $id);
     out(['ok' => true]);
   }
 
   case 'resend': {
     if (!$staff) fail('not_granted', 'Solo staff', 403);
-    $id = (string)($in['id'] ?? ''); $r = load('bookings');
-    if (!isset($r[$id])) fail('not_found', 'Prenotazione non trovata', 404);
-    $b = $r[$id]; $b['id'] = $id; $b['source'] = ($b['source'] ?? '') === 'test' ? 'test-resend' : $b['source']; unset($b['example']);
+    $id = (string)($in['id'] ?? ''); $b = preg_match('/^[A-Za-z0-9_-]{1,64}$/', $id) ? getDoc('bookings', $id) : null;
+    if ($b === null) fail('not_found', 'Prenotazione non trovata', 404);
+    $b['id'] = $id; $b['source'] = ($b['source'] ?? '') === 'test' ? 'test-resend' : $b['source']; unset($b['example']);
     $kind = ($b['status'] ?? '') === 'cancelled' ? 'canc' : (!empty($in['confirm']) || empty($b['pending']) ? 'ok' : 'rec');
     $ok = mailGuest($C, $b, $kind);
-    withLock(function () use ($id, $b) { $r = load('bookings'); if (isset($r[$id])) { $r[$id] = array_merge($r[$id], array_intersect_key($b, array_flip(['emailSentAt', 'emailKind', 'emailError']))); if (!isset($b['emailError'])) unset($r[$id]['emailError']); save('bookings', $r); } });
+    patchDoc('bookings', $id, array_intersect_key($b, array_flip(['emailSentAt', 'emailKind', 'emailError'])), isset($b['emailError']) ? [] : ['emailError']);
     if (!$ok) fail('mail_failed', $b['emailError'] ?? 'Invio non riuscito', 502);
     out(['ok' => true]);
   }
