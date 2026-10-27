@@ -93,6 +93,35 @@ table{width:100%;border-collapse:collapse;font-size:.9rem}
 th,td{text-align:left;padding:.45rem .5rem;border-bottom:1px solid var(--line);vertical-align:top}
 th{font-weight:400;color:var(--muted);font-size:.75rem;letter-spacing:.1em;text-transform:uppercase}
 .tablewrap{overflow-x:auto}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+.seg button{border:0;background:var(--card);color:var(--ink);font:400 .85rem var(--sans);padding:.35rem .9rem;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--wine);color:#fff}
+.wk{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.5rem}
+.wkd{border:1px solid var(--line);border-radius:8px;background:var(--card);padding:.6rem .7rem;display:flex;flex-direction:column;gap:.35rem;text-align:left;font:inherit;color:inherit;cursor:pointer;min-width:0}
+.wkd:hover{border-color:var(--wine)}
+.wkd.off{opacity:.5;cursor:default;background:var(--bg)}
+.wkd.today{box-shadow:inset 0 0 0 1px var(--gold)}
+.wkd .dt{font-family:var(--serif);font-size:1.05rem}
+.wkd .sv{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:.2rem}
+.wkd .tot{font-variant-numeric:tabular-nums}
+.wkd .sl{display:flex;justify-content:space-between;gap:.4rem;font-size:.8rem;font-variant-numeric:tabular-nums}
+.wkd .sl span:first-child{color:var(--muted)}
+.kpis{display:flex;flex-wrap:wrap;gap:.5rem}
+.kpi{border:1px solid var(--line);border-radius:8px;padding:.5rem .8rem;background:var(--bg);min-width:7rem}
+.kpi b{display:block;font-family:var(--serif);font-size:1.4rem;font-weight:400;font-variant-numeric:tabular-nums}
+.kpi span{font-size:.75rem;color:var(--muted)}
+.tl{display:flex;flex-direction:column;gap:.35rem}
+.tlr{display:grid;grid-template-columns:3.4rem 6.5rem 1fr;gap:.6rem;align-items:start;padding:.45rem 0;border-bottom:1px solid var(--line)}
+.tlr.empty{color:var(--muted);padding:.15rem 0}
+.tlr.empty .t{font-weight:400}
+.tlr .t{font-variant-numeric:tabular-nums;font-weight:600}
+.tlr .c{font-size:.8rem;font-variant-numeric:tabular-nums}
+.tlr .c .meter{display:block;margin-top:.25rem;min-width:0}
+.tbls{display:flex;flex-wrap:wrap;gap:.3rem}
+.tbl{border:1px solid var(--line);border-radius:6px;padding:.15rem .5rem;font-size:.8rem;background:var(--card);white-space:nowrap}
+.tbl b{font-variant-numeric:tabular-nums;color:var(--wine);margin-right:.25rem}
+.tbl.ex{border-style:dashed}
+@media (max-width:520px){.tlr{grid-template-columns:3rem 1fr}.tlr .tbls{grid-column:1/-1}}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem}
 .copy{white-space:pre-wrap;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:.6rem;font-size:.85rem}
 .evs{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.75rem}
@@ -226,6 +255,20 @@ a.btn{display:inline-block;text-decoration:none;font:400 .8rem var(--sans);lette
 
   <!-- STAFF -->
   <section id="v-staff" class="stack" hidden>
+    <div class="card stack" id="planner">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <h2>Calendario sala</h2>
+        <div class="seg" role="group" aria-label="Vista"><button type="button" id="pl-week" aria-pressed="true">Settimana</button><button type="button" id="pl-day" aria-pressed="false">Giorno</button></div>
+      </div>
+      <div class="row" style="align-items:center;gap:.5rem">
+        <button class="btn ghost small" type="button" id="pl-prev" aria-label="Precedente">‹</button>
+        <strong id="pl-title" style="flex:1;text-align:center"></strong>
+        <button class="btn ghost small" type="button" id="pl-next" aria-label="Successivo">›</button>
+        <button class="btn ghost small" type="button" id="pl-today">Oggi</button>
+      </div>
+      <div id="pl-body" class="stack"></div>
+      <p class="small muted">Ogni prenotazione è un tavolo. Gli orari sono gli arrivi; "in sala" conta le persone sedute in quel momento (il tavolo resta 2 ore).</p>
+    </div>
     <div class="card stack">
       <div class="row" style="justify-content:space-between;align-items:center">
         <h2>Prossimi 14 giorni</h2>
@@ -903,6 +946,74 @@ function mailFor(b){var L=MAIL[b.lang]?b.lang:"it",M=MAIL[L],l=calLinks(b),TT=T[
   return {subject:f(M.s),body:f(M.b)}}
 function mailtoFor(b){var m=mailFor(b);return "mailto:"+encodeURIComponent(b.email||"")+"?subject="+encodeURIComponent(m.subject)+"&body="+encodeURIComponent(m.body)}
 async function markMailed(b){if(!db)return;try{await db.doc("bookings/"+b.id).update({emailSentAt:new Date().toISOString()})}catch(e){}}
+/* ---------- staff planner: week and day views grouped by arrival time ---------- */
+function mondayOf(d){var x=parseD(d),k=(x.getDay()+6)%7;return addDays(d,-k)}
+function tabsOf(list){return {t:list.length,p:list.reduce(function(a,b){return a+(+b.party||0)},0)}}
+function tp(o){return o.t+(o.t===1?" tavolo":" tavoli")+" · "+o.p+(o.p===1?" persona":" persone")}
+function inRoomAt(d,tm){var T=mins(tm),H=S.settings.holdMin||120;return dayBookings(d).reduce(function(a,b){var m=mins(b.time);return (m<=T&&T<m+H)?a+(+b.party||0):a},0)}
+function bySlot(list){var g={};list.forEach(function(b){(g[b.time]=g[b.time]||[]).push(b)});return g}
+function renderPlanner(){
+  if(!S.plRef)S.plRef=today();if(!S.plMode)S.plMode="week";
+  el("pl-week").setAttribute("aria-pressed",String(S.plMode==="week"));el("pl-day").setAttribute("aria-pressed",String(S.plMode==="day"));
+  var body=el("pl-body");body.textContent="";
+  var min=S.plMode==="week"?mondayOf(today()):today();
+  var start=S.plMode==="week"?mondayOf(S.plRef):S.plRef;
+  el("pl-prev").disabled=start<=min;
+  if(S.plMode==="week")weekView(body,start);else dayPlan(body,S.plRef);
+}
+function weekView(body,mon){
+  var sun=addDays(mon,6);
+  el("pl-title").textContent=parseD(mon).toLocaleDateString("it-IT",{day:"numeric",month:"short"})+" – "+parseD(sun).toLocaleDateString("it-IT",{day:"numeric",month:"short",year:"numeric"});
+  var all=S.bookings.filter(function(b){return active(b)&&b.date>=mon&&b.date<=sun});
+  var L=tabsOf(all.filter(function(b){return svcOf(b.time)==="lunch"})),D=tabsOf(all.filter(function(b){return svcOf(b.time)==="dinner"})),W=tabsOf(all);
+  body.append(h("div",{class:"kpis"},[kpi(W.t,"tavoli nella settimana"),kpi(W.p,"persone"),kpi(L.t+" · "+L.p,"pranzi: tavoli · persone"),kpi(D.t+" · "+D.p,"cene: tavoli · persone")]));
+  var grid=h("div",{class:"wk"});
+  for(var i=0;i<7;i++){
+    var d=addDays(mon,i),open=slotsFor(d).length>0,list=all.filter(function(b){return b.date===d});
+    var card=h("button",{type:"button",class:"wkd"+(open||list.length?"":" off")+(d===today()?" today":"")});
+    card.append(h("div",{class:"dt",text:parseD(d).toLocaleDateString("it-IT",{weekday:"short",day:"numeric",month:"short"})}));
+    if(!open&&!list.length){card.append(h("div",{class:"small muted",text:"Riposo"}));card.disabled=true}
+    else if(!list.length)card.append(h("div",{class:"small muted",text:"Nessuna prenotazione"}));
+    else{
+      card.append(h("div",{class:"tot",text:tp(tabsOf(list))}));
+      ["lunch","dinner"].forEach(function(sv){
+        var sl=list.filter(function(b){return svcOf(b.time)===sv});if(!sl.length)return;
+        var o=tabsOf(sl);card.append(h("div",{class:"sv",text:(sv==="lunch"?"Pranzo":"Cena")+" · "+o.t+" tav. · "+o.p+" pers."}));
+        var g=bySlot(sl);Object.keys(g).sort().forEach(function(tm){var x=tabsOf(g[tm]);card.append(h("div",{class:"sl"},[h("span",{text:tm}),h("span",{text:x.t+" tav · "+x.p+" p"})]))});
+      });
+      if(hasDinner(d)){var ds=dinnerState(d);if(ds!=="none"&&ds!=="past")card.append(h("span",{class:"pill s-"+ds,style:"align-self:flex-start",text:"Cena: "+SLBL[ds]}))}
+    }
+    (function(day){card.addEventListener("click",function(){S.plMode="day";S.plRef=day;S.selDay=day;render()})})(d);
+    grid.append(card);
+  }
+  body.append(grid);
+}
+function kpi(v,l){return h("div",{class:"kpi"},[h("b",{text:String(v)}),h("span",{text:l})])}
+function dayPlan(body,d){
+  el("pl-title").textContent=fmtDay(d,true);
+  var list=S.bookings.filter(function(b){return active(b)&&b.date===d}),cap=capFor(d);
+  var L=tabsOf(list.filter(function(b){return svcOf(b.time)==="lunch"})),D=tabsOf(list.filter(function(b){return svcOf(b.time)==="dinner"}));
+  var peak=0;slotsFor(d).concat(list.map(function(b){return b.time})).forEach(function(x){peak=Math.max(peak,inRoomAt(d,x))});
+  body.append(h("div",{class:"kpis"},[kpi(list.length,"tavoli"),kpi(L.p+D.p,"persone"),kpi(L.t+" · "+L.p,"pranzo: tavoli · persone"),kpi(D.t+" · "+D.p,"cena: tavoli · persone"),kpi(peak+"/"+cap,"massimo in sala")]));
+  if(!slotsFor(d).length&&!list.length){body.append(h("p",{class:"muted",text:"Giorno di riposo."}));return}
+  var sizes={};list.forEach(function(b){var p=+b.party||0;sizes[p]=(sizes[p]||0)+1});
+  var sk=Object.keys(sizes).sort(function(a,b){return a-b});
+  if(sk.length)body.append(h("p",{class:"small",text:"Tavoli per grandezza: "+sk.map(function(p){return sizes[p]+" da "+p}).join(", ")}));
+  var g=bySlot(list),times=slotsFor(d).concat(Object.keys(g)).filter(function(x,i,a){return a.indexOf(x)===i}).sort();
+  var tl=h("div",{class:"tl"}),last="";
+  times.forEach(function(tm){
+    var sv=svcOf(tm);if(sv!==last){last=sv;var o=tabsOf(list.filter(function(b){return svcOf(b.time)===sv}));tl.append(h("h3",{text:(sv==="lunch"?"Pranzo":"Cena")+" · "+tp(o)}))}
+    var bk=(g[tm]||[]).slice().sort(function(a,b){return (+b.party||0)-(+a.party||0)}),x=tabsOf(bk),inRoom=inRoomAt(d,tm),pct=Math.min(100,Math.round(inRoom/cap*100));
+    tl.append(h("div",{class:"tlr"+(bk.length?"":" empty")},[
+      h("div",{class:"t",text:tm}),
+      bk.length?h("div",{class:"c"},[h("div",{text:x.t+" tav · "+x.p+" pers."}),h("span",{class:"meter",title:"In sala: "+inRoom+" su "+cap},[h("i",{style:"width:"+pct+"%"})]),h("div",{class:"muted",text:"in sala "+inRoom+" su "+cap})]):h("div",{class:"c muted",text:inRoom?"in sala "+inRoom:"—"}),
+      h("div",{class:"tbls"},bk.map(function(b){return h("span",{class:"tbl"+(b.example?" ex":""),title:[b.name,b.phone,b.notes].filter(Boolean).join(" · ")},[h("b",{text:String(b.party)}),document.createTextNode((b.name||"Ospite")+(b.notes?" ✎":""))])}))
+    ]));
+  });
+  body.append(tl);
+  body.append(h("p",{class:"small muted",text:"Dettagli, email e annullamenti di questo giorno sono più sotto."}));
+}
+function plMove(n){if(S.plMode==="week")S.plRef=addDays(mondayOf(S.plRef||today()),7*n);else{S.plRef=addDays(S.plRef||today(),n);S.selDay=S.plRef}render()}
 /* ---------- staff ---------- */
 var SLBL={confirmed:"Confermata",building:"In raccolta",lastcall:"Ultima chiamata",closed:"Chiusa",past:"Passata"};
 function renderBoard(){
@@ -1006,6 +1117,8 @@ async function clearTest(){
   el("x-clear").disabled=false;
 }
 el("x-fill").addEventListener("click",fillTest);
+el("pl-week").addEventListener("click",function(){S.plMode="week";render()});el("pl-day").addEventListener("click",function(){S.plMode="day";S.plRef=S.selDay||S.plRef||today();render()});
+el("pl-prev").addEventListener("click",function(){plMove(-1)});el("pl-next").addEventListener("click",function(){plMove(1)});el("pl-today").addEventListener("click",function(){S.plRef=today();S.selDay=today();render()});
 el("x-clear").addEventListener("click",clearTest);
 function fillSettings(){var s=S.settings;el("s-min").value=s.minGuests;el("s-ext").value=s.extendIfAtLeast;el("s-hide").value=s.hideIfAtMost;el("s-seats").value=s.seats;el("s-wdpct").value=s.weekdayPct;el("s-wepct").value=s.weekendPct;el("s-ovpct").value=s.overflowPct;el("s-fullfrom").value=s.showFullFrom;el("s-disc").value=s.discountPct;el("s-offer").value=s.offer||""}
 el("s-save").addEventListener("click",async function(){
@@ -1159,7 +1272,7 @@ el("tab-guest").addEventListener("click",function(){setView("guest")});
 el("tab-staff").addEventListener("click",function(){setView("staff")});
 if(location.hash==="#staff")setTimeout(function(){setView("staff")},0);
 
-function render(){try{if(S.view==="staff"){renderBoard();renderDay();renderEvAdmin()}else{renderMine();renderEvents();renderCal();renderSlots()}}catch(e){dbStatus("Errore di visualizzazione: "+(e&&e.message))}}
+function render(){try{if(S.view==="staff"){renderPlanner();renderBoard();renderDay();renderEvAdmin()}else{renderMine();renderEvents();renderCal();renderSlots()}}catch(e){dbStatus("Errore di visualizzazione: "+(e&&e.message))}}
 setInterval(render,60000);
 window.DVOR_LOGIC={check:check,dinnerState:dinnerState,slotsFor:slotsFor,S:S};
 boot();
