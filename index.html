@@ -1097,14 +1097,20 @@ async function setArrival(b,state){
       var left=(x.dates||[]).filter(function(d){return d!==tag});
       if(left.length)await ref.update({dates:left,count:left.length});else await ref.delete();
     }
-  }catch(e){alert("Non salvato: "+((e&&e.message)||e))}
+  }catch(e){dbStatus("No show / arrivo non salvato: "+((e&&e.message)||e));S.arrErr=(e&&e.message)||String(e);render()}
+}
+/* inline confirmation: the first tap arms the button, the second within 4 s runs it (no browser dialogs, which some frames block) */
+function twoStep(btn,label,fn){
+  if(btn.dataset.armed){clearTimeout(+btn.dataset.armed);btn.disabled=true;btn.textContent="…";fn();return}
+  var old=btn.textContent;btn.textContent=label;btn.classList.remove("ghost");btn.style.background="var(--bad)";btn.style.color="#fff";btn.style.borderColor="var(--bad)";
+  btn.dataset.armed=String(setTimeout(function(){delete btn.dataset.armed;btn.textContent=old;btn.classList.add("ghost");btn.style.background=btn.style.color=btn.style.borderColor=""},4000));
 }
 function arrivalCell(b){
   if(b.status==="cancelled")return null;
   var tm=b.arrivalAt?new Date(b.arrivalAt).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}):"";
   if(b.arrival==="in")return h("div",{class:"arr"},[h("span",{class:"pill s-confirmed",text:"✓ Arrivato "+tm}),h("button",{class:"btn ghost small",type:"button",text:"Correggi",title:"Togli il segno",onclick:function(){setArrival(b,"")}})]);
   if(b.arrival==="noshow")return h("div",{class:"arr"},[h("span",{class:"pill s-closed",text:"No show"}),h("button",{class:"btn ghost small",type:"button",text:"Correggi",title:"Togli il segno",onclick:function(){setArrival(b,"")}})]);
-  return h("div",{class:"arr"},[h("button",{class:"btn small",type:"button",text:"✓ Arrivato",onclick:function(){setArrival(b,"in")}}),h("button",{class:"btn ghost small",type:"button",text:"No show",onclick:function(){if(confirm("Segnare "+(b.name||"l'ospite")+" come no show e metterlo nella lista nera?"))setArrival(b,"noshow")}})]);
+  return h("div",{class:"arr"},[h("button",{class:"btn small",type:"button",text:"✓ Arrivato",onclick:function(){setArrival(b,"in")}}),h("button",{class:"btn ghost small",type:"button",text:"No show",onclick:function(){twoStep(this,"Confermi no show?",function(){setArrival(b,"noshow")})}})]);
 }
 function renderBlacklist(){
   var L=(S.blacklist||[]).slice().sort(function(a,b){return String(b.last||"").localeCompare(String(a.last||""))}),box=el("bl-list");
@@ -1113,7 +1119,7 @@ function renderBlacklist(){
   L.forEach(function(x){
     box.append(h("div",{class:"blr"},[
       h("div",{},[h("div",{text:(x.name||"Senza nome")+" · "+(x.count||1)+" no show"}),h("div",{class:"small muted",text:[x.phone,x.email].filter(Boolean).join(" · ")}),h("div",{class:"small muted",text:"Date: "+(x.dates||[]).join(", ")})]),
-      h("button",{class:"btn ghost small",type:"button",text:"Togli dalla lista",onclick:function(){if(confirm("Togliere "+(x.name||"questo ospite")+" dalla lista nera?"))db.doc("blacklist/"+x.id).delete().catch(function(){})}})
+      h("button",{class:"btn ghost small",type:"button",text:"Togli dalla lista",onclick:function(){twoStep(this,"Sicuro? Tocca ancora",function(){db.doc("blacklist/"+x.id).delete().catch(function(){})})}})
     ]));
   });
 }
@@ -1166,7 +1172,7 @@ function renderDay(){
         h("td",{},[h("div",{text:b.name||""}),blFind(b)?h("span",{class:"pill s-closed",text:"⚠ Lista nera · "+(blFind(b).count||1)+" no show"}):null,h("div",{class:"small muted",text:[b.phone,b.email,b.example?"prova":""].filter(Boolean).join(" · ")})]),
         h("td",{class:"small",text:[b.notes,b.offer?"Offerta: "+b.offer:"",b.discount?"Sconto "+b.discount+"%":"",b.eventTitle?"Evento: "+b.eventTitle:"",b.retained?"Spostata invece di annullare":"",b.source==="assistant"?"Via assistente":"",SRC[b.source]||"",b.insight?"Cosa cercava: "+b.insight:""].filter(Boolean).join(" · ")}),
         h("td",{},[b.status==="cancelled"||!b.email?null:h("a",{class:"btn small"+(b.emailSentAt?" ghost":""),style:"display:inline-block;text-decoration:none;margin-bottom:.3rem",href:mailtoFor(b),text:b.emailSentAt?"✉ Rinvia":"✉ Conferma",onclick:function(ev){if(window.DVOR_RESEND){ev.preventDefault();DVOR_RESEND(b,this)}else markMailed(b)}}),b.emailSentAt?h("div",{class:"small muted",text:"Email inviata"}):null]),
-        h("td",{},[h("div",{class:"stack",style:"gap:.3rem"},[arrivalCell(b),b.status==="cancelled"?h("span",{class:"pill s-closed",text:"Annullata"}):b.arrival?null:h("button",{class:"btn ghost small",type:"button",style:"align-self:flex-start",text:"Annulla prenotazione",onclick:function(){if(confirm("Annullare la prenotazione di "+(b.name||"questo ospite")+"?"))setStatus(b,"cancelled")}})])])
+        h("td",{},[h("div",{class:"stack",style:"gap:.3rem"},[arrivalCell(b),b.status==="cancelled"?h("span",{class:"pill s-closed",text:"Annullata"}):b.arrival?null:h("button",{class:"btn ghost small",type:"button",style:"align-self:flex-start",text:"Annulla prenotazione",onclick:function(){twoStep(this,"Confermi annullamento?",function(){setStatus(b,"cancelled")})}})])])
       ]));
     });
     var tl=list.filter(function(b){return active(b)&&svcOf(b.time)==="lunch"}).reduce(function(x,b){return x+(+b.menuTasting||0)},0),td=list.filter(function(b){return active(b)&&svcOf(b.time)==="dinner"}).reduce(function(x,b){return x+(+b.menuTasting||0)},0);
