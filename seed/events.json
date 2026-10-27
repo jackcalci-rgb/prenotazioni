@@ -1,0 +1,37 @@
+{
+ "halloween-2026": {
+  "date": "2026-10-31",
+  "time": "15:00",
+  "title_it": "Halloween: festa per grandi e piccini",
+  "title_en": "Halloween: a party for young and old",
+  "desc_it": "Sabato 31 ottobre, dalle 15:00, la festa di Halloween da Dvor per tutta la famiglia.\nBuffet salato con stuzzichini e tante cose buone, calici di vino per i grandi, sciroppi alla frutta per i piccoli e una caccia al tesoro nel nostro grande parco, per adulti e bambini. Prenota il tuo posto: tel. 0481 090740, WhatsApp 392 388 3900.",
+  "desc_en": "Saturday 31 October, from 3 pm, the Halloween party at Dvor for the whole family.\nSavoury buffet with nibbles and lots of good things, glasses of wine for the grown-ups, fruit syrups for the little ones and a treasure hunt in our big park, for adults and children. Book your place: tel. +39 0481 090740, WhatsApp +39 392 388 3900.",
+  "price": "25 € a famiglia, bevande escluse",
+  "link": "https://www.osteriadvor.com/eventi.html",
+  "imageId": "03b4e244b2dca69a1043a191df11bedb.jpg"
+ },
+ "san-martino-2026": {
+  "date": "2026-11-11",
+  "time": "",
+  "allDay": true,
+  "openLunch": true,
+  "openDinner": true,
+  "title_it": "Pranzo e cena di San Martino",
+  "title_en": "St Martin's lunch and dinner",
+  "desc_it": "Mercoledì 11 novembre, a pranzo e a cena, la festa di San Martino come da tradizione agricola: il giorno che chiude l'annata nei campi e in cui si assaggia il vino nuovo.\nUn menù ispirato ai sapori della terra, da gustare in compagnia, tra le sale e le colline del Collio. Posti limitati: prenota in anticipo.",
+  "desc_en": "Wednesday 11 November, at lunch and dinner, the feast of St Martin in the farming tradition: the day that closes the year's work in the fields and when the new wine is tasted.\nA menu inspired by the flavours of the land, to enjoy together among the rooms and hills of the Collio. Limited seats: book ahead.",
+  "price": "",
+  "link": "https://www.osteriadvor.com/eventi.html"
+ },
+ "natale-2026": {
+  "date": "2026-12-25",
+  "time": "",
+  "title_it": "Il pranzo di Natale da Dvor",
+  "title_en": "Christmas lunch at Dvor",
+  "desc_it": "Venerdì 25 dicembre, dopo il successo dell'anno scorso, un altro Natale insieme da Dvor.\nUn pranzo di festa in famiglia, tra le sale in pietra e legno e le colline del Collio, con i sapori della tradizione. Posti limitati: prenota in anticipo.",
+  "desc_en": "Friday 25 December: after last year's success, another Christmas together at Dvor.\nA festive family lunch among the stone-and-wood rooms and the hills of the Collio, with the flavours of tradition. Limited seats: book ahead.",
+  "price": "",
+  "link": "https://www.osteriadvor.com/eventi.html",
+  "imageId": "f032c0c03d9ae36ccb4e526290fbae95.jpg"
+ }
+}

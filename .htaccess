@@ -1,0 +1,9 @@
+DirectoryIndex index.html
+<FilesMatch "^(config\.php|.*\.(json|log|lock|tmp))$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Deny from all
+  </IfModule>
+</FilesMatch>

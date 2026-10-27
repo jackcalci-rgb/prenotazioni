@@ -1,0 +1,14 @@
+{
+ "main": {
+  "discountPct": 5,
+  "extendIfAtLeast": 7,
+  "hideIfAtMost": 3,
+  "minGuests": 10,
+  "offer": "Una bollicina del collio di benvenuto",
+  "overflowPct": 10,
+  "seats": 74,
+  "showFullFrom": 50,
+  "weekdayPct": 50,
+  "weekendPct": 100
+ }
+}

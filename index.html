@@ -1,0 +1,1170 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+</head>
+<body>
+<title>Prenotazioni Dvor</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* Layout: one column, header with two tabs (Ospite / Staff); the guest side is a booking card, the staff side a 14-day board. Palette and faces follow the Osteria Dvor website. */
+:root{
+  --bg:#F6EFE4; --alt:#EADCC6; --card:#FBF6EE; --ink:#2B1D14; --muted:#6A5645; --line:#D8C6AA;
+  --wine:#7A2E22; --on-wine:#FBF3E6; --gold:#9C5A10;
+  --heat-1:#3E9B4F; --heat-2:#E3B22B; --heat-3:#C8372A;
+  --ok:#2F6B3A; --ok-bg:#DCEBD8; --warn:#8A5A00; --warn-bg:#F3E2BC; --bad:#9B2C22; --bad-bg:#F2D5CF; --idle:#6A5645; --idle-bg:#E6DCCD;
+  --serif:"Cormorant Garamond","Iowan Old Style",Georgia,serif;
+  --sans:"Jost","Helvetica Neue",Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){--bg:#1B120C;--alt:#25190F;--card:#21160E;--ink:#F0E4D2;--muted:#BCA78E;--line:#3D2C1E;--wine:#E2A24B;--on-wine:#26170F;--gold:#E2A24B;
+  --ok:#8FD19B;--ok-bg:#1F3322;--warn:#F0C26A;--warn-bg:#3A2C12;--bad:#F09A8E;--bad-bg:#3D1C17;--idle:#BCA78E;--idle-bg:#2E2218;color-scheme:dark}
+}
+:root[data-theme="dark"]{--bg:#1B120C;--alt:#25190F;--card:#21160E;--ink:#F0E4D2;--muted:#BCA78E;--line:#3D2C1E;--wine:#E2A24B;--on-wine:#26170F;--gold:#E2A24B;
+  --ok:#8FD19B;--ok-bg:#1F3322;--warn:#F0C26A;--warn-bg:#3A2C12;--bad:#F09A8E;--bad-bg:#3D1C17;--idle:#BCA78E;--idle-bg:#2E2218;color-scheme:dark}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font:300 1rem/1.6 var(--sans);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 3rem}
+.wrap{max-width:860px;margin:0 auto}
+h1,h2,h3{font-family:var(--serif);font-weight:500;line-height:1.15;text-wrap:balance;margin:0}
+h1{font-size:2.2rem} h2{font-size:1.6rem} h3{font-size:1.25rem}
+.caps{font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;font-weight:400;color:var(--muted)}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:1rem;padding-block:1.6rem 1rem;border-bottom:1px solid var(--line);margin-bottom:1.5rem}
+.tabs{display:flex;gap:.25rem;background:var(--alt);padding:.25rem;border-radius:999px}
+.tabs button{border:0;background:transparent;color:var(--ink);font:400 .8rem var(--sans);letter-spacing:.12em;text-transform:uppercase;padding:.5rem 1rem;border-radius:999px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--wine);color:var(--on-wine)}
+.proto{font-size:.85rem;color:var(--muted);background:var(--alt);padding:.6rem .9rem;border-radius:6px;margin-bottom:1.25rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:1.25rem}
+.stack{display:flex;flex-direction:column;gap:1rem}
+.row{display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end}
+.row>*{min-width:0}
+label{display:flex;flex-direction:column;gap:.25rem;font-size:.8rem;color:var(--muted);flex:1 1 140px}
+input,select,textarea{font:400 1rem var(--sans);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:.55rem .7rem;width:100%}
+textarea{resize:vertical;min-height:3.2rem}
+button.btn{font:400 .8rem var(--sans);letter-spacing:.14em;text-transform:uppercase;border:1px solid var(--wine);background:var(--wine);color:var(--on-wine);padding:.65rem 1.1rem;border-radius:6px;cursor:pointer}
+button.btn.ghost{background:transparent;color:var(--wine)}
+button.btn.small{padding:.4rem .7rem;font-size:.7rem}
+button.btn:disabled{opacity:.5;cursor:default}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.chat{display:flex;flex-direction:column;gap:.6rem;max-height:420px;overflow-y:auto;padding:.25rem}
+.msg{max-width:85%;padding:.6rem .85rem;border-radius:12px;white-space:pre-wrap;overflow-wrap:anywhere}
+.msg.me{align-self:flex-end;background:var(--wine);color:var(--on-wine);border-bottom-right-radius:3px}
+.msg.bot{align-self:flex-start;background:var(--alt);border-bottom-left-radius:3px}
+.brow{display:flex;align-items:flex-end;gap:.5rem;align-self:flex-start;max-width:92%}
+.brow .msg{max-width:none}
+.chef{flex:0 0 auto;width:40px;height:40px;border-radius:50%;background:#f3e6d3;border:1px solid var(--line);overflow:hidden}
+.chef svg{width:100%;height:100%;display:block}
+.chef.big{width:64px;height:64px}
+.ask-head{display:flex;gap:.85rem;align-items:center}
+.brow .msg.thinking::after{content:" 🍳"}
+@keyframes chefbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+.brow.busy .chef svg{animation:chefbob .9s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.brow.busy .chef svg{animation:none}}
+.msg.bot.thinking{color:var(--muted);font-style:italic}
+.chips{display:flex;flex-wrap:wrap;gap:.4rem}
+.chip{text-decoration:none;display:inline-block;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:.35rem .8rem;font:400 .85rem var(--sans);cursor:pointer}
+.chip:hover{border-color:var(--wine)}
+.pill{display:inline-block;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;padding:.15rem .55rem;border-radius:999px;font-weight:400;white-space:nowrap}
+.s-confirmed{background:var(--ok-bg);color:var(--ok)}
+.s-building{background:var(--idle-bg);color:var(--idle)}
+.s-lastcall{background:var(--warn-bg);color:var(--warn)}
+.s-closed{background:var(--bad-bg);color:var(--bad)}
+.s-past{background:var(--idle-bg);color:var(--idle)}
+.nudge{border:1px solid var(--gold);background:var(--warn-bg);color:var(--ink);border-radius:10px;padding:1rem}
+.nudge strong{color:var(--warn)}
+.proposal{border-left:3px solid var(--wine);padding-left:.9rem}
+.big{font-family:var(--serif);font-size:1.5rem}
+.card p{margin:0}
+.muted{color:var(--muted)}
+.small{font-size:.85rem}
+.board{display:flex;flex-direction:column;gap:.5rem}
+.day{display:grid;grid-template-columns:7.5rem 1fr 1fr;gap:.75rem;align-items:center;padding:.6rem .75rem;border:1px solid var(--line);border-radius:8px;background:var(--card);cursor:pointer;text-align:left;font:inherit;color:inherit;width:100%}
+.day[aria-pressed="true"]{border-color:var(--wine);box-shadow:0 0 0 1px var(--wine)}
+.day .svc{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;min-width:0}
+.day.closedday{opacity:.55;cursor:default}
+.meter{flex:1 1 80px;height:6px;background:var(--alt);border-radius:3px;overflow:hidden;min-width:60px}
+.meter i{display:block;height:100%;background:var(--wine)}
+.num{font-variant-numeric:tabular-nums}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th,td{text-align:left;padding:.45rem .5rem;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:400;color:var(--muted);font-size:.75rem;letter-spacing:.1em;text-transform:uppercase}
+.tablewrap{overflow-x:auto}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem}
+.copy{white-space:pre-wrap;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:.6rem;font-size:.85rem}
+.evs{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.75rem}
+.ev{display:flex;flex-direction:column;text-align:left;border:1px solid var(--line);background:var(--card);border-radius:10px;overflow:hidden;cursor:pointer;padding:0;font:inherit;color:inherit}
+.ev:hover{border-color:var(--wine)}
+.ev .pic{aspect-ratio:4/3;background:var(--alt);display:flex;align-items:center;justify-content:center;max-width:100%}
+.ev .pic img{width:100%;height:100%;object-fit:cover;display:block}
+.ev .pic span{font-family:var(--serif);font-size:2.4rem;color:var(--wine)}
+.ev .body{padding:.7rem .85rem;display:flex;flex-direction:column;gap:.15rem}
+.ev .when{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+.ev .ttl{font-family:var(--serif);font-size:1.2rem;line-height:1.2}
+dialog{border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);padding:0;max-width:min(560px,calc(100vw - 32px));width:100%}
+dialog::backdrop{background:rgba(20,12,8,.55)}
+dialog .pic img{width:100%;max-height:320px;object-fit:cover;display:block}
+dialog .in{padding:1.1rem 1.25rem;display:flex;flex-direction:column;gap:.6rem}
+dialog .desc{white-space:pre-wrap}
+dialog p{margin:0}
+a.btn{display:inline-block;text-decoration:none;font:400 .8rem var(--sans);letter-spacing:.14em;text-transform:uppercase;border:1px solid var(--wine);background:var(--wine);color:var(--on-wine);padding:.65rem 1.1rem;border-radius:6px}
+.evrow{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--line)}
+.evrow>div{min-width:0}
+.cal{display:flex;flex-direction:column;gap:.4rem}
+.calhead{display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+.calmonth{font-family:var(--serif);font-size:1.35rem;text-transform:capitalize}
+.calgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+#cal-wd div{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-align:center;padding:.2rem 0}
+.cd{position:relative;min-height:64px;border:1px solid var(--line);border-radius:6px;background:var(--bg);padding:.3rem .35rem;display:flex;flex-direction:column;gap:2px;align-items:flex-start;text-align:left;font:inherit;color:inherit;cursor:pointer;min-width:0;overflow:hidden}
+.cd:hover:not(:disabled){border-color:var(--wine)}
+.cd .n{font-variant-numeric:tabular-nums;font-weight:400}
+.cd .tag{font-size:.62rem;line-height:1.2;letter-spacing:.04em;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cd.open{background:var(--card)}
+.cd.closed,.cd.past,.cd.out{background:transparent;color:var(--muted);cursor:default}
+.cd.out{border-color:transparent}
+.cd.open{background:var(--ok-bg);border-color:color-mix(in srgb,var(--ok) 35%,var(--line));border-left:4px solid var(--ok)}
+.cd.open .n{font-weight:600;color:var(--ok)}
+.cd.open:hover{border-color:var(--ok)}
+.cd.closed{background:repeating-linear-gradient(135deg,var(--alt) 0 4px,transparent 4px 9px);border-style:dashed;opacity:.8}
+.cd.closed .n{text-decoration:line-through;text-decoration-color:var(--bad)}
+.cd.closed .tag{color:var(--bad);text-transform:uppercase;letter-spacing:.08em}
+.cd.closed.evd{opacity:1;border:1px solid var(--gold);background:var(--warn-bg)}
+.cd.closed.evd .n{text-decoration:none}
+.cd.open.evd{border-left-color:var(--gold);box-shadow:inset 0 0 0 1px var(--gold)}
+.cd.past{opacity:.45}
+.cd.sel{border-color:var(--wine)!important;box-shadow:inset 0 0 0 2px var(--wine)!important}
+.lg-sw{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:.35rem;border:1px solid var(--line)}
+.lg-open{background:var(--ok-bg);border-left:4px solid var(--ok)}
+.lg-closed{background:repeating-linear-gradient(135deg,var(--alt) 0 3px,transparent 3px 6px);border-style:dashed}
+.cd.sel{border-color:var(--wine);box-shadow:inset 0 0 0 1px var(--wine)}
+.cd.today .n{color:var(--wine);text-decoration:underline;text-underline-offset:3px}
+.cd .ev-dot{color:var(--gold)}
+.cd .promo{color:var(--ok)}
+.cd .few{color:var(--warn)}
+.cd .dbar{position:absolute;left:0;right:0;bottom:0;height:4px;background:var(--alt)}
+.cd .dbar i,.fullbar .meter i{display:block;height:100%;background:linear-gradient(90deg,var(--heat-1),var(--heat-2) 60%,var(--heat-3));background-repeat:no-repeat}
+.fullbar{display:flex;flex-direction:column;gap:.3rem;max-width:320px}
+.fullbar .meter{flex:0 0 8px;height:8px;min-width:0}
+.urg{color:var(--warn);margin:.2rem 0}
+.chip.hot{position:relative;overflow:hidden;padding-bottom:.5rem}
+.chip .cbar{position:absolute;left:0;right:0;bottom:0;height:4px;background:var(--alt)}
+.chip .cbar i{display:block;height:100%;background:linear-gradient(90deg,var(--heat-1),var(--heat-2) 60%,var(--heat-3));background-repeat:no-repeat}
+.callegend{display:flex;flex-wrap:wrap;gap:.3rem 1rem}
+.slotgroup{display:flex;flex-direction:column;gap:.35rem}
+@media (max-width:480px){.cd{min-height:52px;padding:.25rem}.cd.closed .tag{letter-spacing:0;text-transform:none;font-size:.56rem}.cd.open{border-left-width:3px}.cd .tag.long{display:none}}
+@media (max-width:560px){.day{grid-template-columns:1fr}h1{font-size:1.8rem}}
+@media (prefers-reduced-motion:no-preference){.nudge{animation:in .35s ease-out}@keyframes in{from{transform:translateY(6px);opacity:.4}to{transform:none;opacity:1}}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <div class="caps">Osteria Enoteca Dvor</div>
+      <h1 id="h-title">Prenota un tavolo</h1>
+    </div>
+    <div class="row" style="align-items:center">
+      <select id="lang" aria-label="Lingua" style="width:auto">
+        <option value="it">IT</option><option value="en">EN</option><option value="de">DE</option><option value="sl">SL</option><option value="nl">NL</option>
+      </select>
+      <div class="tabs" role="tablist">
+        <button id="tab-guest" role="tab" aria-selected="true">Ospite</button>
+        <button id="tab-staff" role="tab" aria-selected="false">Staff</button>
+      </div>
+    </div>
+  </header>
+
+  <p class="proto" id="proto">Prototipo di prova. Le prenotazioni qui non sono reali e il modulo Odoo sul sito resta attivo.</p>
+
+  <!-- GUEST -->
+  <section id="v-guest" class="stack">
+    <div id="g-events" class="stack" hidden>
+      <h2 id="t-events">Eventi in arrivo</h2>
+      <div class="evs" id="evs"></div>
+    </div>
+    <div class="card stack" id="assistant">
+      <div class="ask-head"><span class="chef big" id="chef-big" aria-hidden="true"></span><div>
+        <h2 id="t-ask">Scrivici cosa desideri</h2>
+        <p class="muted small" id="t-ask-sub">Per esempio: «Siamo in 4 venerdì verso le 20, una persona vegetariana».</p>
+      </div></div>
+      <div class="chat" id="chat" aria-live="polite"></div>
+      <form id="chat-form" class="row">
+        <label style="flex:10 1 240px"><span id="t-msg">Messaggio</span><input id="chat-in" autocomplete="off"></label>
+        <button class="btn" id="chat-send" type="submit">Invia</button>
+      </form>
+      <p class="muted small" id="ai-off" hidden>L'assistente non è disponibile in questa vista. Usa il modulo qui sotto.</p>
+    </div>
+
+    <div class="card stack" id="manual">
+      <h3 id="t-manual">Oppure scegli tu</h3>
+      <div class="cal" id="cal">
+        <div class="calhead">
+          <button class="btn ghost small" type="button" id="cal-prev" aria-label="Mese precedente">‹</button>
+          <div class="calmonth" id="cal-month" aria-live="polite"></div>
+          <button class="btn ghost small" type="button" id="cal-next" aria-label="Mese successivo">›</button>
+        </div>
+        <div class="calgrid" id="cal-wd" aria-hidden="true"></div>
+        <div class="calgrid" id="cal-grid" role="grid"></div>
+        <div class="callegend small muted" id="cal-legend"></div>
+      </div>
+      <div id="slots" class="stack" hidden></div>
+      <div class="row">
+        <label><span id="t-date">Data</span><input type="date" id="f-date"></label>
+        <label><span id="t-party">Persone</span><input type="number" id="f-party" min="1" max="20" value="2"></label>
+        <label><span id="t-time">Orario</span><select id="f-time"></select></label>
+        <button class="btn" id="f-check" type="button">Verifica</button>
+      </div>
+    </div>
+
+    <div id="proposal" class="card stack" hidden></div>
+    <div id="nudge" class="nudge" hidden></div>
+    <div id="mine" class="card stack" hidden></div>
+    <p class="small muted" id="diag">Controllo prototipo: caricamento…</p>
+  </section>
+
+  <!-- STAFF -->
+  <section id="v-staff" class="stack" hidden>
+    <div class="card stack">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <h2>Prossimi 14 giorni</h2>
+        <span class="small muted" id="now-label"></span></div>
+      <p class="small muted" id="db-status">Caricamento…</p>
+      <p class="small muted">La cena apre con almeno <b id="lbl-min">10</b> ospiti. Il giorno prima alle 18:00 il sistema decide: con 7–9 ospiti aspetta fino alle 15:00 del giorno stesso, sotto i 7 chiude. Sopra il minimo è confermata subito.</p>
+      <p class="small muted" id="diag2"></p>
+      <div class="board" id="board"></div>
+    </div>
+    <div class="card stack" id="dayview"></div>
+    <div class="card stack" id="eventsbox">
+      <h2>Eventi</h2>
+      <p class="small muted">Cene a tema, feste e celebrazioni. Gli ospiti li vedono in cima alla pagina di prenotazione: un clic apre l'anteprima, il pulsante porta alla pagina dell'evento.</p>
+      <div id="ev-list"></div>
+      <form id="ev-form" class="stack">
+        <h3 id="ev-form-title">Nuovo evento</h3>
+        <div class="row">
+          <label>Titolo (italiano)<input id="e-title-it" required></label>
+          <label>Titolo (inglese)<input id="e-title-en"></label>
+        </div>
+        <div class="row">
+          <label>Data<input type="date" id="e-date" required></label>
+          <label>Ora (facoltativa)<input type="time" id="e-time"></label>
+          <label style="flex:0 1 auto;flex-direction:row;align-items:center;gap:.5rem;padding-bottom:.6rem"><input type="checkbox" id="e-allday" style="width:auto">Tutto il giorno</label>
+        </div>
+        <div class="row">
+          <span class="small muted" style="flex-basis:100%">Apri le prenotazioni dal sito in questo giorno, anche se di solito è chiuso:</span>
+          <label style="flex:0 1 auto;flex-direction:row;align-items:center;gap:.5rem"><input type="checkbox" id="e-open-l" style="width:auto">A pranzo (12:00–15:00)</label>
+          <label style="flex:0 1 auto;flex-direction:row;align-items:center;gap:.5rem"><input type="checkbox" id="e-open-d" style="width:auto">A cena (19:00–21:30, senza minimo di ospiti)</label>
+          <label>Prezzo (facoltativo)<input id="e-price" placeholder="45 € a persona, vini inclusi"></label>
+        </div>
+        <label>Descrizione (italiano)<textarea id="e-desc-it" rows="4"></textarea></label>
+        <label>Descrizione (inglese)<textarea id="e-desc-en" rows="3"></textarea></label>
+        <label>Link alla pagina dell'evento<input id="e-link" type="url" placeholder="https://www.osteriadvor.com/eventi.html"></label>
+        <label>Immagine o locandina (facoltativa)<input id="e-img" type="file" accept="image/*"></label>
+        <div class="row"><button class="btn" type="submit" id="e-save">Salva evento</button><button class="btn ghost" type="button" id="e-cancel" hidden>Annulla modifica</button><span class="small muted" id="e-msg"></span></div>
+      </form>
+    </div>
+    <div class="card stack" id="testbox">
+      <h2>Prove</h2>
+      <p class="small muted">Riempie i prossimi 14 giorni con prenotazioni finte, segnate come "prova", per vedere come si comportano le regole. Sere diverse ricevono quantità diverse: alcune superano 10, altre restano basse o vuote.</p>
+      <div class="row"><button class="btn" id="x-fill" type="button">Genera prenotazioni di prova</button><button class="btn ghost" id="x-clear" type="button">Cancella le prove</button><span class="small muted" id="x-msg"></span></div>
+    </div>
+    <div class="card stack" id="settings">
+      <h2>Regole e offerte</h2>
+      <div class="row">
+        <label>Minimo ospiti cena<input type="number" id="s-min" min="1"></label>
+        <label>Aspetta fino al giorno stesso se almeno<input type="number" id="s-ext" min="1"></label>
+        <label>Suggerisci altre sere se al massimo<input type="number" id="s-hide" min="0"></label>
+        <label>Posti totali del locale<input type="number" id="s-seats" min="1"></label>
+        <label>Capienza in settimana (%)<input type="number" id="s-wdpct" min="1" max="200"></label>
+        <label>Capienza nel weekend (%)<input type="number" id="s-wepct" min="1" max="200"></label>
+        <label>Extra automatico quando è pieno (%)<input type="number" id="s-ovpct" min="0" max="100"></label>
+        <label>Mostra all'ospite quanto è pieno da (%)<input type="number" id="s-fullfrom" min="0" max="100"></label>
+      </div>
+      <label>Sconto % su servizi senza prenotazioni (lun, mar, ven)<input type="number" id="s-disc" min="0" max="50"></label>
+      <label style="flex-basis:100%">Offerta per le cene da riempire, lun, mar, ven (vuoto = nessuna offerta)<input id="s-offer" placeholder="Un calice di Collio in omaggio"></label>
+      <div class="row"><button class="btn" id="s-save" type="button">Salva regole</button><span class="small muted" id="s-msg"></span></div>
+      <p class="small muted" id="s-ro" hidden>Solo il proprietario o chi modifica può cambiare le regole.</p>
+    </div>
+  </section>
+</div>
+<dialog id="evdlg" aria-labelledby="evd-title">
+  <div class="pic" id="evd-pic"></div>
+  <div class="in">
+    <div class="caps" id="evd-when"></div>
+    <h2 id="evd-title"></h2>
+    <p class="small" id="evd-price"></p>
+    <p class="desc" id="evd-desc"></p>
+    <div class="row"><a class="btn" id="evd-link" target="_blank" rel="noopener">Pagina dell'evento</a><button class="btn ghost" type="button" id="evd-close">Chiudi</button></div>
+  </div>
+</dialog>
+
+<script>
+/* Osteria Dvor · collegamento della pagina di prenotazione al server (api.php).
+   Offre alla pagina le stesse funzioni che aveva dentro Claude: database, immagini, utente e assistente. */
+(function () {
+  var API = "api.php";
+  function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v) } catch (e) { return null } }
+  function sstore(k, v) { try { if (v === undefined) return sessionStorage.getItem(k); if (v === null) sessionStorage.removeItem(k); else sessionStorage.setItem(k, v) } catch (e) { return null } }
+  var cid = store("dvor-cid");
+  if (!cid) { cid = "c" + Math.random().toString(36).slice(2) + Date.now().toString(36); store("dvor-cid", cid) }
+  function token() { var t = sstore("dvor-staff"); if (!t) return ""; var exp = +t.split(".")[1] || 0; if (exp * 1000 < Date.now()) { sstore("dvor-staff", null); return "" } return t }
+  function headers() { var h = { "Content-Type": "application/json", "X-Client-Id": cid }; var t = token(); if (t) h["X-Staff-Token"] = t; return h }
+  function call(body) {
+    return fetch(API, { method: "POST", headers: headers(), body: JSON.stringify(body), cache: "no-store" }).then(function (r) {
+      return r.json().catch(function () { return {} }).then(function (j) {
+        if (!r.ok || j.error) { var e = j.error || {}; throw { code: e.code || ("http_" + r.status), message: e.message || ("Errore " + r.status) } }
+        return j;
+      });
+    });
+  }
+  function docSnap(id, data, exists) { var d = data ? Object.freeze(Object.assign({}, data)) : undefined; return { id: id, exists: !!exists, data: function () { return d } } }
+  function querySnap(docs) { var list = docs.map(function (x) { return docSnap(x.id, x.data, true) }); return { docs: list, size: list.length, empty: !list.length } }
+  var POLL = 20000, ticks = [];
+  function refreshAll() { setTimeout(function () { ticks.slice().forEach(function (f) { f() }) }, 50) }
+  function query(coll, where, lim) {
+    var q = {
+      where: function (f, op, v) { return query(coll, where.concat([[f, op, v]]), lim) },
+      orderBy: function () { return q },
+      limit: function (n) { return query(coll, where, n) },
+      get: function () { return call({ op: "get", coll: coll, where: where, limit: lim || 0 }).then(function (j) { return querySnap(j.docs || []) }) },
+      onSnapshot: function (next, err) {
+        var stop = false;
+        function tick() { if (stop) return; q.get().then(function (s) { if (!stop) next(s) }, function (e) { if (!stop && err) err(e) }) }
+        tick(); var iv = setInterval(tick, POLL); ticks.push(tick);
+        return function () { stop = true; clearInterval(iv); ticks = ticks.filter(function (f) { return f !== tick }) };
+      },
+      add: function (data) { return call({ op: "add", coll: coll, data: data }).then(function (j) { refreshAll(); return { id: j.id } }) },
+      doc: function (id) { return docRef(coll + "/" + id) }
+    };
+    return q;
+  }
+  function docRef(path) {
+    var id = path.split("/")[1];
+    var r = {
+      id: id,
+      get: function () { return call({ op: "getdoc", path: path }).then(function (j) { return docSnap(id, j.data, j.exists) }) },
+      set: function (data) { return call({ op: "set", path: path, data: data }).then(function (j) { refreshAll(); return j }) },
+      update: function (data) { return call({ op: "update", path: path, data: data }).then(function (j) { refreshAll(); return j }) },
+      delete: function () { return call({ op: "delete", path: path }).then(function (j) { refreshAll(); return j }) },
+      onSnapshot: function (next, err) {
+        var stop = false;
+        function tick() { if (stop) return; r.get().then(function (s) { if (!stop) next(s) }, function (e) { if (!stop && err) err(e) }) }
+        tick(); var iv = setInterval(tick, POLL); ticks.push(tick);
+        return function () { stop = true; clearInterval(iv); ticks = ticks.filter(function (f) { return f !== tick }) };
+      }
+    };
+    return r;
+  }
+  var db = { collection: function (c) { return query(c, [], 0) }, doc: docRef };
+
+  var assets = {
+    upload: function (file) {
+      var fd = new FormData(); fd.append("file", file);
+      var h = { "X-Client-Id": cid }; var t = token(); if (t) h["X-Staff-Token"] = t;
+      return fetch(API + "?op=upload", { method: "POST", headers: h, body: fd }).then(function (r) {
+        return r.json().then(function (j) { if (!r.ok || j.error) throw { code: (j.error || {}).code || "error", message: (j.error || {}).message || "Caricamento non riuscito" }; return j });
+      });
+    }
+  };
+
+  var info = call({ op: "info" }).catch(function () { return { ai: false, staff: false } });
+
+  var user = {
+    id: function () { return Promise.resolve(cid) },
+    me: function () { return Promise.resolve({ id: cid }) },
+    isOwner: function () { return !!token() },
+    canEdit: function () { return !!token() },
+    can: function () { return !!token() }
+  };
+
+  /* assistant: the page sends instructions and tools, this runs the tool loop through the server */
+  function parseJSON(text) {
+    var a = text.indexOf("{"), b = text.lastIndexOf("}");
+    if (a < 0 || b < a) throw { code: "bad_json", message: "Risposta non valida" };
+    return JSON.parse(text.slice(a, b + 1));
+  }
+  async function run(input, opts) {
+    opts = opts || {};
+    var messages = typeof input === "string" ? [{ role: "user", content: input }] : input.map(function (m) { return { role: m.role, content: m.content } });
+    messages = messages.reduce(function (acc, m) { var p = acc[acc.length - 1]; if (p && p.role === m.role && typeof p.content === "string" && typeof m.content === "string") p.content += "\n\n" + m.content; else acc.push({ role: m.role, content: m.content }); return acc }, []);
+    var tools = (opts.tools || []).map(function (t) { return { name: t.name, description: t.description || "", input_schema: t.inputSchema || { type: "object", properties: {} } } });
+    var byName = {}; (opts.tools || []).forEach(function (t) { byName[t.name] = t });
+    for (var round = 0; round < 6; round++) {
+      var res = await call({ op: "claude", messages: messages, tools: tools.length ? tools : undefined });
+      var content = res.content || [];
+      var uses = content.filter(function (c) { return c.type === "tool_use" });
+      if (res.stop_reason !== "tool_use" || !uses.length) {
+        return content.filter(function (c) { return c.type === "text" }).map(function (c) { return c.text }).join("");
+      }
+      messages.push({ role: "assistant", content: content });
+      var results = [];
+      for (var i = 0; i < uses.length; i++) {
+        var u = uses[i], out;
+        try { out = await byName[u.name].execute(u.input || {}); results.push({ type: "tool_result", tool_use_id: u.id, content: JSON.stringify(out === undefined ? null : out) }) }
+        catch (e) { results.push({ type: "tool_result", tool_use_id: u.id, content: String((e && e.message) || e), is_error: true }) }
+      }
+      messages.push({ role: "user", content: results });
+    }
+    throw { code: "too_many_steps", message: "Troppi passaggi" };
+  }
+  var sample = function (input, opts) { return run(input, opts).then(function (t) { return { text: t, truncated: false } }) };
+  sample.json = function (input, opts) {
+    var msgs = typeof input === "string" ? [{ role: "user", content: input }] : input.slice();
+    var last = msgs[msgs.length - 1];
+    msgs[msgs.length - 1] = { role: last.role, content: last.content + "\n\n(Answer with only the JSON object.)" };
+    return run(msgs, opts).then(parseJSON);
+  };
+
+  var permissions = { state: function () { return info.then(function (i) { return i.ai ? "granted" : "denied" }) }, request: function () { return permissions.state() } };
+
+  window.claude = {
+    use: function (name) {
+      if (name === "db") return Promise.resolve(db);
+      if (name === "assets") return Promise.resolve(token() ? assets : null);
+      if (name === "user") return Promise.resolve(user);
+      if (name === "permissions") return Promise.resolve(permissions);
+      if (name === "sample") return info.then(function (i) { return i.ai ? sample : null });
+      return Promise.resolve(null);
+    }
+  };
+
+  /* staff: email confirmation sent by the server */
+  window.DVOR_RESEND = function (b, btn) {
+    var old = btn.textContent; btn.textContent = "Invio…";
+    call({ op: "resend", id: b.id, confirm: true }).then(function () { btn.textContent = "✉ Inviata"; if (window.reloadData) reloadData() }, function (e) { btn.textContent = old; alert("Email non inviata: " + (e.message || e.code)) });
+  };
+
+  /* staff area: hidden unless the address ends with #staff, protected by password */
+  document.addEventListener("DOMContentLoaded", function () {
+    var tab = document.getElementById("tab-staff");
+    if (!tab) return;
+    function showTab() { var on = location.hash === "#staff" || !!token(); tab.hidden = !on; if (tab.parentNode) tab.parentNode.hidden = !on }
+    showTab(); window.addEventListener("hashchange", showTab);
+    tab.addEventListener("click", function (ev) {
+      if (token()) return;
+      ev.stopImmediatePropagation(); ev.preventDefault();
+      var pw = prompt("Password area staff");
+      if (!pw) return;
+      call({ op: "login", password: pw }).then(function (j) { sstore("dvor-staff", j.token); sstore("dvor-open-staff", "1"); location.reload() }, function () { alert("Password errata") });
+    }, true);
+    if (token() && sstore("dvor-open-staff")) { sstore("dvor-open-staff", null); setTimeout(function () { tab.click() }, 300) }
+  });
+  window.DVOR_LOGOUT = function () { sstore("dvor-staff", null); location.hash = ""; location.reload() };
+})();
+
+</script>
+<script>
+(function(){
+"use strict";
+/* ---------- config ---------- */
+var DEFAULTS={minGuests:10,extendIfAtLeast:7,hideIfAtMost:3,seats:74,weekdayPct:50,weekendPct:100,overflowPct:10,showFullFrom:50,holdMin:120,stepMin:30,offer:"",discountPct:10};
+var WINDOWS={mon:[["12:00","15:00"],["19:00","21:30"]],tue:[["12:00","15:00"],["19:00","21:30"]],wed:[],thu:[],fri:[["12:00","15:00"],["19:00","21:30"]],sat:[["11:00","21:30"]],sun:[["11:00","19:00"]]};
+var WD=["sun","mon","tue","wed","thu","fri","sat"];
+var DINNER_FROM=18*60;
+
+var S={settings:Object.assign({},DEFAULTS),bookings:[],overrides:{},me:null,canEditRules:false,db:null,sample:null,lang:"it",view:"guest",selDay:null,proposal:null,events:[],editEv:null,calMonth:null,selDate:null,turns:[],journey:[],t0:Date.now(),intent:"",perms:null,changes:0,nudged:false,idleT:null,lastBooked:null};
+
+/* ---------- i18n (guest side) ---------- */
+var T={
+it:{fullPct:"Sala già piena al {p}%",fullShort:"pieno {p}%",lastSeats:"Ultimi posti",event:"Evento",pickTime:"Scegli l'orario",noTimes:"Nessun orario libero per questo numero di persone.",prevM:"Mese precedente",nextM:"Mese successivo",allDay:"tutto il giorno",events:"Eventi in arrivo",evLink:"Vai alla pagina dell'evento",close:"Chiudi",menu:"Menù",carta:"Alla carta",degustazione:"Menù degustazione",email:"Email",discount:"Sconto del {p}% sul conto per questa prenotazione",better:"{d} c'è già più gente in sala. Preferisci quella sera?",title:"Prenota un tavolo",ask:"Scrivici cosa desideri",askSub:"Per esempio: «Siamo in 4 venerdì verso le 20, una persona vegetariana».",msg:"Messaggio",send:"Invia",manual:"Oppure scegli tu",date:"Data",party:"Persone",time:"Orario",check:"Verifica",proto:"Prototipo di prova. Le prenotazioni qui non sono reali e il modulo Odoo sul sito resta attivo.",aiOff:"L'assistente non è disponibile in questa vista. Usa il modulo qui sotto.",thinking:"Sto controllando la disponibilità…",yourTable:"Il tuo tavolo",name:"Nome",phone:"Telefono",notes:"Note (allergie, occasioni)",book:"Conferma prenotazione",people:"persone",lunch:"Pranzo",dinner:"Cena",available:"Disponibile",notAvail:"Non disponibile",closed:"Chiuso",seatsLeft:"Restano {n} posti a quest'ora",needN:"Mancano {n} ospiti per confermare la cena",dinnerOk:"Cena confermata",pendingNote:"Ti mandiamo la conferma via email il giorno prima.",alts:"Alternative",booked:"Prenotazione registrata",mine:"Le tue prenotazioni",cancel:"Annulla",keep:"Tengo la prenotazione",cancelAnyway:"Annulla comunque",beforeCancel:"Prima di annullare: possiamo spostarla?",offer:"Per te: {o}",nudgeTitle:"Ancora indeciso?",choose:"Scegli",cancelled:"Annullata",confirmed:"Confermata",pending:"Ricevuta",errName:"Inserisci nome, telefono e un'email valida.",errSave:"Non è stato possibile salvare. Riprova tra poco.",aiErr:"L'assistente non ha risposto. Usa il modulo qui sotto."},
+en:{fullPct:"The room is already {p}% full",fullShort:"{p}% full",lastSeats:"Last seats",event:"Event",pickTime:"Pick a time",noTimes:"No free times for this party size.",prevM:"Previous month",nextM:"Next month",allDay:"all day",events:"Upcoming events",evLink:"Go to the event page",close:"Close",menu:"Menu",carta:"À la carte",degustazione:"Tasting menu",email:"Email",discount:"{p}% off your bill with this booking",better:"On {d} the room is already livelier. Would you prefer that evening?",title:"Book a table",ask:"Tell us what you'd like",askSub:"For example: “4 of us on Friday around 8pm, one vegetarian”.",msg:"Message",send:"Send",manual:"Or choose yourself",date:"Date",party:"Guests",time:"Time",check:"Check",proto:"Test prototype. Bookings here are not real and the Odoo form on the website stays live.",aiOff:"The assistant isn't available in this view. Use the form below.",thinking:"Checking availability…",yourTable:"Your table",name:"Name",phone:"Phone",notes:"Notes (allergies, occasions)",book:"Confirm booking",people:"guests",lunch:"Lunch",dinner:"Dinner",available:"Available",notAvail:"Not available",closed:"Closed",seatsLeft:"{n} seats left at this time",needN:"{n} more guests needed to confirm dinner",dinnerOk:"Dinner confirmed",pendingNote:"We'll email you a confirmation the day before.",alts:"Alternatives",booked:"Booking saved",mine:"Your bookings",cancel:"Cancel",keep:"Keep my booking",cancelAnyway:"Cancel anyway",beforeCancel:"Before you cancel: can we move it instead?",offer:"For you: {o}",nudgeTitle:"Still deciding?",choose:"Choose",cancelled:"Cancelled",confirmed:"Confirmed",pending:"Received",errName:"Please add your name, phone and a valid email.",errSave:"Couldn't save. Please try again shortly.",aiErr:"The assistant didn't answer. Use the form below."},
+de:{fullPct:"Der Saal ist schon zu {p}% belegt",fullShort:"{p}% belegt",lastSeats:"Letzte Plätze",event:"Veranstaltung",pickTime:"Uhrzeit wählen",noTimes:"Keine freien Zeiten für diese Personenzahl.",prevM:"Voriger Monat",nextM:"Nächster Monat",allDay:"ganztägig",events:"Kommende Veranstaltungen",evLink:"Zur Veranstaltungsseite",close:"Schließen",menu:"Menü",carta:"À la carte",degustazione:"Degustationsmenü",email:"E-Mail",discount:"{p}% Rabatt auf die Rechnung für diese Reservierung",better:"Am {d} ist schon mehr los. Lieber an diesem Abend?",title:"Tisch reservieren",ask:"Schreiben Sie uns Ihren Wunsch",askSub:"Zum Beispiel: „Wir sind 4, Freitag gegen 20 Uhr, eine Person vegetarisch“.",msg:"Nachricht",send:"Senden",manual:"Oder selbst wählen",date:"Datum",party:"Personen",time:"Uhrzeit",check:"Prüfen",proto:"Testprototyp. Reservierungen hier sind nicht echt; das Odoo-Formular bleibt aktiv.",aiOff:"Der Assistent ist hier nicht verfügbar. Nutzen Sie das Formular.",thinking:"Verfügbarkeit wird geprüft…",yourTable:"Ihr Tisch",name:"Name",phone:"Telefon",notes:"Hinweise (Allergien, Anlässe)",book:"Reservierung bestätigen",people:"Personen",lunch:"Mittag",dinner:"Abendessen",available:"Verfügbar",notAvail:"Nicht verfügbar",closed:"Geschlossen",seatsLeft:"Noch {n} Plätze zu dieser Zeit",needN:"Noch {n} Gäste, dann ist das Abendessen bestätigt",dinnerOk:"Abendessen bestätigt",pendingNote:"Wir senden Ihnen am Vortag eine Bestätigung per E-Mail.",alts:"Alternativen",booked:"Reservierung gespeichert",mine:"Ihre Reservierungen",cancel:"Stornieren",keep:"Reservierung behalten",cancelAnyway:"Trotzdem stornieren",beforeCancel:"Vor dem Stornieren: lieber verschieben?",offer:"Für Sie: {o}",nudgeTitle:"Noch unentschlossen?",choose:"Wählen",cancelled:"Storniert",confirmed:"Bestätigt",pending:"Eingegangen",errName:"Bitte Name, Telefon und gültige E-Mail angeben.",errSave:"Speichern fehlgeschlagen. Bitte gleich erneut versuchen.",aiErr:"Der Assistent hat nicht geantwortet. Nutzen Sie das Formular."},
+sl:{fullPct:"Jedilnica je že {p}% polna",fullShort:"{p}% polno",lastSeats:"Zadnja mesta",event:"Dogodek",pickTime:"Izberite uro",noTimes:"Za to število oseb ni prostih ur.",prevM:"Prejšnji mesec",nextM:"Naslednji mesec",allDay:"ves dan",events:"Prihajajoči dogodki",evLink:"Na stran dogodka",close:"Zapri",menu:"Meni",carta:"À la carte",degustazione:"Degustacijski meni",email:"E-pošta",discount:"{p}% popusta na račun za to rezervacijo",better:"{d} je v jedilnici že več gostov. Bi raje ta večer?",title:"Rezerviraj mizo",ask:"Napišite nam, kaj želite",askSub:"Na primer: »Štirje v petek okoli 20h, ena oseba vegetarijanka«.",msg:"Sporočilo",send:"Pošlji",manual:"Ali izberite sami",date:"Datum",party:"Osebe",time:"Ura",check:"Preveri",proto:"Testni prototip. Rezervacije tukaj niso prave; obrazec Odoo ostane aktiven.",aiOff:"Pomočnik tu ni na voljo. Uporabite obrazec spodaj.",thinking:"Preverjam razpoložljivost…",yourTable:"Vaša miza",name:"Ime",phone:"Telefon",notes:"Opombe (alergije, priložnosti)",book:"Potrdi rezervacijo",people:"oseb",lunch:"Kosilo",dinner:"Večerja",available:"Na voljo",notAvail:"Ni na voljo",closed:"Zaprto",seatsLeft:"Ob tej uri je še {n} mest",needN:"Za potrditev večerje manjka še {n} gostov",dinnerOk:"Večerja potrjena",pendingNote:"Potrditev vam pošljemo po e-pošti dan prej.",alts:"Druge možnosti",booked:"Rezervacija shranjena",mine:"Vaše rezervacije",cancel:"Prekliči",keep:"Obdržim rezervacijo",cancelAnyway:"Vseeno prekliči",beforeCancel:"Pred preklicem: jo raje prestavimo?",offer:"Za vas: {o}",nudgeTitle:"Še razmišljate?",choose:"Izberi",cancelled:"Preklicano",confirmed:"Potrjeno",pending:"Prejeto",errName:"Vpišite ime, telefon in veljaven e-naslov.",errSave:"Shranjevanje ni uspelo. Poskusite znova.",aiErr:"Pomočnik se ni odzval. Uporabite obrazec spodaj."},
+nl:{fullPct:"De zaal is al voor {p}% vol",fullShort:"{p}% vol",lastSeats:"Laatste plaatsen",event:"Evenement",pickTime:"Kies een tijd",noTimes:"Geen vrije tijden voor dit aantal personen.",prevM:"Vorige maand",nextM:"Volgende maand",allDay:"de hele dag",events:"Komende evenementen",evLink:"Naar de evenementpagina",close:"Sluiten",menu:"Menu",carta:"À la carte",degustazione:"Proeverijmenu",email:"E-mail",discount:"{p}% korting op de rekening bij deze reservering",better:"Op {d} is het al gezellig druk. Liever die avond?",title:"Reserveer een tafel",ask:"Vertel ons wat je wilt",askSub:"Bijvoorbeeld: “Met z'n vieren vrijdag rond 20 uur, één vegetariër”.",msg:"Bericht",send:"Verstuur",manual:"Of kies zelf",date:"Datum",party:"Personen",time:"Tijd",check:"Controleer",proto:"Testprototype. Reserveringen hier zijn niet echt; het Odoo-formulier blijft actief.",aiOff:"De assistent is hier niet beschikbaar. Gebruik het formulier.",thinking:"Beschikbaarheid controleren…",yourTable:"Jouw tafel",name:"Naam",phone:"Telefoon",notes:"Opmerkingen (allergieën, gelegenheden)",book:"Reservering bevestigen",people:"personen",lunch:"Lunch",dinner:"Diner",available:"Beschikbaar",notAvail:"Niet beschikbaar",closed:"Gesloten",seatsLeft:"Nog {n} plaatsen op dit tijdstip",needN:"Nog {n} gasten nodig om het diner te bevestigen",dinnerOk:"Diner bevestigd",pendingNote:"We mailen je de dag ervoor een bevestiging.",alts:"Alternatieven",booked:"Reservering opgeslagen",mine:"Jouw reserveringen",cancel:"Annuleren",keep:"Reservering houden",cancelAnyway:"Toch annuleren",beforeCancel:"Voor je annuleert: zullen we hem verzetten?",offer:"Voor jou: {o}",nudgeTitle:"Twijfel je nog?",choose:"Kies",cancelled:"Geannuleerd",confirmed:"Bevestigd",pending:"Ontvangen",errName:"Vul naam, telefoon en een geldig e-mailadres in.",errSave:"Opslaan mislukt. Probeer het zo opnieuw.",aiErr:"De assistent antwoordde niet. Gebruik het formulier."}
+};
+var T2={it:{addCal:"Aggiungi al tuo calendario",doneT:"Prenotazione registrata",mailTo:"Ti mandiamo la conferma via email a {e}.",limited:"Posti limitati · prenotazione consigliata",firstDisc:"Sconto del {p}% riservato a chi prenota per primo questo turno",recentH:"Ultima prenotazione ricevuta {n} fa",recentN:"{n} prenotazioni ricevute negli ultimi 7 giorni",min:"{n} min",hr:"{n} ore"},
+en:{addCal:"Add to your calendar",doneT:"Booking saved",mailTo:"We will email your confirmation to {e}.",limited:"Limited seats · booking recommended",firstDisc:"{p}% off, reserved for the first to book this service",recentH:"Last booking received {n} ago",recentN:"{n} bookings received in the last 7 days",min:"{n} min",hr:"{n} hours"},
+de:{addCal:"Zum Kalender hinzufügen",doneT:"Reservierung gespeichert",mailTo:"Wir senden die Bestätigung per E-Mail an {e}.",limited:"Begrenzte Plätze · Reservierung empfohlen",firstDisc:"{p}% Rabatt für die ersten, die diesen Termin reservieren",recentH:"Letzte Reservierung vor {n}",recentN:"{n} Reservierungen in den letzten 7 Tagen",min:"{n} Min.",hr:"{n} Std."},
+sl:{addCal:"Dodaj v koledar",doneT:"Rezervacija shranjena",mailTo:"Potrditev vam pošljemo na {e}.",limited:"Omejeno število mest · priporočamo rezervacijo",firstDisc:"{p}% popusta za prve, ki rezervirajo ta termin",recentH:"Zadnja rezervacija pred {n}",recentN:"{n} rezervacij v zadnjih 7 dneh",min:"{n} min",hr:"{n} h"},
+nl:{addCal:"Zet in je agenda",doneT:"Reservering opgeslagen",mailTo:"We mailen je bevestiging naar {e}.",limited:"Beperkt aantal plaatsen · reserveren aanbevolen",firstDisc:"{p}% korting voor wie deze shift als eerste reserveert",recentH:"Laatste reservering {n} geleden",recentN:"{n} reserveringen in de afgelopen 7 dagen",min:"{n} min",hr:"{n} uur"}};
+for(var _l in T2)for(var _k in T2[_l])if(T[_l])T[_l][_k]=T2[_l][_k];
+/* honest social proof: built only from real bookings (test and example data excluded) */
+function recentProof(){var now=Date.now(),last=0,n=0;S.bookings.forEach(function(b){if(b.example||b.source==="test"||!b.createdAt)return;var ts=Date.parse(b.createdAt);if(isNaN(ts))return;if(ts>last)last=ts;if(now-ts<7*864e5)n++});
+  if(last&&now-last<48*36e5){var m=Math.max(1,Math.round((now-last)/6e4));return t("recentH",{n:m<60?t("min",{n:m}):t("hr",{n:Math.round(m/60)})})}
+  if(n>=3)return t("recentN",{n:n});return ""}
+function urgencyLine(c){var x=[];if(!showFull(c.fullPct))x.push(t("limited"));var r=recentProof();if(r)x.push(r);return x.length?h("p",{class:"small urg",text:"● "+x.join(" · ")}):null}
+function t(k,v){var s=(T[S.lang]&&T[S.lang][k])||T.it[k]||k;if(v)for(var x in v)s=s.split("{"+x+"}").join(v[x]);return s}
+var LOC={it:"it-IT",en:"en-GB",de:"de-DE",sl:"sl-SI",nl:"nl-NL"};
+
+/* ---------- date helpers ---------- */
+function pad(n){return (n<10?"0":"")+n}
+function ymd(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())}
+function parseD(s){var p=s.split("-");return new Date(+p[0],+p[1]-1,+p[2])}
+function addDays(s,n){var d=parseD(s);d.setDate(d.getDate()+n);return ymd(d)}
+function mins(hm){var p=hm.split(":");return +p[0]*60+ +p[1]}
+function hm(m){return pad(Math.floor(m/60))+":"+pad(m%60)}
+function at(dateStr,hmStr){var d=parseD(dateStr),m=mins(hmStr);d.setHours(Math.floor(m/60),m%60,0,0);return d}
+function wd(s){return WD[parseD(s).getDay()]}
+function fmtDay(s,long){return parseD(s).toLocaleDateString(LOC[S.lang]||"it-IT",long?{weekday:"long",day:"numeric",month:"long"}:{weekday:"short",day:"numeric",month:"short"})}
+function today(){return ymd(new Date())}
+
+/* ---------- core logic ---------- */
+function openingEvent(dateStr){return S.events.filter(function(e){return e.date===dateStr&&(e.openLunch||e.openDinner)})[0]||null}
+function slotsFor(dateStr){
+  var w=(WINDOWS[wd(dateStr)]||[]).slice(),ev=openingEvent(dateStr);
+  if(ev){if(ev.openLunch)w.push(["12:00","15:00"]);if(ev.openDinner)w.push(["19:00","21:30"])}
+  var seen={},out=[];w.forEach(function(x){for(var m=mins(x[0]);m<=mins(x[1]);m+=S.settings.stepMin||30){var k=hm(m);if(!seen[k]){seen[k]=1;out.push(k)}}});
+  return out.sort();
+}
+function svcOf(time){return mins(time)>=DINNER_FROM?"dinner":"lunch"}
+function active(b){return b.status!=="cancelled"}
+function dayBookings(dateStr){return S.bookings.filter(function(b){return b.date===dateStr&&active(b)})}
+function guests(dateStr,svc){return dayBookings(dateStr).filter(function(b){return svcOf(b.time)===svc}).reduce(function(a,b){return a+(+b.party||0)},0)}
+function seatsUsedAt(dateStr,time){
+  var T0=mins(time),H=S.settings.holdMin||120;
+  return dayBookings(dateStr).reduce(function(a,b){var m=mins(b.time);return (m<T0+H&&T0<m+H)?a+(+b.party||0):a},0);
+}
+function weekdayPromo(dateStr){if(S.events.some(function(e){return e.date===dateStr}))return false;return (S.settings.discountDays||["mon","tue","fri"]).indexOf(wd(dateStr))>=0}
+/* base capacity is a share of the total seats; once a time is full, an extra share opens automatically */
+function baseCap(dateStr){var st=S.settings,we=wd(dateStr)==="sat"||wd(dateStr)==="sun";return Math.max(1,Math.round((+st.seats||74)*(+(we?st.weekendPct:st.weekdayPct)||100)/100))}
+function extraCap(){return Math.round((+S.settings.seats||74)*(+S.settings.overflowPct||0)/100)}
+function capFor(dateStr){return baseCap(dateStr)+extraCap()}
+/* guest-facing fullness: never shows 100%. Near the top it settles on a varying 88-96% per date/time, so a full room still reads "almost full" */
+function pctCeil(dateStr,time){var k=dateStr+"|"+(time||""),x=7;for(var i=0;i<k.length;i++)x=(x*31+k.charCodeAt(i))%9973;return 88+x%9}
+function fullPct(dateStr,time){var raw=Math.round(seatsUsedAt(dateStr,time)/baseCap(dateStr)*100);return Math.min(raw,pctCeil(dateStr,time))}
+function showFull(p){return S.settings.showFullFrom>0&&p>=S.settings.showFullFrom}
+function hasDinner(dateStr){return slotsFor(dateStr).some(function(x){return svcOf(x)==="dinner"})}
+/* dinner state: confirmed | building | lastcall | closed | past | none */
+function dinnerState(dateStr,now){
+  now=now||new Date();
+  if(!hasDinner(dateStr))return "none";
+  var ov=S.overrides[dateStr];
+  var g=guests(dateStr,"dinner"),st=S.settings;
+  var end=at(dateStr,"23:59");if(now>end)return "past";
+  if(ov==="open")return "confirmed";
+  var oe=openingEvent(dateStr);if(oe&&oe.openDinner&&ov!=="closed")return "confirmed";
+  if(ov==="closed")return "closed";
+  if(g>=st.minGuests)return "confirmed";
+  var d1=at(addDays(dateStr,-1),"18:00"),d2=at(dateStr,"15:00");
+  if(now<d1)return "building";
+  if(now<d2&&g>=st.extendIfAtLeast)return "lastcall";
+  return "closed";
+}
+/* a quiet evening loses new guests to a nearby evening that is further along */
+function betterEvening(dateStr,now){
+  var g=guests(dateStr,"dinner"),best=null;
+  if(S.overrides[dateStr]==="open")return null;
+  if(g>S.settings.hideIfAtMost)return null;
+  for(var i=-4;i<=4;i++){
+    if(!i)continue;var d=addDays(dateStr,i);if(d<today())continue;
+    var s=dinnerState(d,now);if(s!=="building"&&s!=="confirmed"&&s!=="lastcall")continue;
+    var gd=guests(d,"dinner");if(gd<=g)continue;
+    if(!best||gd>best.g||(gd===best.g&&Math.abs(i)<Math.abs(best.i)))best={date:d,g:gd,i:i};
+  }
+  return best;
+}
+function nearestSlot(dateStr,time,svc){
+  var list=slotsFor(dateStr).filter(function(x){return !svc||svcOf(x)===svc});if(!list.length)return null;
+  var m=mins(time);list.sort(function(a,b){return Math.abs(mins(a)-m)-Math.abs(mins(b)-m)});return list[0];
+}
+function check(dateStr,time,party,now){
+  now=now||new Date();party=Math.max(1,Math.round(+party||1));
+  var r={date:dateStr,time:time,party:party,ok:false,reason:"",service:time?svcOf(time):null,seatsLeft:null,dinner:null,offer:null,discount:0,suggestion:null,events:[],alternatives:[]};
+  if(!dateStr||dateStr<today()){r.reason="past_date";return r}
+  r.events=S.events.filter(function(e){return e.date===dateStr}).map(function(e){return {title:e.title_it,time:e.allDay?"all day":(e.time||""),price:e.price||"",link:e.link||""}});
+  var slots=slotsFor(dateStr);
+  if(!slots.length){r.reason="closed_day";addAlternatives(r,now);return r}
+  if(!time||slots.indexOf(time)<0){var n=nearestSlot(dateStr,time||"20:00");r.reason="not_a_slot";r.alternatives.push({date:dateStr,time:n,why:"nearest_time"});addAlternatives(r,now);return r}
+  if(at(dateStr,time)<now){r.reason="time_passed";addAlternatives(r,now);return r}
+  var left=capFor(dateStr)-seatsUsedAt(dateStr,time);r.seatsLeft=left;r.fullPct=fullPct(dateStr,time);
+  if(left<party){r.reason="slot_full";addAlternatives(r,now);return r}
+  if(r.service==="dinner"){
+    var ds=dinnerState(dateStr,now),g=guests(dateStr,"dinner");
+    r.dinner={state:ds,guestsSoFar:g,minGuests:S.settings.minGuests,neededAfterThisBooking:Math.max(0,S.settings.minGuests-g-party)};
+    if(ds==="closed"){r.reason="dinner_not_running";addAlternatives(r,now);return r}
+    var b=ds==="building"?betterEvening(dateStr,now):null;
+    if(b&&g+party<S.settings.minGuests)r.suggestion={date:b.date,time:nearestSlot(b.date,time,"dinner"),guestsSoFar:b.g};
+    if(S.settings.offer&&weekdayPromo(dateStr)&&g+party<S.settings.minGuests)r.offer=S.settings.offer;
+  }
+  if(S.settings.discountPct>0&&weekdayPromo(dateStr)&&guests(dateStr,r.service)===0)r.discount=S.settings.discountPct;
+  r.ok=true;return r;
+}
+function addAlternatives(r,now){
+  var seen={};r.alternatives.forEach(function(a){seen[a.date+a.time]=1});
+  var want=r.time?mins(r.time):20*60,svc=r.time?svcOf(r.time):"dinner";
+  for(var i=0;i<=10&&r.alternatives.length<3;i++){
+    var d=addDays(r.date&&r.date>=today()?r.date:today(),i);var sl=slotsFor(d);if(!sl.length)continue;
+    var cost=function(x){return svcOf(x)===svc?Math.abs(mins(x)-want):300+Math.abs(mins(x)-(svcOf(x)==="lunch"?13*60:20*60))};
+    var cands=sl.slice().sort(function(a,b){return cost(a)-cost(b)});
+    for(var j=0;j<cands.length;j++){
+      var tm=cands[j];if(seen[d+tm])continue;
+      var c=checkNoAlt(d,tm,r.party,now);if(c.ok){seen[d+tm]=1;r.alternatives.push({date:d,time:tm,why:svcOf(tm)==="dinner"?(c.dinner&&c.dinner.state==="confirmed"?"dinner_confirmed":"dinner_filling"):"lunch"});break}
+    }
+  }
+}
+function checkNoAlt(d,tm,p,now){var save=addAlternatives;addAlternatives=function(){};try{return check(d,tm,p,now)}finally{addAlternatives=save}}
+
+/* ---------- capabilities ---------- */
+var db=null,sample=null,user=null,perms=null,assets=null;
+function el(id){return document.getElementById(id)}
+function h(tag,attrs,kids){var e=document.createElement(tag);if(attrs)for(var k in attrs){if(k==="text")e.textContent=attrs[k];else if(k==="class")e.className=attrs[k];else if(k.slice(0,2)==="on")e.addEventListener(k.slice(2),attrs[k]);else e.setAttribute(k,attrs[k])}(kids||[]).forEach(function(c){if(c!=null)e.append(c)});return e}
+
+var BUILD="host-v30";
+function applyBookings(q,src){S.bookings=q.docs.map(function(d){return Object.assign({},d.data()||{},{id:d.id})});S.bkSrc=src;S.bkErr="";diag();dbStatus(S.bookings.length+" prenotazioni caricate · aggiornato alle "+hm(new Date().getHours()*60+new Date().getMinutes()));render()}
+function applyEvents(q,src){S.evLoaded=true;S.evSrc=src;S.evErr="";S.events=q.docs.map(function(d){return Object.assign({},d.data()||{},{id:d.id})}).filter(function(e){return e.date>=today()}).sort(function(a,b){return (a.date+(a.time||"")).localeCompare(b.date+(b.time||""))});fillTimes();render();diag()}
+function applyOverrides(q){var o={};q.docs.forEach(function(d){var x=d.data()||{};if(x.state)o[d.id]=x.state});S.overrides=o;render()}
+function applySettings(d){S.settings=Object.assign({},DEFAULTS,d.exists?d.data():{});fillSettings();render()}
+function diag(){var txt="Controllo prototipo "+BUILD+(S.dbNull?" · database non disponibile":"")+" · eventi: "+(S.evLoaded?S.events.length+" ("+S.evSrc+")":"in attesa")+(S.evErr?" errore "+S.evErr:"")+" · prenotazioni: "+S.bookings.length+(S.bkSrc?" ("+S.bkSrc+")":"")+(S.bkErr?" errore "+S.bkErr:"")+" · 11 nov: "+(slotsFor("2026-11-11").length?"aperto":"chiuso");["diag","diag2"].forEach(function(id){var e=el(id);if(e)e.textContent=txt})}
+function dbStatus(t){var e=el("db-status");if(e)e.textContent=t}
+async function boot(){
+  try{var l=localStorage.getItem("dvor-lang");if(l&&T[l])S.lang=l}catch(e){}
+  el("lang").value=S.lang;applyLang();
+  el("f-date").value=today();el("f-date").min=today();fillTimes();fillSettings();
+  render();
+  if(!window.claude){dbStatus("Database non disponibile in questa vista.");return noCaps()}
+  dbStatus("Collegamento al database…");
+  claude.use("db").then(function(d){
+    db=d;if(!db){dbStatus("Database non disponibile: apri la pagina da claude.ai con il tuo account.");S.dbNull=true;diag();return}
+    var bq=function(){return db.collection("bookings").where("date",">=",addDays(today(),-1)).limit(1000)};
+    var eq=function(){return db.collection("events").limit(500)};
+    var oq=function(){return db.collection("overrides").limit(500)};
+    try{bq().onSnapshot(function(q){applyBookings(q,"live")},function(e){S.bkErr=(e&&e.code)||"errore";diag()})}catch(e){S.bkErr="sub "+e.message}
+    try{eq().onSnapshot(function(q){applyEvents(q,"live")},function(e){S.evErr=(e&&e.code)||"errore";diag()})}catch(e){S.evErr="sub "+e.message}
+    try{oq().onSnapshot(applyOverrides,function(){})}catch(e){}
+    try{db.doc("settings/main").onSnapshot(applySettings,function(){})}catch(e){}
+    /* polling as a backstop, in case live updates do not arrive in this view */
+    window.reloadData=async function(){
+      try{applyBookings(await bq().get(),"get")}catch(e){S.bkErr="get "+((e&&e.code)||e)}
+      try{applyEvents(await eq().get(),"get")}catch(e){S.evErr="get "+((e&&e.code)||e)}
+      try{applyOverrides(await oq().get())}catch(e){}
+      try{applySettings(await db.doc("settings/main").get())}catch(e){}
+      diag();
+    };
+    reloadData();setInterval(reloadData,30000);
+  });
+  claude.use("sample").then(function(x){sample=x;if(!sample){el("ai-off").hidden=false;el("chat-form").hidden=true}});
+  claude.use("assets").then(function(x){assets=x}).catch(function(){});
+  claude.use("permissions").then(function(x){perms=x}).catch(function(){});
+  claude.use("user").then(async function(u){user=u;if(!user)return;
+    try{S.me=await user.id()}catch(e){}try{S.canEditRules=await user.canEdit()}catch(e){}
+    el("s-save").disabled=!S.canEditRules;el("s-ro").hidden=S.canEditRules;render()});
+}
+function noCaps(){el("ai-off").hidden=false;el("chat-form").hidden=true}
+
+/* ---------- guest: language ---------- */
+function applyLang(){
+  document.documentElement.lang=S.lang;
+  el("h-title").textContent=S.view==="staff"?"Prenotazioni · staff":t("title");
+  el("t-ask").textContent=t("ask");el("t-ask-sub").textContent=t("askSub");el("t-msg").textContent=t("msg");el("chat-send").textContent=t("send");
+  el("t-manual").textContent=t("manual");el("t-date").textContent=t("date");el("t-party").textContent=t("party");el("t-time").textContent=t("time");el("f-check").textContent=t("check");
+  el("proto").textContent=t("proto");el("t-events").textContent=t("events");el("evd-link").textContent=t("evLink");el("evd-close").textContent=t("close");el("ai-off").textContent=t("aiOff");
+  if(el("chef-big")&&!el("chef-big").innerHTML)el("chef-big").innerHTML=CHEF;if(!el("chat-form").hidden)hello();
+}
+el("lang").addEventListener("change",function(){S.lang=this.value;try{localStorage.setItem("dvor-lang",S.lang)}catch(e){}applyLang();fillTimes();render()});
+
+/* ---------- guest: manual form ---------- */
+function fillTimes(){
+  var d=el("f-date").value,sel=el("f-time"),cur=sel.value;sel.textContent="";
+  var sl=slotsFor(d);
+  if(!sl.length){sel.append(h("option",{value:"",text:t("closed")}));return}
+  sl.forEach(function(x){sel.append(h("option",{value:x,text:x+" · "+t(svcOf(x))}))});
+  if(sl.indexOf(cur)>=0)sel.value=cur;else{var n=nearestSlot(d,"20:00");if(n)sel.value=n}
+}
+el("f-date").addEventListener("change",function(){fillTimes();noteChange();var v=this.value;if(v){S.selDate=v;var d=parseD(v);S.calMonth=new Date(d.getFullYear(),d.getMonth(),1);renderCal();renderSlots()}});
+el("f-time").addEventListener("change",noteChange);
+el("f-party").addEventListener("change",function(){noteChange();renderCal();renderSlots()});
+el("f-check").addEventListener("click",function(){showProposal(check(el("f-date").value,el("f-time").value,el("f-party").value))});
+
+/* ---------- guest: assistant ---------- */
+var CHEF='<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="64" fill="#f3e6d3"/><path d="M8 64c2-11 12-16 24-16s22 5 24 16z" fill="#fff" stroke="#d9cbb8"/><path d="M24 49l8 7 8-7-4-2h-8z" fill="#7a1f2b"/><circle cx="32" cy="34" r="14" fill="#f2c9a0"/><path d="M19 22c-6-1-8-8-3-11 2-6 9-6 11-3 3-4 9-4 11 0 3-3 10-2 10 4 5 2 4 9-2 10v4H19z" fill="#fff" stroke="#d9cbb8" stroke-width="1.2"/><rect x="19" y="21" width="26" height="4" fill="#fff" stroke="#d9cbb8" stroke-width="1"/><circle cx="26.5" cy="32" r="1.8" fill="#3b2a20"/><circle cx="37.5" cy="32" r="1.8" fill="#3b2a20"/><circle cx="23" cy="37" r="2.4" fill="#e9967a" opacity=".55"/><circle cx="41" cy="37" r="2.4" fill="#e9967a" opacity=".55"/><path d="M24 39c3-3 6-2 8 0 2-2 5-3 8 0-3 2-6 1-8-.5-2 1.5-5 2.5-8 .5z" fill="#5a3a28"/><path d="M28 42.5q4 3 8 0" stroke="#7a3b2e" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg>';
+var HELLO={it:"Ciao! Sono lo chef del Dvor 👨‍🍳 Dimmi quando vuoi venire e in quanti siete, ti trovo io il tavolo giusto.",en:"Hello! I'm the chef at Dvor 👨‍🍳 Tell me when you'd like to come and how many you are, and I'll find you the right table.",de:"Hallo! Ich bin der Koch im Dvor 👨‍🍳 Sagen Sie mir, wann und mit wie vielen Personen Sie kommen, ich finde den passenden Tisch.",sl:"Pozdravljeni! Sem kuhar v Dvoru 👨‍🍳 Povejte mi, kdaj in koliko vas bo, pa vam poiščem pravo mizo.",nl:"Hallo! Ik ben de chef van Dvor 👨‍🍳 Vertel me wanneer je wilt komen en met hoeveel, dan zoek ik de juiste tafel."};
+function chefIcon(big){var c=h("span",{class:"chef"+(big?" big":""),"aria-hidden":"true"});c.innerHTML=CHEF;return c}
+function bubble(cls,text){var b=h("div",{class:"msg "+cls,text:text}),node=b;
+  if(/bot/.test(cls)){node=h("div",{class:"brow"+(/thinking/.test(cls)?" busy":"")});node.append(chefIcon(),b);b.done=function(){node.classList.remove("busy")}}
+  el("chat").append(node);el("chat").scrollTop=el("chat").scrollHeight;return b}
+function hello(){var x=el("hello-msg");if(!x){x=bubble("bot",HELLO[S.lang]||HELLO.it);x.id="hello-msg"}else x.textContent=HELLO[S.lang]||HELLO.it}
+function eventsText(){
+  var ev=S.events.slice(0,12);if(!ev.length)return "";
+  return "Upcoming special events (a listed opening overrides the normal closed days):\n"+ev.map(function(e){
+    var o=[e.openLunch?"lunch 12:00-15:00":"",e.openDinner?"dinner 19:00-21:30":""].filter(Boolean).join(" and ");
+    return "- "+e.date+" ("+WD[parseD(e.date).getDay()]+"): "+(e.title_it||"")+(e.title_en?" / "+e.title_en:"")+(e.allDay?", all day":e.time?", from "+e.time:"")+(e.price?", "+e.price:"")+(o?". OPEN for table bookings: "+o:". Book via the event page")+(e.link?" ("+e.link+")":"");
+  }).join("\n")+"\n";
+}
+/* knowledge from the official site www.osteriadvor.com (snapshot 27 Oct 2026, Italian text) */
+var SITE={"casa": {"url": "https://www.osteriadvor.com/index.html", "about": "La storia, gli ambienti (sale, giardino, panorama), griglia, wine shop, partner, come raggiungerci, contatti, orari", "text": "Osteria Enoteca Dvor – Cucina friulana e vini del Collio\nRistorante Enoteca · San Floriano del Collio\nCucina tipica di confine e friulana, nel cuore del Collio\nPrenota un tavolo Menù\nUn edificio storico\nIn una cornice pittoresca nel cuore del Collio\nDvor nasce per celebrare la tradizione culinaria locale, offrendo un viaggio nei sapori in un contesto storico e paesaggistico senza pari. Immersa in un edificio di grande valore culturale, l'osteria intreccia il fascino del passato con le sfumature del presente.\nOgni piatto, tipico e ricercato, viene servito in ambienti che raccontano una storia. Cucina tipica di confine e friulana, con un'ampia selezione di vini del Collio italiano e sloveno.\nOgni ambiente crea un'atmosfera accogliente e raffinata. La location, profondamente legata al territorio, si propone come una meta gastronomica di eccellenza, capace di attrarre tanto i residenti quanto i turisti in cerca di autenticità e qualità.\nQuattro esperienze in una\nPrenotazione consigliata\nRistorante\nPiatti tipici rivisitati in chiave moderna, con ingredienti freschi e di qualità, in una sala calda e accogliente di pietra, legno e travi a vista.\nPrenota Menù\nPrimavera ed estate\nGriglia alla brace\nPiatti cotti alla brace all'aperto, nel giardino tra castagni e piante fiorite. Atmosfera informale, senza servizio al tavolo, per chi ama il sapore autentico della carne cotta alla brace.\nCollio e non solo\nWine shop\nUna selezione curata di vini locali e internazionali, con consigli esperti per gli abbinamenti, in un ambiente accogliente e informale.\nCarta vini\nVista panoramica\nPanoramic point\nUna vista mozzafiato su colline verdi e vigneti, ideale per un momento di relax e per scattare foto indimenticabili. Al tramonto, ogni pasto diventa un ricordo.\nGli ambienti\nLe sale interne, il giardino e il panorama: tre modi di vivere Dvor.\nSale interne Giardino Panorama\nCalore rustico e semplicità elegante\nGli spazi interni combinano calore rustico e semplicità elegante, in un ambiente accogliente e autentico, tra pietra, legno e travi a vista. Una zona bar-enoteca ricca di carattere completa l'atmosfera: qui si degustano vini locali e specialità del territorio, in un contesto informale ma curato.\nPietra, legno e travi a vista\nZona bar-enoteca per la degustazione\nPrenotazione consigliata\nUn angolo di quiete immerso nel verde\nIl giardino è un angolo di quiete e bellezza immerso nel verde, dove il tempo sembra rallentare. Circondato da castagni e piante fiorite, è un'oasi di relax: gli ospiti possono gustare i pasti all'aperto, immersi nella natura, in un'atmosfera serena.\nTavoli all'ombra dei castagni\nGriglia alla brace in primavera ed estate\nUn luogo diverso in ogni stagione\nIl Collio, a perdita d'occhio\nDal giardino e dalle finestre dell'osteria si apre un panorama mozzafiato che abbraccia l'intero Collio: colline verdi e vigneti, e i colori del tramonto che rendono ogni pasto un'esperienza indimenticabile.\nColline e vigneti a perdita d'occhio\nIl Panoramic Point, per le foto più belle\nAl tramonto, tutto cambia colore\nLa tavola e il territorio\nPiatti tipici di confine, rivisitati in chiave moderna.\nIl giardino, tra i castagni.\nColline verdi e vigneti, tutto intorno.\nProssimi eventi\nSerate speciali, appuntamenti a tema e giornate in famiglia. Scopri il calendario e prenota il tuo posto.\nTutti gli eventi Eventi privati\nDicono di noi\nLe recensioni dei nostri ospiti\nLeggi tutte su Google Lascia una recensione\nPartner e riconoscimenti\nDove ci trovate segnalati.\nGuida Piatti Chiari\nSegnalato nella guida Piatti Chiari 2026\nKayak Guides\nPresente nella guida di San Floriano del Collio\nFornitori e produttori\nOgni piatto nasce da una selezione accurata di ingredienti locali, scelti per valorizzare i sapori genuini e stagionali del territorio.\nKrombacher Birra scelta\nAzienda Rizzi - Piedimont Bollicina metodo classico\nValleris · Collio Vini macerati\nCome raggiungerci\nVia Castello 5\n34070 San Floriano del Collio (GO)\nSan Floriano del Collio si trova a circa 6 km da Gorizia, sul confine con la Slovenia.\nIndicazioni stradali Apri in Google Maps\nContattaci\nScrivici per organizzare un evento o fare una domanda: rispondiamo appena possibile. Per prenotare un tavolo usa la prenotazione online .\n+39 0481 090740\nWhatsApp +39 392 388 3900\nNon siamo riusciti a inviare il messaggio. Scrivici a prenotazioni@osteriadvor.com .\nOsteria Enoteca Dvor\nCucina di confine e friulana nel cuore del Collio.\nMeta gastronomica per residenti e turisti in cerca di autenticità e qualità.\nPrenota un tavolo\nIndirizzo\nVia Castello 5\n34070 San Floriano del Collio\nGorizia, Italia\nPrenotazioni\n+39 0481 090740 WhatsApp +39 392 388 3900 Prenota online info@osteriadvor.com\nOrari di apertura\nLun, mar, ven–dom\n11:00–22:00\nChiuso mercoledì e giovedì\nHoreca FVG Srl · P.IVA 01280650316 Privacy policy · Termini di servizio · Cancellazione dei dati Via Castello 5, San Floriano del Collio"}, "menu": {"url": "https://www.osteriadvor.com/menu.html", "about": "Il menù: antipasti, primi, secondi, contorni, dolci, allergie", "text": "Menù – Cucina friulana e di confine | Osteria Enoteca Dvor\nMenù\nIl menù\nCucina tipica di confine e friulana, nel cuore del Collio.\nOgni piatto, tipico e ricercato, è servito in un ambiente che racconta la storia.\nAntipasti\nToc in braide\nMorbida polenta di mais servita con fonduta di formaggi friulani e burro fuso.\nTartar di manzo\nManzo crudo, finemente battuto al coltello e condito con ingredienti selezionati.\nTrittico di mantecati\nDentice, scorfano e baccalà mantecati, serviti su una croccante cialda di polenta.\nTagliere di salumi\nProsciutto crudo, prosciutto cotto alla brace con kren, lonza di maiale affumicata e salame nostrano.\nPrimi\nGnocchi alla goriziana\nGnocchi morbidi serviti con gulasch di maiale, preparato lentamente con cipolla e spezie.\nTagliolini tartufo bianco\nTagliolini freschi avvolti da un condimento delicato con scaglie di tartufo bianco invernale istriano.\nPappardelle con cervo\nPappardelle condite con un saporito spezzatino di cervo.\nCanederli\nMorbidi canederli preparati con spinaci freschi e ricotta, dal gusto delicato e genuino.\nSecondi\nTagliata di manzo\nRoastbeef uruguaiano cotto alla griglia, tagliato a fette e servito tenero, con scaglie di Grana.\nCervo ai frutti rossi\nTenero filetto di cervo accompagnato da una salsa ai frutti rossi, dal gusto delicatamente dolce e aromatico.\nFiletto di fassona\nTenero filetto di Fassona servito con tartufo e purè di patate, oppure con purè di patate e finocchietto.\nMazze di tamburo\nFunghi mazze di tamburo dorati e croccanti, serviti con insalata di puntarelle e finocchio.\nContorni\nPatate in tecia\nPatate cotte in padella con cipolla rosolate fino a formare una crosticina dorata.\nPurè di patate\nMorbido e cremoso, preparato con patate e arricchito con burro e latte.\nCicoria\nCicoria di stagione dal gusto amarognolo, con una delicata nota piccante.\nInsalata autunnale\nUn mix di ingredienti di stagione, freschi e croccanti, dai sapori tipici dell’autunno.\nDolci\nTiramisù\nUn classico dessert, con savoiardi inzuppati nel caffè, crema al mascarpone e una spolverata di cacao.\nPannacotta\nMorbida e vellutata, accompagnata dalle note intense del vino Terrano e dalla croccantezza degli amaretti.\nStrudel di mele\nSfoglia fragrante ripiena di mele, uvetta e cannella, servita tiepida.\nLingotto Rocher\nGoloso lingotto ispirato al celebre cioccolatino, servito con panna e coulisse di cioccolato.\nSegnalaci eventuali allergie o intolleranze al momento della prenotazione, o chiedi al nostro staff al tavolo. Il registro completo degli allergeni è sulla pagina del menù .\nPrenota un tavolo Carta vini"}, "vini": {"url": "https://www.osteriadvor.com/vini.html", "about": "Carta vini con prezzi e abbinamenti", "text": "Carta vini – Collio, Carso e bollicine | Osteria Enoteca Dvor\nCarta vini\nLa carta dei vini\nUna selezione dal Collio italiano e sloveno, dal Carso e oltre: bollicine, bianchi e rossi, con una nota su ogni vitigno e i piatti con cui sposarlo.\nSelezioni vini FVG Gambero Rosso 24 etichette premiate con i Tre Bicchieri 2026, con schede tecniche.\nScopri la selezione\nBottiglie in evidenza\nOtto etichette da ricordare, con i piatti del nostro menù che le accompagnano meglio.\nChampagne € 450\nDom Pérignon 2015\nMillesimato di Pinot Nero (51%) e Chardonnay (49%): cacao tostato, tiglio e gelsomino al naso; in bocca morbido e pieno, con pesca, nettarina e agrumi. Il tartufo bianco ne esalta le note tostate.\nIn tavola Tagliolini tartufo bianco\nTrittico di mantecati\nTartar di manzo\nChampagne € 150\nVeuve Clicquot Yellow Label\nLo stile della maison, con il Pinot Nero in primo piano: frutto pieno, crosta di pane e vaniglia, equilibrio e grande versatilità a tavola.\nIn tavola Tagliere di salumi\nToc in braide\nCanederli\nChampagne € 200\nRuinart Blanc de Blancs\nSolo Chardonnay: freschezza di agrumi e fiori bianchi, eleganza e una sottile mineralità. Ideale con il pesce e con i sapori delicati.\nIn tavola Trittico di mantecati\nCanederli\nChampagne € 150\nBollinger Brut\nPinot Nero in prevalenza, con una parte vinificata in legno: struttura vinosa, mela matura, nocciola e brioche. Uno Champagne da tutto pasto.\nIn tavola Tartar di manzo\nTagliere di salumi\nMazze di tamburo\nTrento DOC € 80\nFerrari Perlé Millesimato Trento DOC\nChardonnay in purezza, metodo classico di montagna: freschezza, eleganza, sentori di lievito e agrumi, perlage fine. Millesimato, con almeno 24 mesi sui lieviti.\nIn tavola Trittico di mantecati\nTagliolini tartufo bianco\nTagliere di salumi\nMetodo Classico € 65\nPiedimont Sfacciato · 48 mesi\nMetodo Classico da Gorizia con 48 mesi sui lieviti: perlage fine, note di crosta di pane e frutta bianca, e la profondità che dà un lungo affinamento.\nIn tavola Tartar di manzo\nTrittico di mantecati\nTagliere di salumi\nCuvée e riserve € 300\nPrimosic Collio Rosso “Metamorfosis” DOC · Magnum\nRosso importante da Merlot, in formato magnum: frutti neri, pepe, cuoio e un finale di tartufo nero; bocca succosa e lunga. Da condividere a tavola.\nIn tavola Filetto di fassona\nCervo ai frutti rossi\nTagliata di manzo\nCuvée e riserve € 58\nBlazevi Princic 105 2020 · Goriška Brda\nCuvée rossa della Goriška Brda, appena oltre il confine: un assemblaggio d’annata con struttura, profondità e buona persistenza.\nIn tavola Cervo ai frutti rossi\nPappardelle con cervo\nFiletto di fassona\nI piatti sono quelli del menù attuale e possono variare con la stagione. Annate e disponibilità su richiesta. Vedi il menù →\nBollicine\nMetodo Classico\nRifermentazione in bottiglia e lungo affinamento sui lieviti: perlage fine, note di crosta di pane e frutta bianca.\nAbbinamenti Aperitivo, tartar di manzo, trittico di mantecati; i Pas Dosé anche con il tagliere di salumi.\nPiedimont Ribolla Gialla · 12 mesi € 35\nPittaro Argento Metodo Classico · Chardonnay 80%, Pinot Bianco 20% € 36\nPittaro Rosé Metodo Classico · Chardonnay, Pinot Bianco e Pinot Nero € 36\nAlja Spumante Brut Metodo Classico € 40\nPiedimont Classico Cuvée Piè di Mont Millesimato · 33 mesi € 45\nPittaro Oro Metodo Classico 2020 · Chardonnay 100% € 45\nPiedimont Blanc de Blancs Pas Dosé Millesimato · 42 mesi € 65\nPiedimont Sfacciato · 48 mesi € 65\nPittaro Oro Pas Dosé Metodo Classico 2018 · Chardonnay 100% € 65\nPiedimont Classico Cuvée Piè di Mont Millesimato · 33 mesi · Magnum € 80\nTrento DOC\nMetodo classico di montagna da Chardonnay e Pinot Nero: freschezza, eleganza e sentori di lievito e agrumi.\nAbbinamenti Antipasti di pesce, mantecati, tagliolini al tartufo bianco.\nD’Isera Trento DOC Brut € 40\nFerrari Perlé Millesimato Trento DOC € 80\nChampagne\nLe grandi maison e i vignerons della Champagne: finezza, profondità e lunga persistenza.\nAbbinamenti Tartar di manzo, tagliolini al tartufo bianco, fritti e crudi; splendido anche da solo.\nSophie Baron Grande Réserve Brut € 80\nA. Bergère Nature T. Blanc. € 100\nA. Bergère Origine Brut € 100\nBollinger Brut € 150\nVeuve Clicquot Yellow Label € 150\nRuinart Blanc de Blancs € 200\nDom Pérignon 2015 € 450\nProsecco\nSpumante Charmat da uve Glera: fresco, fruttato e floreale, con note di mela e pera.\nAbbinamenti Aperitivo, antipasti leggeri e salumi delicati.\nColesel Prosecco DOCG Prato Scuro Brut € 25\nRebuli Prosecco DOCG Brut Zerogrammi € 25\nSpumanti e frizzanti\nRibolla, Malvasia e rosati: bollicine fresche e di facile beva, dal Collio e dal Brda.\nAbbinamenti Aperitivo, tagliere di salumi e piatti leggeri; i rosati anche con il tartar di manzo.\nFiegl IGT Malvasia Frizzante € 30\nBlazevi Rosé (Charmat) · Goriška Brda € 35\nValleris Ribolla spumantizzata 2024 € 35\nValleris Rosé Perla Nera Charmat € 35\nSerena Soe Spumante Brut Ribolla e Chardonnay € 36\nCollavini Ribolla Gialla Brut Spumante € 45\nPrimosic Ribolla Noir € 45\nSinefinis Rebolium Vino Spumante € 45\nSinefinis Rosé Vino Spumante € 45\nBianchi\nFriulano\nIl vitigno simbolo del Collio: secco, con note di mandorla, fieno e fiori di campo.\nAbbinamenti Prosciutto crudo, tagliere di salumi, toc in braide e gnocchi alla goriziana.\nHumar Collio Friulano € 26\nGradis’ciutta Friulano DOC Collio 2024 · Bio € 30\nPrimosic Friulano DOC € 30\nMonviert Friulano Riserva € 50\nPrimosic Riserva Friulano 2020 € 50\nRibolla Gialla · Rebula\nVitigno storico del Collio e del Brda: acidità vivace, agrumi e fiori bianchi.\nAbbinamenti Mantecati di pesce, antipasti freschi e primi delicati.\nHumar Collio Ribolla Gialla € 26\nPrimosic Collio Ribolla Gialla “Low Nat” € 30\nGradis’ciutta Sveti Nikolaj Rebula 2022 € 40\nPrimosic Riserva Ribolla Gialla 2019 € 50\nGradis’ciutta Ribolla Gialla DOC Collio 2024 · Magnum · Bio € 65\nMalvasia\nAromatica e minerale, con note di fiori, pesca e una leggera sapidità.\nAbbinamenti Pesce, trittico di mantecati, tagliolini al tartufo bianco.\nUrizio Vigna Sul Mar Malvasia Carso € 25\nGradis’ciutta Malvasia DOC Collio 2024 · Bio € 30\nPrimosic Malvasia DOC € 30\nBlazevi Malvazja · Goriška Brda € 35\nLupinc Malvasia IGT Venezia Giulia € 46\nSauvignon\nProfumato e vivace, con note di salvia, pompelmo e frutto della passione.\nAbbinamenti Antipasti di pesce, verdure, formaggi freschi.\nPrimosic Sauvignon DOC € 30\nSkok Collio Sauvignon € 30\nBlazevi Sauvignon · Goriška Brda € 35\nPinot Grigio, Pinot Bianco e Chardonnay\nBianchi rotondi e puliti: frutta a polpa bianca, fiori e un finale armonioso.\nAbbinamenti Primi delicati, canederli agli spinaci, pesce e carni bianche.\nHumar Collio Pinot Grigio € 26\nFiegl DOC Pinot Bianco 2025 € 30\nPrimosic Pinot Grigio DOC € 30\nBlazevi Sivi Pinot · 1 L · Goriška Brda € 35\nBlazevi Sivi Pinot · Goriška Brda € 35\nPrimosic Riserva Chardonnay 2022 € 50\nPrimosic Riserva Pinot Grigio 2020 € 50\nGewürztraminer\nAromatico e speziato: rosa, litchi e spezie dolci.\nAbbinamenti Piatti speziati, formaggi stagionati, strudel di mele.\nMuri Gries Gewürztraminer Alto Adige DOC € 30\nCollio Bianco e cuvée\nAssemblaggi di varietà del territorio: ricchi, complessi e armoniosi.\nAbbinamenti Toc in braide, gnocchi, pesce al forno, tagliere di salumi.\nOsvaldo Bianco 2023 € 30\nOsvaldo Blanc dal Gigi € 30\nOsvaldo L’Orlando € 30\nLis Neris Fiore di Campo 2023 IGT € 36\nFiegl DOC Cuvée Blanc Leopold 2023 € 40\nEdi Keber Collio DOC Bianco 2021 € 50\nPrimosic Collio Bianco “Klin” DOC € 50\nMacerati\nBianchi macerati\nUve bianche fermentate con le bucce: colore dorato o ambrato, struttura e tannino gentile.\nAbbinamenti Salumi, tagliolini al tartufo, selvaggina leggera e formaggi.\nValleris Sauvignon macerato 2023 € 50\nIl Carpino Collio Ribolla Gialla macerato 2018 € 70\nIl Carpino Collio Sauvignon macerato 2018 € 70\nPrimosic Bianco Skin 70 2022 € 70\nRossi\nMerlot\nMorbido e fruttato: prugna, ciliegia e spezie dolci.\nAbbinamenti Pappardelle al cervo, gulasch, roast beef.\nUrizio Vigna Sul Mar Merlot Carso € 25\nGradis’ciutta Merlot DOC Collio 2020 · Bio € 30\nPrimosic Collio Merlot DOC € 30\nBlazevi Merlot Reserve · Goriška Brda € 35\nBlazevi Merlot · 1 L · Goriška Brda € 35\nCabernet Franc e Cabernet Sauvignon\nNote erbacee e di ribes nero, con buona struttura e tannino deciso.\nAbbinamenti Filetto di manzo, roast beef, spezzatino di cervo, formaggi stagionati.\nHumar Collio Cabernet Franc € 26\nFiegl DOC Cabernet Sauvignon 2025 € 30\nGradis’ciutta Cabernet Franc DOC Collio 2022 · Bio € 30\nBlazevi Cabernet Franc · Goriška Brda € 35\nBlazevi Cabernet Sauvignon · Goriška Brda € 35\nLis Neris Cabernet Sauvignon € 36\nRefosco, Terrano e Franconia\nRossi vivaci del Friuli e del Carso: frutti rossi e neri, acidità e sapidità.\nAbbinamenti Salumi, gulasch, gnocchi alla goriziana, carni alla brace.\nGradis’ciutta Franconia DOC Isonzo 2021 · Bio € 30\nBlazevi Refošk · 1 L · Goriška Brda € 35\nLupinc Terrano IGT Venezia Giulia € 48\nPinot Nero\nElegante e leggero: piccoli frutti rossi, sottobosco e tannino setoso.\nAbbinamenti Filetto di cervo ai frutti rossi, funghi, primi al tartufo.\nMuri Gries Pinot Nero Alto Adige DOC € 30\nCuvée e riserve\nAssemblaggi importanti e lunghi affinamenti: struttura, profondità e grande persistenza.\nAbbinamenti Selvaggina, filetto di Fassona al tartufo, formaggi stagionati.\nFiegl DOC Cuvée Rouge Leopold 2019 € 45\nBlazevi Princic 105 2020 · Goriška Brda € 58\nPrimosic Collio Rosso “Metamorfosis” DOC · Magnum € 300\nPrezzi in euro, IVA inclusa. Annate e disponibilità possono variare: chiedi al nostro staff, ti aiuteremo a scegliere il vino giusto per il tuo menù.\nPrenota un tavolo Carta vini"}, "vini-fvg": {"url": "https://www.osteriadvor.com/selezioni-vini-fvg.html", "about": "Selezione vini FVG Tre Bicchieri Gambero Rosso", "text": "Selezioni vini FVG Gambero Rosso | Osteria Enoteca Dvor\nCarta vini\nSelezioni vini FVG Gambero Rosso\nI vini del Friuli Venezia Giulia premiati con i Tre Bicchieri 2026 dal Gambero Rosso: ventiquattro etichette da scoprire in carta.\n← Carta vini Scarica tutte le schede (PDF)\nUna selezione di vini friulani e giuliani che la guida del Gambero Rosso ha premiato con i Tre Bicchieri nell'edizione 2026. Per ogni etichetta trovi produttore, annata e zona, e la scheda tecnica del produttore. Chiedi al nostro personale disponibilità e annate in carta.\nAttems Collio Sauvignon Cicinis\n2023 Capriva del Friuli Vitigni · Sauvignon · Collio DOC\nScheda tecnica ↗ Borgo Conventi Luna di Ponca\n2022 Farra d'Isonzo Vitigni · Friulano, Chardonnay, Malvasia · Collio DOC\nScheda tecnica ↗ Ca'Bolani Pinot Bianco Opimio\n2020 Cervignano del Friuli Vitigni · Pinot Bianco 100% · Friuli Aquileia DOC\nScheda tecnica ↗ Doro Princic Collio Malvasia\n2024 Cormons Vitigni · Malvasia 100% · Collio DOC\nScheda tecnica ↗ Eugenio Collavini Broy Bianco Collio\n2023 Corno di Rosazzo Vitigni · Friulano, Chardonnay, Sauvignon · Collio Bianco DOC\nScheda tecnica ↗ La Viarte Friulano Liende\n2023 Prepotto Vitigni · Friulano · Friuli Colli Orientali DOC\nScheda tecnica ↗ Le Monde Pinot Bianco D.O.C.\n2024 Prata di Pordenone Vitigni · Pinot Bianco · Friuli DOC\nScheda tecnica ↗ Lis Neris Pinot Grigio Gris\n2023 San Lorenzo Isontino Vitigni · Pinot Grigio\nScheda tecnica ↗ Livio Felluga Terre Alte\n2022 Rosazzo Scheda tecnica ↗ Livon Gran Cru Braide Alte\n2023 San Giovanni al Natisone Vitigni · Chardonnay, Sauvignon, Picolit, Moscato Giallo · IGT Venezia Giulia\nScheda tecnica ↗ Monviert Friulano Riserva\n2019 Spessa Vitigni · Friulano\nScheda tecnica ↗ Primosic Ribolla Gialla Riserva\n2020 Oslavia Vitigni · Ribolla Gialla · Collio DOC\nScheda tecnica ↗ Ronco dei Tassi Fosarin Collio Bianco DOC\n2023 Cormons Vitigni · Friulano, Malvasia, Pinot Bianco · Collio Bianco DOC\nScheda tecnica ↗ Ronco Margherita Pinot Grigio\n2023 Pinzano al Tagliamento Vitigni · Pinot Grigio 100%\nScheda tecnica ↗ Russiz Superiore Collio Friulano\n2024 Capriva del Friuli Vitigni · Friulano · Collio DOC\nScheda tecnica ↗ Skerk Ogarde\n2022 Duino Aurisina Vitigni · Vitovska, Malvasia, Sauvignon, Pinot Grigio\nScheda tecnica ↗ Tenuta Luisa I Ferretti Desiderium\n2023 Mariano del Friuli Scheda tecnica ↗ Tiare Sauvignon\n2024 Dolegna del Collio Vitigni · Sauvignon · Collio DOC\nScheda tecnica ↗ Torre Rosazza Masiero Friulano Riserva\n2022 Manzano Vitigni · Friulano · Friuli Colli Orientali DOC\nScheda tecnica ↗ Tunella Biancosesto\n2023 Ipplis Vitigni · Friulano, Ribolla Gialla\nScheda tecnica ↗ Vie di Romans Friuli Isonzo Chardonnay\n2023 Mariano del Friuli Vitigni · Chardonnay 100% · Friuli Isonzo DOC\nScheda tecnica ↗ Vigna Traverso Schioppettino di Prepotto\n2020 Prepotto Vitigni · Schioppettino 100% · Friuli Colli Orientali DOC\nScheda tecnica ↗ Vigne del Malina Chardonnay\n2020 Remanzacco Vitigni · Chardonnay 100%\nScheda tecnica ↗ Zorzettig I Fiori di Leonie MYÓ\n2022 Spessa Vitigni · Friulano, Pinot Bianco, Sauvignon\nScheda tecnica ↗\n«Tre Bicchieri» è un riconoscimento del Gambero Rosso. Le schede tecniche sono materiale dei rispettivi produttori. Annate e disponibilità possono variare."}, "servizi": {"url": "https://www.osteriadvor.com/servizi.html", "about": "Eventi privati su misura: panoramica dei servizi", "text": "Eventi privati, compleanni e battesimi | Osteria Enoteca Dvor\nServizi\nLa tua festa, da Dvor\nTrasformiamo la tua idea in un evento su misura: concept, allestimento, catering e coordinamento nel giorno della festa.\nScegli il tuo evento\nCene aziendali\nCene di lavoro, fine anno e incontri con clienti.\nFeste private\nCompleanni, lauree, anniversari e serate a tema.\nComunioni e battesimi\nIl pranzo di famiglia per le tappe più importanti.\nColazioni e brunch\nDolce e salato tra le colline, su prenotazione.\nCome lavoriamo\nCi racconti cosa immagini e lo costruiamo insieme. Ricevi un preventivo chiaro e aggiornamenti regolari fino al giorno dell'evento, e il nostro staff cura ogni dettaglio sul posto.\nUna location profondamente legata al territorio, in un edificio storico: un'atmosfera accogliente e raffinata per ogni occasione.\nEventi su misura\nCompleanni e anniversari\nDecorazioni a tema\nCatering, anche con opzioni vegetariane, vegane e per intolleranze\nIntrattenimento per tutte le età\nFotografia professionale\nRichiedi un preventivo\nEleganza e intimità\nBattesimi e prime comunioni\nDecorazioni coordinate\nMenù pensati per i bambini\nServizi foto e video\nIntrattenimento soft, partecipazioni e segnaposto stampati\nCoordinamento con la chiesa\nRichiedi un preventivo\nCene e ritrovi\nFeste private\nCene private, cocktail party e serate a tema\nProgettazione di luci e audio\nBar e mixology\nDJ o musicisti dal vivo\nFoto e video, noleggio attrezzature\nRichiedi un preventivo\nRaccontaci il tuo evento\nScrivici o chiamaci con la data, il numero di ospiti e le tue idee, e ti risponderemo con una proposta.\nScrivici WhatsApp Chiama"}, "eventi": {"url": "https://www.osteriadvor.com/eventi.html", "about": "Pagina eventi", "text": "Eventi e serate speciali | Osteria Enoteca Dvor\nEventi\nProssimi eventi\nSerate speciali, appuntamenti a tema e giornate in famiglia da Dvor: scopri il calendario e prenota il tuo posto.\nVuoi organizzare un tuo evento?\nCene aziendali, feste private, comunioni, battesimi e brunch: scopri come lavoriamo.\nEventi privati Prenota un tavolo"}, "cene-aziendali": {"url": "https://www.osteriadvor.com/cene-aziendali.html", "about": "Cene aziendali", "text": "Cene aziendali a San Floriano del Collio | Osteria Enoteca Dvor\nServizi\nCene aziendali\nIl Collio come cornice per il tuo team: cene di lavoro, ritrovi di fine anno e incontri con clienti e partner.\nUn tavolo per il vostro team\nCostruiamo insieme la serata: menù concordato, vini del Collio in abbinamento e uno spazio riservato al vostro gruppo, così da potervi dedicare solo ai vostri ospiti.\nPer le aziende Cene di lavoro e ritrovi di team\nMenù su misura, concordato in anticipo\nAbbinamento con i vini del Collio e degustazioni\nSala o giardino riservati, secondo stagione e disponibilità\nAperitivo di benvenuto e brindisi finale\nOpzioni vegetariane, vegane e per intolleranze\nPreventivo chiaro, senza sorprese\nRichiedi un preventivo Calcola il preventivo WhatsApp\nCome funziona\nRaccontaci l'idea\nData, numero di ospiti ed esigenze: scrivici, chiamaci o mandaci un messaggio su WhatsApp.\nRicevi una proposta\nTi inviamo menù e preventivo chiari, da affinare insieme fino a quando è perfetto.\nCi pensiamo noi\nIl giorno dell'evento il nostro staff cura cucina, sala e dettagli: tu pensi solo a stare con i tuoi ospiti.\nScopri anche\nFeste private\nCompleanni, lauree, anniversari e serate a tema.\nComunioni e battesimi\nIl pranzo di famiglia per le tappe più importanti.\nColazioni e brunch\nDolce e salato tra le colline, su prenotazione.\nTutti i servizi\nRaccontaci il tuo evento\nScrivici o chiamaci con la data, il numero di ospiti e le tue idee, e ti risponderemo con una proposta.\nScrivici WhatsApp Chiama"}, "feste-private": {"url": "https://www.osteriadvor.com/feste-private.html", "about": "Feste private, compleanni, lauree, anniversari", "text": "Feste private a San Floriano del Collio | Osteria Enoteca Dvor\nServizi\nFeste private\nCompleanni, lauree, anniversari e serate a tema: la festa che hai in mente, nel giardino sotto i castagni o in sala.\nFate festa a casa nostra\nDalla cena intima alla grande serata con musica: ci occupiamo di cucina, allestimento e atmosfera, perché tu possa goderti i tuoi ospiti.\nCene e ritrovi Feste su misura\nCene private, cocktail party e serate a tema\nMusica dal vivo e DJ set\nProgettazione di luci e audio\nBar e mixology\nDecorazioni a tema\nMenù anche vegetariani, vegani e per intolleranze\nRichiedi un preventivo Calcola il preventivo WhatsApp\nCome funziona\nRaccontaci l'idea\nData, numero di ospiti ed esigenze: scrivici, chiamaci o mandaci un messaggio su WhatsApp.\nRicevi una proposta\nTi inviamo menù e preventivo chiari, da affinare insieme fino a quando è perfetto.\nCi pensiamo noi\nIl giorno dell'evento il nostro staff cura cucina, sala e dettagli: tu pensi solo a stare con i tuoi ospiti.\nScopri anche\nCene aziendali\nCene di lavoro, fine anno e incontri con clienti.\nComunioni e battesimi\nIl pranzo di famiglia per le tappe più importanti.\nColazioni e brunch\nDolce e salato tra le colline, su prenotazione.\nTutti i servizi\nRaccontaci il tuo evento\nScrivici o chiamaci con la data, il numero di ospiti e le tue idee, e ti risponderemo con una proposta.\nScrivici WhatsApp Chiama"}, "comunioni-battesimi": {"url": "https://www.osteriadvor.com/comunioni-battesimi.html", "about": "Comunioni e battesimi", "text": "Comunioni e battesimi a San Floriano del Collio | Osteria Enoteca Dvor\nServizi\nComunioni e battesimi\nUn pranzo di famiglia da ricordare, in un ambiente elegante e raccolto, con tutto il tempo per stare insieme.\nIl giorno importante, in famiglia\nAccogliamo più generazioni attorno allo stesso tavolo: un menù equilibrato per grandi e piccoli, un allestimento curato e un servizio discreto che lascia spazio alla festa.\nEleganza e intimità Battesimi e prime comunioni\nDecorazioni coordinate\nMenù pensati per i bambini\nServizi foto e video\nTorta e brindisi finale\nDisposizione dei tavoli concordata con voi\nOpzioni per intolleranze e allergie\nRichiedi un preventivo Calcola il preventivo WhatsApp\nCome funziona\nRaccontaci l'idea\nData, numero di ospiti ed esigenze: scrivici, chiamaci o mandaci un messaggio su WhatsApp.\nRicevi una proposta\nTi inviamo menù e preventivo chiari, da affinare insieme fino a quando è perfetto.\nCi pensiamo noi\nIl giorno dell'evento il nostro staff cura cucina, sala e dettagli: tu pensi solo a stare con i tuoi ospiti.\nScopri anche\nCene aziendali\nCene di lavoro, fine anno e incontri con clienti.\nFeste private\nCompleanni, lauree, anniversari e serate a tema.\nColazioni e brunch\nDolce e salato tra le colline, su prenotazione.\nTutti i servizi\nRaccontaci il tuo evento\nScrivici o chiamaci con la data, il numero di ospiti e le tue idee, e ti risponderemo con una proposta.\nScrivici WhatsApp Chiama"}, "colazioni-brunch": {"url": "https://www.osteriadvor.com/colazioni-brunch.html", "about": "Colazioni e brunch", "text": "Colazioni e brunch nel Collio | Osteria Enoteca Dvor\nServizi\nColazioni e brunch\nUn risveglio lento tra le colline del Collio: colazioni e brunch per gruppi, su prenotazione.\nIl Collio al mattino\nDolce e salato, prodotti del territorio e un tavolo con vista sulle vigne: organizziamo colazioni e brunch per ritrovi tra amici, famiglie, gruppi e occasioni speciali. Giorni e orari si concordano insieme.\nSu prenotazione Colazioni e brunch di gruppo\nDolce e salato con prodotti del territorio\nBrunch in sala o in giardino, secondo stagione\nPer amici, famiglie, gruppi e occasioni speciali\nBollicine e vini del Collio da abbinare\nOpzioni vegetariane, vegane e per intolleranze\nGiorni e orari concordati su prenotazione\nRichiedi un preventivo Calcola il preventivo WhatsApp\nCome funziona\nRaccontaci l'idea\nData, numero di ospiti ed esigenze: scrivici, chiamaci o mandaci un messaggio su WhatsApp.\nRicevi una proposta\nTi inviamo menù e preventivo chiari, da affinare insieme fino a quando è perfetto.\nCi pensiamo noi\nIl giorno dell'evento il nostro staff cura cucina, sala e dettagli: tu pensi solo a stare con i tuoi ospiti.\nScopri anche\nCene aziendali\nCene di lavoro, fine anno e incontri con clienti.\nFeste private\nCompleanni, lauree, anniversari e serate a tema.\nComunioni e battesimi\nIl pranzo di famiglia per le tappe più importanti.\nTutti i servizi\nCalcola il tuo brunch\nScegli il buffet o i piatti alla carta: ottieni subito un prezzo indicativo e, se vuoi, ci invii la richiesta.\nPer la stima serve JavaScript: scrivici a info@osteriadvor.com .\nRaccontaci il tuo evento\nScrivici o chiamaci con la data, il numero di ospiti e le tue idee, e ti risponderemo con una proposta.\nScrivici WhatsApp Chiama"}, "preventivo": {"url": "https://www.osteriadvor.com/preventivo.html", "about": "Preventivo online per eventi", "text": "Preventivo online per eventi | Osteria Enoteca Dvor\nServizi\nPreventivo online\nScegli menù e numero di ospiti: ottieni subito un prezzo indicativo per il tuo evento.\nCompila i passaggi: il totale si aggiorna in tempo reale. Se vuoi, invia la richiesta e ti rispondiamo con la proposta definitiva. Per il brunch c’è un calcolatore dedicato nella pagina Colazioni e brunch .\nPer il preventivo online serve JavaScript: scrivici a info@osteriadvor.com o chiama +39 0481 090740."}, "prenota": {"url": "https://www.osteriadvor.com/prenota.html", "about": "Prenotazione tavolo e gruppi", "text": "Prenota un tavolo | Osteria Enoteca Dvor, San Floriano del Collio\nPrenota\nPrenota un tavolo\nScegli data, ora e numero di ospiti: la tua prenotazione arriva subito a noi e ricevi la conferma via e-mail.\nIl modulo non si carica? Aprilo in una nuova pagina .\nPer gruppi numerosi, eventi o richieste particolari scrivici o chiamaci.\nChiama +39 0481 090740 WhatsApp Scrivici"}};
+var SITE_TOOL={name:"site_info",description:"Returns the text of a page of the official website www.osteriadvor.com, and its link. Use it for any question that is not a table check: dishes, wines and prices, allergies, story and rooms, garden and grill, how to get here, contacts, opening hours, private events, company dinners, parties, communions and baptisms, breakfast and brunch, quotes. Topics: "+Object.keys(SITE).map(function(k){return k+" ("+SITE[k].about+")"}).join("; "),
+  inputSchema:{type:"object",properties:{topic:{type:"string",enum:Object.keys(SITE)}},required:["topic"]},
+  execute:function(i){var x=SITE[String(i.topic||"")]||SITE.casa;return {url:x.url,text:x.text}}};
+var RULES=function(){
+  var d=new Date();
+  return "You are the booking assistant of Osteria Enoteca Dvor, a restaurant in San Floriano del Collio (Italy). "+
+  "Today is "+d.toDateString()+" ("+ymd(d)+"), local time "+hm(d.getHours()*60+d.getMinutes())+". "+
+  "Opening (arrival times, a table is held 2 hours): Mon, Tue, Fri lunch 12:00-15:00 and dinner 19:00-21:30; Sat 11:00-21:30 non-stop; Sun 11:00-19:00; normally closed Wed and Thu. Arrivals every 30 minutes.\n"+eventsText()+
+  "Contacts: Via Castello 5, 34070 San Floriano del Collio (GO), about 6 km from Gorizia on the Slovenian border; tel +39 0481 090740; WhatsApp +39 392 388 3900; info@osteriadvor.com.\n"+
+  "For any question about the restaurant (menu, dishes, wines and prices, allergies, rooms, garden, directions, private events, company dinners, parties, communions, brunch, quotes) call the site_info tool and answer only from what it returns, in the guest's language, and add the page link when useful. If the site does not say, say so kindly and give the phone or WhatsApp. Never invent dishes, prices or services.\n"+
+  "Always call the check_availability tool before proposing anything or saying a day is closed, and only state facts the tool returned (the tool knows special openings). Rules:\n"+
+  "- You speak as the friendly chef of the osteria: cheerful, warm, a little playful, with an occasional light food or wine touch (Collio wines, homemade pasta) and at most one emoji. Reply in the guest's language and keep it short (max 3 sentences, up to 5 when answering a question about the restaurant).\n"+
+  "- If ok is true, propose that exact date/time. If seatsLeft is 15 or less, you may say how many seats are left. If fullPct is '+S.settings.showFullFrom+' or more, you may say the room is already fullPct% full at that time. Never mention the minimum number of guests, how many guests are booked, or that a dinner might not take place; for a dinner that is not yet confirmed just say we will email a confirmation the day before. If offer is set, mention it once. If discount > 0, mention once the discount percent off the bill, reserved for the first guests who book that service. When the room is not busy you may say seats are limited and booking is recommended, but never invent numbers of bookings or guests.\n"+
+  "- If ok is false, never say the restaurant is full unless reason is slot_full. If ok is true and suggestion is set, first confirm the requested evening can be booked, then mention that on the suggestion evening the room is already livelier, and let the guest choose; propose the requested evening unless the guest picks the other. For dinner_not_running say that evening is not available and warmly suggest the first alternative (an evening that is filling up, or lunch). For closed_day say we are closed that day.\n"+
+  "- If events is not empty, mention the event once (in the guest's language) and if ok is true the guest can book it right here, otherwise say they can book it from the event page.\n- Never invent availability, discounts or scarcity.\n"+
+  "- Guests choose between the à la carte menu (carta) and the tasting menu (degustazione); each guest can choose; set tasting to how many take the tasting menu if they say (the rest are à la carte), otherwise you may ask once. Do not invent dishes or prices (use site_info).\n- If you lack the date or party size, ask for it (proposal null).\n"+
+  "Reply with only JSON: {\"reply\": string, \"lang\": \"it\"|\"en\"|\"de\"|\"sl\"|\"nl\"|other ISO code, \"proposal\": {\"date\":\"YYYY-MM-DD\",\"time\":\"HH:MM\",\"party\":number,\"notes\":string,\"tasting\":number of guests taking the tasting menu or null} or null}";
+};
+var TOOL={name:"check_availability",description:"Checks a table for a date (YYYY-MM-DD), arrival time (HH:MM) and party size. Also returns events on that date (title, time, price, link). Returns (internal fields guestsSoFar/minGuests/neededAfterThisBooking are for your reasoning only, never tell the guest) ok, reason, seatsLeft, discount (percent off the bill, 0 if none), suggestion {date,time,guestsSoFar} (a fuller nearby evening), dinner {state, guestsSoFar, minGuests, neededAfterThisBooking}, offer and up to 3 alternatives {date,time,why}.",
+  inputSchema:{type:"object",properties:{date:{type:"string"},time:{type:"string"},party:{type:"number"}},required:["date","time","party"]},
+  execute:function(i){var r=check(String(i.date||""),String(i.time||""),Number(i.party||2));return r}};
+el("chat-form").addEventListener("submit",async function(e){
+  e.preventDefault();var v=el("chat-in").value.trim();if(!v||!sample)return;
+  el("chat-in").value="";bubble("me",v);S.turns.push({role:"user",content:v});
+  var wait=bubble("bot thinking",t("thinking"));el("chat-send").disabled=true;
+  try{
+    var out=await sample.json([{role:"user",content:RULES()}].concat(S.turns.slice(-10)),{tools:[TOOL,SITE_TOOL],modelTier:"quick",cache:false});
+    var reply=out&&typeof out.reply==="string"?out.reply:"";
+    wait.className="msg bot";wait.done&&wait.done();wait.textContent=reply||t("aiErr");
+    S.turns.push({role:"assistant",content:reply||"(no reply)"});
+    if(out&&out.lang&&T[out.lang]&&out.lang!==S.lang){S.lang=out.lang;el("lang").value=S.lang;applyLang();fillTimes()}
+    var p=out&&out.proposal;
+    if(p&&p.date&&p.time){
+      el("f-date").value=p.date;fillTimes();el("f-time").value=p.time;el("f-party").value=p.party||2;
+      var c=check(p.date,p.time,p.party||2);c.notes=p.notes||"";if(p.tasting!=null&&!isNaN(+p.tasting))c.tasting=Math.max(0,Math.min(c.party,Math.round(+p.tasting)));showProposal(c);
+    }
+  }catch(err){
+    wait.className="msg bot";wait.done&&wait.done();wait.textContent=err&&err.code==="not_granted"?t("aiOff"):t("aiErr");
+    if(err&&err.code==="not_granted"){el("chat-form").hidden=true}
+  }finally{el("chat-send").disabled=false}
+});
+
+/* ---------- guest: proposal + nudges ---------- */
+function stateLabel(s){return {confirmed:t("dinnerOk"),building:t("pending"),lastcall:t("pending"),closed:t("closed")}[s]||""}
+function altButtons(list,party){
+  if(!list||!list.length)return null;
+  return h("div",{class:"stack"},[h("div",{class:"caps",text:t("alts")}),h("div",{class:"chips"},list.map(function(a){
+    return h("button",{class:"chip",type:"button",text:fmtDay(a.date)+" · "+a.time,onclick:function(){el("f-date").value=a.date;fillTimes();el("f-time").value=a.time;noteChange();showProposal(check(a.date,a.time,party))}});
+  }))]);
+}
+function showProposal(c){
+  S.proposal=c;S.nudged=false;el("nudge").hidden=true;
+  S.journey.push({sec:Math.round((Date.now()-S.t0)/1000),date:c.date,weekday:c.date?wd(c.date):"",time:c.time,party:c.party,ok:c.ok,reason:c.reason||"",discount:c.discount||0,dinnerGuests:c.dinner?c.dinner.guestsSoFar:null});if(S.journey.length>20)S.journey.shift();
+  var box=el("proposal");box.textContent="";box.hidden=false;
+  var head=h("div",{class:"proposal stack"},[
+    h("div",{class:"caps",text:t("yourTable")}),
+    h("div",{class:"big",text:fmtDay(c.date,true)+(c.time?" · "+c.time:"")+" · "+c.party+" "+t("people")})
+  ]);
+  box.append(head);
+  if(!c.ok){
+    var why={slot_full:t("notAvail"),evening_not_available:t("notAvail"),dinner_not_running:t("notAvail"),closed_day:t("closed"),time_passed:t("notAvail"),not_a_slot:t("notAvail"),past_date:t("notAvail")}[c.reason]||t("notAvail");
+    box.append(h("p",{},[h("span",{class:"pill s-closed",text:why})]));
+    box.append(altButtons(c.alternatives,c.party));
+    return;
+  }
+  var facts=h("div",{class:"chips"});
+  facts.append(h("span",{class:"pill s-confirmed",text:t("available")}));
+  if(c.seatsLeft!=null&&c.seatsLeft<=15)facts.append(h("span",{class:"pill s-lastcall",text:t("seatsLeft",{n:c.seatsLeft})}));
+  if(showFull(c.fullPct))box.append(fullBar(c.fullPct));
+  var ul=urgencyLine(c);if(ul)box.append(ul);
+  if(c.dinner){
+  }
+  box.append(facts);
+  if(c.dinner&&c.dinner.state!=="confirmed")box.append(h("p",{class:"small muted",text:t("pendingNote")}));
+  if(c.offer)box.append(h("p",{},[h("strong",{text:t("offer",{o:c.offer})})]));
+  if(c.discount)box.append(h("p",{},[h("strong",{text:t("firstDisc",{p:c.discount})})]));
+  if(c.suggestion){var sg=c.suggestion;box.append(h("div",{class:"stack"},[h("p",{class:"small",text:t("better",{d:fmtDay(sg.date,true),g:sg.guestsSoFar})}),h("div",{class:"chips"},[h("button",{class:"chip",type:"button",text:fmtDay(sg.date)+" · "+sg.time,onclick:function(){el("f-date").value=sg.date;fillTimes();el("f-time").value=sg.time;showProposal(check(sg.date,sg.time,c.party))}})])]))}
+  var f=h("div",{class:"row"},[
+    h("label",{},[t("name"),h("input",{id:"b-name",autocomplete:"name"})]),
+    h("label",{},[t("phone"),h("input",{id:"b-phone",type:"tel",autocomplete:"tel"})]),
+    h("label",{},[t("email"),h("input",{id:"b-email",type:"email",autocomplete:"email"})])
+  ]);
+  box.append(f);
+  box.append(h("div",{class:"row"},[
+    h("label",{},[t("carta"),h("input",{id:"b-carta",type:"number",min:"0",max:String(c.party),value:String(c.party)})]),
+    h("label",{},[t("degustazione"),h("input",{id:"b-tast",type:"number",min:"0",max:String(c.party),value:"0"})])
+  ]));
+  var syncMenu=function(src){var a=el("b-carta"),b=el("b-tast"),P=c.party;var v=Math.max(0,Math.min(P,Math.round(+src.value||0)));src.value=v;(src===a?b:a).value=P-v};
+  el("b-carta").addEventListener("input",function(){syncMenu(this)});el("b-tast").addEventListener("input",function(){syncMenu(this)});
+  box.append(h("label",{},[t("notes"),h("textarea",{id:"b-notes"})]));
+  var msg=h("p",{class:"small",id:"b-msg"});
+  box.append(h("div",{class:"row"},[h("button",{class:"btn",type:"button",id:"b-go",text:t("book"),onclick:function(){book(c)}}),msg]));
+  if(c.notes)el("b-notes").value=c.notes;
+  if(c.tasting!=null){el("b-tast").value=c.tasting;syncMenu(el("b-tast"))}
+  armIdle();
+  if(S.pendingNudge){S.pendingNudge=false;S.changes=0;nudge("changes")}
+}
+async function book(c){
+  var name=el("b-name").value.trim(),phone=el("b-phone").value.trim(),email=el("b-email").value.trim();
+  if(!name||!phone||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){el("b-msg").textContent=t("errName");return}
+  var fresh=check(c.date,c.time,c.party);if(!fresh.ok){showProposal(fresh);return}
+  if(!db){el("b-msg").textContent=t("errSave");return}
+  el("b-go").disabled=true;clearTimeout(S.idleT);
+  try{
+    var ref=await db.collection("bookings").add({date:c.date,time:c.time,party:c.party,name:name,phone:phone,email:email,eventTitle:(fresh.events&&fresh.events[0]&&fresh.events[0].title)||"",menuCarta:+el("b-carta").value||0,menuTasting:+el("b-tast").value||0,discount:fresh.discount||0,notes:el("b-notes").value.trim(),lang:S.lang,status:"active",offer:fresh.offer||"",createdBy:S.me||"",insight:S.intent||"",createdAt:new Date().toISOString(),source:sample&&S.turns.length?"assistant":"form",pending:svcOf(c.time)==="dinner"&&dinnerState(c.date)!=="confirmed"});
+    S.lastBooked=ref.id;S.proposal=null;el("nudge").hidden=true;
+    var bk={date:c.date,time:c.time,party:c.party,lang:S.lang,eventTitle:(fresh.events&&fresh.events[0]&&fresh.events[0].title)||""},pb=el("proposal");pb.textContent="";pb.hidden=false;
+    pb.append(h("div",{class:"proposal stack"},[h("div",{class:"caps",text:"✓ "+t("doneT")}),h("div",{class:"big",text:fmtDay(c.date,true)+" · "+c.time+" · "+c.party+" "+t("people")})]),
+      h("p",{class:"small",text:t("mailTo",{e:email})}),h("div",{class:"small caps",text:t("addCal")}),calButtons(bk));
+    bubble("bot",t("booked")+": "+fmtDay(c.date,true)+" · "+c.time+" · "+c.party+" "+t("people"));
+  }catch(e){el("b-msg").textContent=t("errSave");el("b-go").disabled=false}
+}
+/* hesitation: many changes, idle on the form, or the pointer leaving the page */
+function noteChange(){S.changes++;if(S.changes>=3)S.pendingNudge=true}
+function armIdle(){clearTimeout(S.idleT);S.idleT=setTimeout(function(){nudge("idle")},40000)}
+document.addEventListener("input",function(e){if(e.target&&e.target.closest&&e.target.closest("#proposal"))armIdle()});
+document.documentElement.addEventListener("mouseleave",function(e){if(e.clientY<=0)nudge("exit")});
+async function canAsk(){if(!sample||!perms)return false;try{return (await perms.state("sample"))==="granted"}catch(e){return false}}
+function journeyText(){return S.journey.map(function(j){return "+"+j.sec+"s "+j.weekday+" "+j.date+" "+(j.time||"?")+" x"+j.party+" -> "+(j.ok?"ok":j.reason)+(j.dinnerGuests!=null?" (dinner guests so far "+j.dinnerGuests+")":"")+(j.discount?" discount "+j.discount+"%":"")}).join("\n")}
+var KIND={changes:"keeps changing date or time",idle:"stopped on the booking form without confirming",exit:"is moving to leave the page"};
+async function smartNudge(kind,c){
+  var langName={it:"Italian",en:"English",de:"German",sl:"Slovenian",nl:"Dutch"}[S.lang]||"Italian";
+  var prompt="You help Osteria Enoteca Dvor (restaurant, San Floriano del Collio) turn a hesitating website visitor into a booking. Today is "+ymd(new Date())+" ("+WD[new Date().getDay()]+"). Open Mon, Tue, Fri lunch 12:00-15:00 and dinner 19:00-21:30, Sat 11:00-21:30, Sun 11:00-19:00, normally closed Wed and Thu. "+eventsText()+"Dinner runs only with at least "+S.settings.minGuests+" guests.\n"+
+  "The visitor "+KIND[kind]+". What they looked at on this page, oldest first:\n"+journeyText()+"\n"+
+  (S.turns.length?"Their chat messages: "+S.turns.filter(function(x){return x.role==="user"}).map(function(x){return x.content}).join(" | ")+"\n":"")+
+  "1) Infer what they really want (preferred weekdays, lunch or dinner, time range, party size, price sensitivity, flexibility). 2) Use check_availability on the 1-3 options that best match, and pick the best one, favouring evenings that are closer to "+S.settings.minGuests+" guests when it fits their wishes. 3) Write a short, warm message ("+langName+", max 2 sentences) proposing it. Only state facts check_availability returned (seats left, discount, offer). Never mention the minimum number of guests, guest counts, or that a dinner might not take place. Never invent scarcity or discounts, never say full unless reason is slot_full.\n"+
+  "Reply with only JSON: {\"intent\": string (one Italian sentence for the restaurant staff, e.g. 'Cerca una cena nel weekend per 4, flessibile sull\'orario'), \"message\": string, \"proposal\": {\"date\":\"YYYY-MM-DD\",\"time\":\"HH:MM\",\"party\":number} or null}";
+  var out=await sample.json(prompt,{tools:[TOOL],modelTier:"quick",cache:false});
+  if(!out||typeof out.message!=="string")throw new Error("bad");
+  return out;
+}
+function nudge(kind){
+  if(S.view!=="guest"||S.nudged)return;
+  var c=S.proposal;if(!c)return;S.nudged=true;
+  canAsk().then(function(ok){
+    if(!ok||S.journey.length<2)return ruleNudge(c);
+    var n=el("nudge");n.textContent="";n.append(h("strong",{text:t("nudgeTitle")}),h("p",{class:"muted",text:t("thinking"),style:"margin:.35rem 0 0"}));n.hidden=false;
+    smartNudge(kind,c).then(function(out){
+      S.intent=typeof out.intent==="string"?out.intent.slice(0,300):"";
+      n.textContent="";n.append(h("strong",{text:t("nudgeTitle")}),h("p",{text:out.message,style:"margin:.35rem 0 0"}));
+      var pr=out.proposal;
+      if(pr&&pr.date&&pr.time){var chk=check(String(pr.date),String(pr.time),Number(pr.party)||c.party);if(chk.ok)n.append(altButtons([{date:chk.date,time:chk.time}],chk.party))}
+    }).catch(function(){ruleNudge(c)});
+  });
+}
+function ruleNudge(c){
+  var n=el("nudge");n.textContent="";n.hidden=true;
+  var lines=[];
+  if(c.ok){
+    if(c.seatsLeft!=null&&c.seatsLeft<=15)lines.push(t("seatsLeft",{n:c.seatsLeft}));
+    else if(showFull(c.fullPct))lines.push(t("fullPct",{p:c.fullPct}));
+    if(c.offer)lines.push(t("offer",{o:c.offer}));
+    if(c.discount)lines.push(t("discount",{p:c.discount}));
+  }
+  var alts=c.ok?(c.suggestion?[c.suggestion]:[]):c.alternatives;
+  if(!lines.length&&!alts.length){S.nudged=false;return}
+  n.append(h("strong",{text:t("nudgeTitle")}));
+  lines.forEach(function(l){n.append(h("p",{text:l,style:"margin:.35rem 0 0"}))});
+  if(alts.length)n.append(altButtons(alts,c.party));
+  n.hidden=false;
+}
+
+/* ---------- guest: my bookings + cancel retention ---------- */
+function renderMine(){
+  var box=el("mine");box.textContent="";
+  var mine=S.bookings.filter(function(b){return S.me&&b.createdBy===S.me&&b.date>=today()}).sort(function(a,b){return (a.date+a.time).localeCompare(b.date+b.time)});
+  if(!mine.length){box.hidden=true;return}
+  box.hidden=false;box.append(h("h3",{text:t("mine")}));
+  mine.forEach(function(b){
+    var st=b.status==="cancelled"?"cancelled":(svcOf(b.time)==="dinner"&&dinnerState(b.date)!=="confirmed"?"pending":"confirmed");
+    var cls={cancelled:"s-closed",pending:"s-building",confirmed:"s-confirmed"}[st];
+    var row=h("div",{class:"row",style:"justify-content:space-between;align-items:center"},[
+      h("div",{},[h("div",{class:"num",text:fmtDay(b.date,true)+" · "+b.time+" · "+b.party+" "+t("people")}),h("span",{class:"pill "+cls,text:t(st)})]),
+      b.status!=="cancelled"?h("button",{class:"btn ghost small",type:"button",text:t("cancel"),onclick:function(){retain(b,row)}}):null
+    ]);
+    box.append(row);if(b.status!=="cancelled")box.append(calButtons(b));
+  });
+}
+function retain(b,row){
+  var wrap=h("div",{class:"nudge stack"});
+  wrap.append(h("strong",{text:t("beforeCancel")}));
+  var tmp=S.bookings;S.bookings=S.bookings.filter(function(x){return x.id!==b.id});
+  var r={date:b.date,time:b.time,party:b.party,alternatives:[]};addAlternatives(r,new Date());
+  var g=guests(b.date,"dinner");S.bookings=tmp;
+  if(svcOf(b.time)==="dinner"&&S.settings.offer&&weekdayPromo(b.date)&&g<S.settings.minGuests+ (+b.party))wrap.append(h("p",{text:t("offer",{o:S.settings.offer})}));
+  if(r.alternatives.length)wrap.append(h("div",{class:"chips"},r.alternatives.map(function(a){return h("button",{class:"chip",type:"button",text:fmtDay(a.date)+" · "+a.time,onclick:function(){move(b,a)}})})));
+  wrap.append(h("div",{class:"row"},[
+    h("button",{class:"btn small",type:"button",text:t("keep"),onclick:function(){wrap.remove()}}),
+    h("button",{class:"btn ghost small",type:"button",text:t("cancelAnyway"),onclick:function(){setStatus(b,"cancelled")}})
+  ]));
+  row.after(wrap);
+}
+async function move(b,a){if(!db)return;try{await db.doc("bookings/"+b.id).update({date:a.date,time:a.time,movedAt:new Date().toISOString(),retained:true})}catch(e){}}
+async function setStatus(b,s){if(!db)return;try{await db.doc("bookings/"+b.id).update({status:s,cancelledAt:new Date().toISOString()})}catch(e){}}
+
+/* ---------- calendar links and confirmation email ---------- */
+var ADDR="Osteria Enoteca Dvor, Via Castello 5, 34070 San Floriano del Collio (GO)";
+function calTimes(b){var p=b.time.split(":"),st=(+p[0])*60+(+p[1]),en=st+(S.settings.holdMin||120),d=b.date.replace(/-/g,"");
+  function f(m){return ("0"+Math.floor(m/60)).slice(-2)+("0"+m%60).slice(-2)+"00"}
+  function iso(m){return b.date+"T"+("0"+Math.floor(m/60)).slice(-2)+":"+("0"+m%60).slice(-2)+":00"}
+  return {g:d+"T"+f(st)+"/"+d+"T"+f(en),s:iso(st),e:iso(en)}}
+function calTitle(b){return "Osteria Dvor · "+b.party+" "+(T[b.lang||S.lang]||T.it).people}
+function calDetails(b){return (b.eventTitle?b.eventTitle+"\n":"")+"Tel. +39 0481 090740 · WhatsApp +39 392 388 3900\nhttps://www.osteriadvor.com"}
+function calLinks(b){var x=calTimes(b),q=encodeURIComponent;
+  return {google:"https://calendar.google.com/calendar/render?action=TEMPLATE&text="+q(calTitle(b))+"&dates="+x.g+"&ctz=Europe/Rome&location="+q(ADDR)+"&details="+q(calDetails(b)),
+    outlook:"https://outlook.live.com/calendar/0/deeplink/compose?path=%2Fcalendar%2Faction%2Fcompose&rru=addevent&subject="+q(calTitle(b))+"&startdt="+x.s+"&enddt="+x.e+"&location="+q(ADDR)+"&body="+q(calDetails(b))}}
+function calButtons(b){var l=calLinks(b);return h("div",{class:"chips"},[h("a",{class:"chip",href:l.google,target:"_blank",rel:"noopener",text:"📅 Google Calendar"}),h("a",{class:"chip",href:l.outlook,target:"_blank",rel:"noopener",text:"📅 Outlook"})])}
+var MAIL={
+ it:{s:"Prenotazione confermata · Osteria Dvor · {d} ore {t}",b:"Ciao {n},\n\nla tua prenotazione da Dvor è confermata:\n\n{d} alle {t}\n{p} persone{m}\n\nAggiungila al tuo calendario:\nGoogle Calendar: {g}\nOutlook: {o}\n\nCi trovi in Via Castello 5, San Floriano del Collio (GO).\nPer modifiche o disdette: tel. +39 0481 090740, WhatsApp +39 392 388 3900.\n\nA presto!\nOsteria Enoteca Dvor"},
+ en:{s:"Booking confirmed · Osteria Dvor · {d} at {t}",b:"Hello {n},\n\nyour table at Dvor is confirmed:\n\n{d} at {t}\n{p} guests{m}\n\nAdd it to your calendar:\nGoogle Calendar: {g}\nOutlook: {o}\n\nFind us at Via Castello 5, San Floriano del Collio (GO), Italy.\nTo change or cancel: tel. +39 0481 090740, WhatsApp +39 392 388 3900.\n\nSee you soon!\nOsteria Enoteca Dvor"},
+ de:{s:"Reservierung bestätigt · Osteria Dvor · {d} um {t}",b:"Hallo {n},\n\nIhr Tisch im Dvor ist bestätigt:\n\n{d} um {t}\n{p} Personen{m}\n\nZum Kalender hinzufügen:\nGoogle Calendar: {g}\nOutlook: {o}\n\nSie finden uns in der Via Castello 5, San Floriano del Collio (GO), Italien.\nÄnderungen oder Stornierung: Tel. +39 0481 090740, WhatsApp +39 392 388 3900.\n\nBis bald!\nOsteria Enoteca Dvor"},
+ sl:{s:"Rezervacija potrjena · Osteria Dvor · {d} ob {t}",b:"Pozdravljeni {n},\n\nvaša miza v Dvoru je potrjena:\n\n{d} ob {t}\n{p} oseb{m}\n\nDodajte v koledar:\nGoogle Calendar: {g}\nOutlook: {o}\n\nNajdete nas na Via Castello 5, San Floriano del Collio (GO), Italija.\nZa spremembe ali odpoved: tel. +39 0481 090740, WhatsApp +39 392 388 3900.\n\nSe vidimo!\nOsteria Enoteca Dvor"},
+ nl:{s:"Reservering bevestigd · Osteria Dvor · {d} om {t}",b:"Hallo {n},\n\nje tafel bij Dvor is bevestigd:\n\n{d} om {t}\n{p} personen{m}\n\nZet het in je agenda:\nGoogle Calendar: {g}\nOutlook: {o}\n\nJe vindt ons op Via Castello 5, San Floriano del Collio (GO), Italië.\nWijzigen of annuleren: tel. +39 0481 090740, WhatsApp +39 392 388 3900.\n\nTot snel!\nOsteria Enoteca Dvor"}};
+function mailFor(b){var L=MAIL[b.lang]?b.lang:"it",M=MAIL[L],l=calLinks(b),TT=T[L]||T.it;
+  var day=parseD(b.date).toLocaleDateString(LOC[L]||"it-IT",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  var m=(+b.menuTasting?"\n"+TT.degustazione+": "+b.menuTasting:"")+(+b.menuCarta?"\n"+TT.carta+": "+b.menuCarta:"")+(b.discount?"\n"+TT.discount.split("{p}").join(b.discount):"")+(b.eventTitle?"\n"+b.eventTitle:"");
+  function f(x){return x.split("{n}").join(b.name||"").split("{d}").join(day).split("{t}").join(b.time).split("{p}").join(b.party).split("{m}").join(m).split("{g}").join(l.google).split("{o}").join(l.outlook)}
+  return {subject:f(M.s),body:f(M.b)}}
+function mailtoFor(b){var m=mailFor(b);return "mailto:"+encodeURIComponent(b.email||"")+"?subject="+encodeURIComponent(m.subject)+"&body="+encodeURIComponent(m.body)}
+async function markMailed(b){if(!db)return;try{await db.doc("bookings/"+b.id).update({emailSentAt:new Date().toISOString()})}catch(e){}}
+/* ---------- staff ---------- */
+var SLBL={confirmed:"Confermata",building:"In raccolta",lastcall:"Ultima chiamata",closed:"Chiusa",past:"Passata"};
+function renderBoard(){
+  var b=el("board");b.textContent="";var now=new Date();
+  el("now-label").textContent="Ora: "+now.toLocaleString("it-IT",{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+  el("lbl-min").textContent=S.settings.minGuests;
+  for(var i=0;i<14;i++){
+    var d=addDays(today(),i),open=slotsFor(d).length>0;
+    var btn=h("button",{class:"day"+(open?"":" closedday"),type:"button","aria-pressed":String(S.selDay===d)});
+    btn.append(h("div",{},[h("div",{text:fmtDay(d)}),!open?h("div",{class:"small muted",text:"Riposo"}):null]));
+    if(open){
+      var lg=guests(d,"lunch"),dg=guests(d,"dinner"),ds=dinnerState(d,now);
+      var lun=slotsFor(d).some(function(x){return svcOf(x)==="lunch"});
+      btn.append(h("div",{class:"svc"},lun?[h("span",{class:"small",text:"Pranzo"}),h("span",{class:"num",text:lg+" ospiti"})]:[h("span",{class:"small muted",text:"—"})]));
+      if(ds==="none")btn.append(h("div",{class:"svc"},[h("span",{class:"small muted",text:"Nessuna cena"})]));
+      else{
+        var pct=Math.min(100,Math.round(dg/S.settings.minGuests*100));
+        var meter=h("span",{class:"meter",title:dg+" su "+S.settings.minGuests},[h("i",{style:"width:"+pct+"%"})]);
+        btn.append(h("div",{class:"svc"},[h("span",{class:"small",text:"Cena"}),h("span",{class:"num",text:dg+"/"+S.settings.minGuests}),meter,h("span",{class:"pill s-"+ds,text:SLBL[ds]+(S.overrides[d]?" (a mano)":"")})]));
+      }
+      (function(day){btn.addEventListener("click",function(){S.selDay=day;render()})})(d);
+    }
+    b.append(btn);
+  }
+}
+function renderDay(){
+  var box=el("dayview");box.textContent="";var d=S.selDay;
+  if(!d){box.append(h("p",{class:"muted",text:"Seleziona un giorno per vedere le prenotazioni e decidere sulla cena."}));return}
+  var ds=dinnerState(d),list=S.bookings.filter(function(b){return b.date===d}).sort(function(a,b){return a.time.localeCompare(b.time)});
+  box.append(h("div",{class:"row",style:"justify-content:space-between;align-items:center"},[h("h2",{text:fmtDay(d,true)}),ds!=="none"?h("span",{class:"pill s-"+ds,text:"Cena: "+SLBL[ds]}):null]));
+  if(ds!=="none"&&ds!=="past"){
+    var bt=h("div",{class:"row"},[
+      h("button",{class:"btn small",type:"button",text:"Apri la cena comunque",onclick:function(){setOverride(d,"open")}}),
+      h("button",{class:"btn ghost small",type:"button",text:"Chiudi la cena",onclick:function(){setOverride(d,"closed")}}),
+      S.overrides[d]?h("button",{class:"btn ghost small",type:"button",text:"Torna alla regola automatica",onclick:function(){setOverride(d,null)}}):null
+    ]);
+    box.append(bt);
+    var bet=betterEvening(d);
+    if(bet&&ds==="building")box.append(h("p",{class:"small muted",text:"Chi prenota questa sera vede anche il suggerimento di "+fmtDay(bet.date)+" ("+bet.g+" ospiti), finché questa sera ha "+S.settings.hideIfAtMost+" ospiti o meno. Può comunque prenotare qui."}));
+  }
+  if(!list.length){box.append(h("p",{class:"muted",text:"Nessuna prenotazione per questo giorno."}));}
+  else{
+    var tb=h("tbody");
+    list.forEach(function(b){
+      tb.append(h("tr",{},[
+        h("td",{class:"num",text:b.time}),h("td",{text:svcOf(b.time)==="dinner"?"Cena":"Pranzo"}),h("td",{class:"num",text:String(b.party)}),h("td",{class:"small",text:(b.menuTasting!=null||b.menuCarta!=null)?("Carta "+(+b.menuCarta||0)+" · Degust. "+(+b.menuTasting||0)):"—"}),
+        h("td",{},[h("div",{text:b.name||""}),h("div",{class:"small muted",text:[b.phone,b.email,b.example?"prova":""].filter(Boolean).join(" · ")})]),
+        h("td",{class:"small",text:[b.notes,b.offer?"Offerta: "+b.offer:"",b.discount?"Sconto "+b.discount+"%":"",b.eventTitle?"Evento: "+b.eventTitle:"",b.retained?"Spostata invece di annullare":"",b.source==="assistant"?"Via assistente":"",b.insight?"Cosa cercava: "+b.insight:""].filter(Boolean).join(" · ")}),
+        h("td",{},[b.status==="cancelled"||!b.email?null:h("a",{class:"btn small"+(b.emailSentAt?" ghost":""),style:"display:inline-block;text-decoration:none;margin-bottom:.3rem",href:mailtoFor(b),text:b.emailSentAt?"✉ Rinvia":"✉ Conferma",onclick:function(ev){if(window.DVOR_RESEND){ev.preventDefault();DVOR_RESEND(b,this)}else markMailed(b)}}),b.emailSentAt?h("div",{class:"small muted",text:"Email inviata"}):null]),
+        h("td",{},[b.status==="cancelled"?h("span",{class:"pill s-closed",text:"Annullata"}):h("button",{class:"btn ghost small",type:"button",text:"Annulla",onclick:function(){setStatus(b,"cancelled")}})])
+      ]));
+    });
+    var tl=list.filter(function(b){return active(b)&&svcOf(b.time)==="lunch"}).reduce(function(x,b){return x+(+b.menuTasting||0)},0),td=list.filter(function(b){return active(b)&&svcOf(b.time)==="dinner"}).reduce(function(x,b){return x+(+b.menuTasting||0)},0);
+    box.append(h("p",{class:"small",text:"Menù degustazione: "+tl+" a pranzo, "+td+" a cena."}));
+    box.append(h("p",{class:"small muted",text:"L\'email parte da sola a ogni prenotazione, con il file per il calendario. Per le cene in attesa il cliente riceve «prenotazione ricevuta»: quando la cena è confermata premi ✉ Conferma e parte l'email di conferma."}));
+    box.append(h("div",{class:"tablewrap"},[h("table",{},[h("thead",{},[h("tr",{},["Ora","Servizio","Pers.","Menù","Ospite","Note","Email",""].map(function(x){return h("th",{text:x})}))]),tb])]));
+  }
+  if(ds==="closed"){
+    var aff=list.filter(function(b){return active(b)&&svcOf(b.time)==="dinner"});
+    if(aff.length){
+      var r={date:d,time:"20:00",party:2,alternatives:[]};addAlternatives(r,new Date());
+      var alt=r.alternatives.map(function(a){return fmtDay(a.date,true)+" alle "+a.time}).join(" oppure ");
+      box.append(h("h3",{text:"Messaggio per gli ospiti della cena ("+aff.length+")"}));
+      box.append(h("p",{class:"small muted",text:"Gli invii automatici arrivano nel passo 4. Per ora copia il testo e mandalo via WhatsApp o SMS."}));
+      box.append(h("div",{class:"copy",text:"Gentile ospite, la cena di "+fmtDay(d,true)+" all'Osteria Dvor non si terrà. Ci farebbe piacere accoglierla "+(alt||"in un'altra data")+". Ci risponda qui e sistemiamo tutto noi. Grazie, Osteria Enoteca Dvor"}));
+    }
+  }
+}
+async function setOverride(d,state){
+  if(!db)return;
+  try{if(state)await db.doc("overrides/"+d).set({state:state,at:new Date().toISOString()});else await db.doc("overrides/"+d).delete()}catch(e){}
+}
+var FAKE=["Rossi","Bianchi","Novak","Müller","Kovač","de Vries","Ferrari","Zorzut","Schmidt","Colombo","Bassi","Visser"];
+async function fillTest(){
+  if(!db)return;var m=el("x-msg"),n=0,docs=[];el("x-fill").disabled=true;
+  var plan=[14,3,0,8,11,1,6],lplan=[18,6,0,24,9],now=new Date();
+  for(var i=0;i<14;i++){
+    var d=addDays(today(),i),sl=slotsFor(d).filter(function(x){return at(d,x)>now});if(!sl.length)continue;
+    var lunch=sl.filter(function(x){return svcOf(x)==="lunch"}),dinner=sl.filter(function(x){return svcOf(x)==="dinner"});
+    [[lunch,lplan[i%5]],[dinner,plan[i%plan.length]]].forEach(function(tg){
+      var slots=tg[0],want=tg[1];if(!slots.length)return;
+      while(want>0){var p=Math.min(want,[2,2,3,4,4,6][Math.floor(Math.random()*6)]);want-=p;
+        var tm=slots[Math.floor(Math.random()*slots.length)],nm=FAKE[Math.floor(Math.random()*FAKE.length)],ts=Math.floor(Math.random()*(p+1));
+        docs.push({date:d,time:tm,party:p,name:"Prova "+nm,phone:"000 000 0000",email:"prova@example.com",notes:"",lang:"it",status:"active",offer:"",discount:0,menuTasting:ts,menuCarta:p-ts,createdBy:"",createdAt:new Date().toISOString(),source:"test",example:true})}
+    });
+  }
+  m.textContent="Creo le prove… 0 di "+docs.length;
+  try{
+    for(var k=0;k<docs.length;k+=5){
+      await Promise.all(docs.slice(k,k+5).map(function(x){return db.collection("bookings").add(x)}));
+      n=Math.min(docs.length,k+5);m.textContent="Creo le prove… "+n+" di "+docs.length;
+    }
+    m.textContent=docs.length+" prenotazioni di prova create. Guarda il calendario qui sopra.";
+  }catch(e){m.textContent="Interrotto dopo "+n+" prenotazioni ("+(e&&e.code||"errore")+"). Riprova tra un minuto.";}
+  el("x-fill").disabled=false;
+}
+async function clearTest(){
+  if(!db)return;var m=el("x-msg"),n=0;el("x-clear").disabled=true;m.textContent="Cancello…";
+  try{var q=await db.collection("bookings").where("example","==",true).limit(1000).get();for(var i=0;i<q.docs.length;i++){await db.doc("bookings/"+q.docs[i].id).delete();n++}m.textContent=n+" prove cancellate.";}
+  catch(e){m.textContent="Interrotto dopo "+n+": "+(e&&e.message||"errore");}
+  el("x-clear").disabled=false;
+}
+el("x-fill").addEventListener("click",fillTest);
+el("x-clear").addEventListener("click",clearTest);
+function fillSettings(){var s=S.settings;el("s-min").value=s.minGuests;el("s-ext").value=s.extendIfAtLeast;el("s-hide").value=s.hideIfAtMost;el("s-seats").value=s.seats;el("s-wdpct").value=s.weekdayPct;el("s-wepct").value=s.weekendPct;el("s-ovpct").value=s.overflowPct;el("s-fullfrom").value=s.showFullFrom;el("s-disc").value=s.discountPct;el("s-offer").value=s.offer||""}
+el("s-save").addEventListener("click",async function(){
+  if(!db)return;var m=el("s-msg");
+  var v={discountPct:Math.max(0,Math.min(50,+el("s-disc").value||0)),minGuests:Math.max(1,+el("s-min").value||10),extendIfAtLeast:Math.max(1,+el("s-ext").value||7),hideIfAtMost:Math.max(0,+el("s-hide").value||0),seats:Math.max(1,+el("s-seats").value||74),offer:el("s-offer").value.trim(),seats:Math.max(1,+el("s-seats").value||74),weekdayPct:Math.max(1,+el("s-wdpct").value||50),weekendPct:Math.max(1,+el("s-wepct").value||100),overflowPct:Math.max(0,+el("s-ovpct").value||0),showFullFrom:Math.max(0,Math.min(100,+el("s-fullfrom").value||0))};
+  try{await db.doc("settings/main").set(v);m.textContent="Regole salvate."}catch(e){m.textContent="Non salvato: solo chi modifica la pagina può cambiare le regole."}
+});
+
+/* ---------- guest month calendar ---------- */
+var MAXMONTHS=6;
+function monthStart(d){return new Date(d.getFullYear(),d.getMonth(),1)}
+function dayInfo(d,party){
+  var info={date:d,state:"open",ok:[],events:S.events.filter(function(e){return e.date===d}),promo:false,few:false};
+  if(d<today()){info.state="past";return info}
+  var sl=slotsFor(d);if(!sl.length){info.state="closed";return info}
+  var now=new Date(),maxLeft=0;
+  info.peak=0;sl.forEach(function(tm){var fp=fullPct(d,tm);if(fp>info.peak)info.peak=fp});
+  sl.forEach(function(tm){var c=checkNoAlt(d,tm,party,now);if(c.ok){info.ok.push(c);if(c.discount)info.promo=true;if(c.seatsLeft>maxLeft)maxLeft=c.seatsLeft}});
+  if(!info.ok.length)info.state="full";
+  else if(maxLeft-party<10)info.few=true;
+  return info;
+}
+function heatStyle(p){p=Math.max(1,p);return "width:"+p+"%;background-size:"+(10000/p)+"% 100%"}
+function fullBar(p){return h("div",{class:"fullbar"},[h("div",{class:"small",text:t("fullPct",{p:p})}),h("div",{class:"meter"},[h("i",{style:heatStyle(p)})])])}
+function renderCal(){
+  if(!el("cal-grid"))return;
+  var now=new Date();if(!S.calMonth)S.calMonth=monthStart(now);
+  var m=S.calMonth,first=monthStart(now),last=new Date(first.getFullYear(),first.getMonth()+MAXMONTHS-1,1);
+  el("cal-prev").disabled=m<=first;el("cal-next").disabled=m>=last;
+  el("cal-prev").setAttribute("aria-label",t("prevM"));el("cal-next").setAttribute("aria-label",t("nextM"));
+  el("cal-month").textContent=m.toLocaleDateString(LOC[S.lang]||"it-IT",{month:"long",year:"numeric"});
+  var wd=el("cal-wd");wd.textContent="";
+  for(var i=0;i<7;i++){var ref=new Date(2026,0,5+i);wd.append(h("div",{text:ref.toLocaleDateString(LOC[S.lang]||"it-IT",{weekday:"short"}).replace(".","")}))}
+  var g=el("cal-grid");g.textContent="";
+  var party=Math.max(1,+el("f-party").value||2),lead=(m.getDay()+6)%7,days=new Date(m.getFullYear(),m.getMonth()+1,0).getDate();
+  for(var b=0;b<lead;b++)g.append(h("div",{class:"cd out","aria-hidden":"true"}));
+  for(var dn=1;dn<=days;dn++){
+    var d=ymd(new Date(m.getFullYear(),m.getMonth(),dn)),inf=dayInfo(d,party);
+    var cls="cd "+inf.state+(inf.events.length?" evd":"")+(d===S.selDate?" sel":"")+(d===today()?" today":"");
+    var kids=[h("span",{class:"n",text:String(dn)})];
+    if(inf.events.length)kids.push(h("span",{class:"tag ev-dot",text:"✦ "+evTitle(inf.events[0])}));
+    if(inf.state==="closed"&&!inf.events.length)kids.push(h("span",{class:"tag",text:t("closed")}));
+    if(inf.state==="full")kids.push(h("span",{class:"tag long",text:t("notAvail")}));
+    if(inf.state==="open"&&inf.promo)kids.push(h("span",{class:"tag promo",text:"−"+S.settings.discountPct+"%"}));
+    if(inf.state==="open"&&inf.few)kids.push(h("span",{class:"tag few long",text:t("lastSeats")}));
+    else if(inf.state==="open"&&showFull(inf.peak))kids.push(h("span",{class:"tag few long",text:t("fullShort",{p:inf.peak})}));
+    if(inf.state==="open"&&showFull(inf.peak))kids.push(h("span",{class:"dbar","aria-hidden":"true"},[h("i",{style:heatStyle(inf.peak)})]));
+    var clickable=inf.state==="open"||inf.events.length>0&&inf.state!=="past";
+    var lab=fmtDay(d,true)+" · "+(inf.events.length?evTitle(inf.events[0])+" · ":"")+(inf.state==="open"?t("available"):inf.state==="closed"?t("closed"):t("notAvail"));
+    var cell=h("button",{class:cls,type:"button","aria-label":lab},kids);
+    if(!clickable)cell.disabled=true;
+    (function(d,inf){cell.addEventListener("click",function(){
+      if(inf.state!=="open"&&inf.events.length){openEvent(inf.events[0]);return}
+      S.selDate=d;el("f-date").value=d;fillTimes();noteChange();renderCal();renderSlots();
+      if(inf.events.length)openEvent(inf.events[0]);
+    })})(d,inf);
+    g.append(cell);
+  }
+  var lg=el("cal-legend");lg.textContent="";
+  var OPN={it:"Aperto",en:"Open",de:"Geöffnet",sl:"Odprto",nl:"Open"};
+  lg.append(h("span",{},[h("i",{class:"lg-sw lg-open"}),OPN[S.lang]||OPN.it]));lg.append(h("span",{},[h("i",{class:"lg-sw lg-closed"}),t("closed")]));
+  lg.append(h("span",{class:"ev-dot",text:"✦ "+t("event")}));
+  if(S.settings.discountPct>0)lg.append(h("span",{class:"promo",text:"−"+S.settings.discountPct+"% "+({it:"sconto",en:"off",de:"Rabatt",sl:"popust",nl:"korting"}[S.lang]||"sconto")}));
+  lg.append(h("span",{class:"few",text:t("lastSeats")}));
+}
+el("cal-prev").addEventListener("click",function(){var m=S.calMonth;S.calMonth=new Date(m.getFullYear(),m.getMonth()-1,1);renderCal()});
+el("cal-next").addEventListener("click",function(){var m=S.calMonth;S.calMonth=new Date(m.getFullYear(),m.getMonth()+1,1);renderCal()});
+function renderSlots(){
+  var box=el("slots");if(!box)return;box.textContent="";
+  var d=S.selDate;if(!d||d<today()){box.hidden=true;return}
+  var party=Math.max(1,+el("f-party").value||2),inf=dayInfo(d,party);
+  box.hidden=false;box.append(h("div",{class:"caps",text:t("pickTime")+" · "+fmtDay(d,true)}));
+  if(!inf.ok.length){box.append(h("p",{class:"small muted",text:inf.state==="closed"?t("closed"):t("noTimes")}));return}
+  var rp=recentProof();box.append(h("p",{class:"small urg",text:"● "+t("limited")+(rp?" · "+rp:"")}));
+  ["lunch","dinner"].forEach(function(sv){
+    var list=inf.ok.filter(function(c){return c.service===sv});if(!list.length)return;
+    box.append(h("div",{class:"slotgroup"},[h("span",{class:"small",text:t(sv)}),h("div",{class:"chips"},list.map(function(c){
+      var sf=showFull(c.fullPct);return h("button",{class:"chip"+(sf?" hot":""),type:"button",onclick:function(){el("f-time").value=c.time;showProposal(check(d,c.time,party));el("proposal").scrollIntoView({behavior:"smooth",block:"start"})}},[c.time+(c.discount?" · −"+c.discount+"%":"")+(sf?" · "+c.fullPct+"%":""),sf?h("span",{class:"cbar","aria-hidden":"true"},[h("i",{style:heatStyle(c.fullPct)})]):null]);
+    }))]));
+  });
+}
+
+/* ---------- events ---------- */
+function evTitle(e){return (S.lang!=="it"&&e.title_en)?e.title_en:e.title_it}
+function evDesc(e){return (S.lang!=="it"&&e.desc_en)?e.desc_en:(e.desc_it||"")}
+function evWhen(e){return fmtDay(e.date,true)+(e.allDay?" · "+t("allDay"):(e.time?" · "+e.time:""))}
+function evPic(e,box){box.textContent="";if(e.imageId)box.append(h("img",{src:"uploads/"+e.imageId,alt:evTitle(e)}));else box.append(h("span",{text:"✦","aria-hidden":"true"}));}
+function renderEvents(){
+  var wrap=el("evs");wrap.textContent="";
+  el("g-events").hidden=!S.events.length;
+  S.events.forEach(function(e){
+    var pic=h("div",{class:"pic"});evPic(e,pic);
+    wrap.append(h("button",{class:"ev",type:"button",onclick:function(){openEvent(e)}},[pic,h("div",{class:"body"},[h("span",{class:"when",text:evWhen(e)}),h("span",{class:"ttl",text:evTitle(e)})])]));
+  });
+}
+function openEvent(e){
+  var d=el("evdlg");evPic(e,el("evd-pic"));if(!e.imageId)el("evd-pic").textContent="";
+  el("evd-when").textContent=evWhen(e);el("evd-title").textContent=evTitle(e);
+  el("evd-price").textContent=e.price||"";el("evd-price").hidden=!e.price;
+  el("evd-desc").textContent=evDesc(e);
+  var a=el("evd-link");if(e.link){a.href=e.link;a.hidden=false}else a.hidden=true;
+  if(d.showModal)d.showModal();else d.setAttribute("open","");
+}
+el("evd-close").addEventListener("click",function(){el("evdlg").close()});
+el("evdlg").addEventListener("click",function(ev){if(ev.target===this)this.close()});
+function renderEvAdmin(){
+  var box=el("ev-list");box.textContent="";
+  if(!S.events.length){box.append(h("p",{class:"muted small",text:"Nessun evento in programma. Aggiungi il primo con il modulo qui sotto."}));return}
+  S.events.forEach(function(e){
+    box.append(h("div",{class:"evrow"},[
+      h("div",{},[h("div",{class:"small muted",text:evWhen(e)}),h("div",{text:e.title_it||""}),(e.openLunch||e.openDinner)?h("div",{class:"small",text:"Prenotabile dal sito: "+[e.openLunch?"pranzo":"",e.openDinner?"cena":""].filter(Boolean).join(" e ")}):null,e.link?null:h("div",{class:"small muted",text:"Senza link: l'anteprima non avrà il pulsante."})]),
+      h("div",{class:"row"},[
+        h("button",{class:"btn ghost small",type:"button",text:"Modifica",onclick:function(){editEvent(e)}}),
+        h("button",{class:"btn ghost small",type:"button",text:"Elimina",onclick:function(){delEvent(e,this)}})
+      ])
+    ]));
+  });
+}
+function editEvent(e){
+  S.editEv=e;el("ev-form-title").textContent="Modifica evento";el("e-cancel").hidden=false;
+  el("e-title-it").value=e.title_it||"";el("e-title-en").value=e.title_en||"";el("e-date").value=e.date||"";el("e-time").value=e.allDay?"":(e.time||"");el("e-allday").checked=!!e.allDay;el("e-open-l").checked=!!e.openLunch;el("e-open-d").checked=!!e.openDinner;el("e-time").disabled=!!e.allDay;
+  el("e-price").value=e.price||"";el("e-desc-it").value=e.desc_it||"";el("e-desc-en").value=e.desc_en||"";el("e-link").value=e.link||"";el("e-img").value="";
+  el("ev-form").scrollIntoView({behavior:"smooth",block:"start"});
+}
+function resetEvForm(){S.editEv=null;el("ev-form").reset();el("e-time").disabled=false;el("ev-form-title").textContent="Nuovo evento";el("e-cancel").hidden=true}
+el("e-cancel").addEventListener("click",resetEvForm);
+el("e-allday").addEventListener("change",function(){el("e-time").disabled=this.checked;if(this.checked)el("e-time").value=""});
+async function delEvent(e,btn){
+  if(btn.dataset.sure!=="1"){btn.dataset.sure="1";btn.textContent="Conferma eliminazione";return}
+  if(!db)return;try{await db.doc("events/"+e.id).delete()}catch(x){el("e-msg").textContent="Non eliminato: solo chi modifica la pagina può farlo."}
+}
+el("ev-form").addEventListener("submit",async function(ev){
+  ev.preventDefault();var m=el("e-msg");if(!db)return;
+  var v={title_it:el("e-title-it").value.trim(),title_en:el("e-title-en").value.trim(),date:el("e-date").value,allDay:el("e-allday").checked,openLunch:el("e-open-l").checked,openDinner:el("e-open-d").checked,time:el("e-allday").checked?"":el("e-time").value,price:el("e-price").value.trim(),desc_it:el("e-desc-it").value.trim(),desc_en:el("e-desc-en").value.trim(),link:el("e-link").value.trim()};
+  if(!v.title_it||!v.date){m.textContent="Servono almeno titolo e data.";return}
+  if(v.link&&!/^https:\/\//.test(v.link)){m.textContent="Il link deve iniziare con https://";return}
+  el("e-save").disabled=true;m.textContent="Salvo…";
+  try{
+    var f=el("e-img").files&&el("e-img").files[0];
+    if(f){if(!assets)throw {message:"caricamento immagini non disponibile"};var up=await assets.upload(f);v.imageId=up.id}
+    else if(S.editEv&&S.editEv.imageId)v.imageId=S.editEv.imageId;
+    if(S.editEv)await db.doc("events/"+S.editEv.id).set(v);else await db.collection("events").add(v);
+    m.textContent="Evento salvato.";resetEvForm();if(window.reloadData)reloadData();
+  }catch(x){m.textContent="Non salvato: "+(x&&(x.message||x.code)||"errore");}
+  el("e-save").disabled=false;
+});
+
+/* ---------- tabs ---------- */
+function setView(v){S.view=v;el("tab-guest").setAttribute("aria-selected",String(v==="guest"));el("tab-staff").setAttribute("aria-selected",String(v==="staff"));el("v-guest").hidden=v!=="guest";el("v-staff").hidden=v!=="staff";el("lang").hidden=v!=="guest";if(v==="staff"&&!S.selDay)S.selDay=today();applyLang();render()}
+el("tab-guest").addEventListener("click",function(){setView("guest")});
+el("tab-staff").addEventListener("click",function(){setView("staff")});
+if(location.hash==="#staff")setTimeout(function(){setView("staff")},0);
+
+function render(){try{if(S.view==="staff"){renderBoard();renderDay();renderEvAdmin()}else{renderMine();renderEvents();renderCal();renderSlots()}}catch(e){dbStatus("Errore di visualizzazione: "+(e&&e.message))}}
+setInterval(render,60000);
+window.DVOR_LOGIC={check:check,dinnerState:dinnerState,slotsFor:slotsFor,S:S};
+boot();
+})();
+</script>
+
+</body>
+</html>
