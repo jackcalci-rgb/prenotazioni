@@ -347,7 +347,7 @@ function mailGuest(array $C, array &$b, string $kind): bool {
 }
 
 /* ---------- validation ---------- */
-function cleanBooking(array $x): array {
+function cleanBooking(array $x, bool $staff = false): array {
   $s = fn($v, $n = 200) => mb_substr(trim((string)$v), 0, $n);
   $b = [
     'date' => $s($x['date'] ?? '', 10), 'time' => $s($x['time'] ?? '', 5), 'party' => (int)($x['party'] ?? 0),
@@ -355,12 +355,17 @@ function cleanBooking(array $x): array {
     'eventTitle' => $s($x['eventTitle'] ?? '', 200), 'menuCarta' => max(0, (int)($x['menuCarta'] ?? 0)), 'menuTasting' => max(0, (int)($x['menuTasting'] ?? 0)),
     'discount' => max(0, min(50, (int)($x['discount'] ?? 0))), 'notes' => $s($x['notes'] ?? '', 1000), 'lang' => preg_match('/^[a-z]{2}$/', (string)($x['lang'] ?? '')) ? $x['lang'] : 'it',
     'status' => 'active', 'offer' => $s($x['offer'] ?? '', 300), 'insight' => $s($x['insight'] ?? '', 500),
-    'createdAt' => date('c'), 'source' => in_array($x['source'] ?? '', ['assistant', 'form', 'test'], true) ? $x['source'] : 'form',
+    'createdAt' => date('c'), 'source' => in_array($x['source'] ?? '', $staff ? ['assistant', 'form', 'test', 'phone', 'whatsapp', 'walkin'] : ['assistant', 'form', 'test'], true) ? $x['source'] : 'form',
     'pending' => !empty($x['pending']),
   ];
   if (!empty($x['example'])) $b['example'] = true;
   if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $b['date']) || !preg_match('/^\d{2}:\d{2}$/', $b['time'])) fail('bad_request', 'Data o ora non valida');
   if ($b['party'] < 1 || $b['party'] > 74) fail('bad_request', 'Numero di persone non valido');
+  if (in_array($b['source'], ['phone', 'whatsapp', 'walkin'], true)) { // taken by the staff: only the name is required
+    if ($b['name'] === '') fail('bad_request', 'Il nome è obbligatorio');
+    if ($b['email'] !== '' && !filter_var($b['email'], FILTER_VALIDATE_EMAIL)) fail('bad_request', 'Email non valida');
+    return $b;
+  }
   if ($b['source'] !== 'test' && ($b['name'] === '' || $b['phone'] === '' || !filter_var($b['email'], FILTER_VALIDATE_EMAIL))) fail('bad_request', 'Nome, telefono ed email sono obbligatori');
   return $b;
 }
@@ -418,10 +423,12 @@ switch ($op) {
     if ($coll === 'bookings') {
       $isTest = ($data['source'] ?? '') === 'test';
       if ($isTest && !$staff) fail('not_granted', 'Solo staff', 403);
-      if (!$isTest) rateLimit('book', 12, 3600);
-      $b = cleanBooking($data); $b['createdBy'] = $cid;
+      $b = cleanBooking($data, $staff); $b['createdBy'] = $cid;
+      $manual = in_array($b['source'], ['phone', 'whatsapp', 'walkin'], true);
+      if (!$isTest && !$manual) rateLimit('book', 12, 3600);
       $id = newId(); $b['id'] = $id;
-      if (!$isTest) { mailGuest($C, $b, $b['pending'] ? 'rec' : 'ok'); notifyStaff($C, $b, 'Nuova prenotazione'); }
+      if ($manual) { if (!empty($data['sendMail']) && $b['email'] !== '') mailGuest($C, $b, $b['pending'] ? 'rec' : 'ok'); }
+      elseif (!$isTest) { mailGuest($C, $b, $b['pending'] ? 'rec' : 'ok'); notifyStaff($C, $b, 'Nuova prenotazione'); }
       unset($b['id']);
       withLock(function () use ($id, $b) { $r = load('bookings'); $r[$id] = $b; save('bookings', $r); });
       out(['id' => $id]);

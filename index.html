@@ -40,6 +40,7 @@ header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-be
 .proto{font-size:.85rem;color:var(--muted);background:var(--alt);padding:.6rem .9rem;border-radius:6px;margin-bottom:1.25rem}
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:1.25rem}
 .stack{display:flex;flex-direction:column;gap:1rem}
+.stack>label{flex:0 0 auto}
 .row{display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end}
 .row>*{min-width:0}
 label{display:flex;flex-direction:column;gap:.25rem;font-size:.8rem;color:var(--muted);flex:1 1 140px}
@@ -255,6 +256,26 @@ a.btn{display:inline-block;text-decoration:none;font:400 .8rem var(--sans);lette
 
   <!-- STAFF -->
   <section id="v-staff" class="stack" hidden>
+    <form class="card stack" id="mb-form" autocomplete="off">
+      <h2>Nuova prenotazione</h2>
+      <p class="small muted">Per le prenotazioni prese al telefono, su WhatsApp o di persona. Nome obbligatorio; telefono ed email facoltativi.</p>
+      <div class="row">
+        <label>Canale<select id="mb-src"><option value="phone">📞 Telefono</option><option value="whatsapp">💬 WhatsApp</option><option value="walkin">🚶 Di persona</option></select></label>
+        <label>Data<input type="date" id="mb-date" required></label>
+        <label>Ora<input type="time" id="mb-time" list="mb-times" step="900" required><datalist id="mb-times"></datalist></label>
+        <label>Persone<input type="number" id="mb-party" min="1" max="74" value="2" required></label>
+      </div>
+      <div class="row">
+        <label>Nome<input id="mb-name" required></label>
+        <label>Telefono<input id="mb-phone" type="tel"></label>
+        <label>Email<input id="mb-email" type="email"></label>
+        <label>Lingua email<select id="mb-lang"><option value="it">Italiano</option><option value="en">English</option><option value="de">Deutsch</option><option value="sl">Slovenščina</option><option value="nl">Nederlands</option></select></label>
+      </div>
+      <label>Note<input id="mb-notes" placeholder="Seggiolone, allergie, compleanno…"></label>
+      <label style="flex-direction:row;align-items:center;gap:.5rem"><input type="checkbox" id="mb-send" style="width:auto" checked>Manda all'ospite l'email di conferma con il calendario (se c'è l'email)</label>
+      <p class="small" id="mb-info" aria-live="polite"></p>
+      <div class="row" style="align-items:center"><button class="btn" type="submit" id="mb-save">Aggiungi prenotazione</button><span class="small muted" id="mb-msg" aria-live="polite"></span></div>
+    </form>
     <div class="card stack" id="planner">
       <div class="row" style="justify-content:space-between;align-items:center">
         <h2>Calendario sala</h2>
@@ -1007,13 +1028,43 @@ function dayPlan(body,d){
     tl.append(h("div",{class:"tlr"+(bk.length?"":" empty")},[
       h("div",{class:"t",text:tm}),
       bk.length?h("div",{class:"c"},[h("div",{text:x.t+" tav · "+x.p+" pers."}),h("span",{class:"meter",title:"In sala: "+inRoom+" su "+cap},[h("i",{style:"width:"+pct+"%"})]),h("div",{class:"muted",text:"in sala "+inRoom+" su "+cap})]):h("div",{class:"c muted",text:inRoom?"in sala "+inRoom:"—"}),
-      h("div",{class:"tbls"},bk.map(function(b){return h("span",{class:"tbl"+(b.example?" ex":""),title:[b.name,b.phone,b.notes].filter(Boolean).join(" · ")},[h("b",{text:String(b.party)}),document.createTextNode((b.name||"Ospite")+(b.notes?" ✎":""))])}))
+      h("div",{class:"tbls"},bk.map(function(b){return h("span",{class:"tbl"+(b.example?" ex":""),title:[b.name,b.phone,b.notes].filter(Boolean).join(" · ")},[h("b",{text:String(b.party)}),document.createTextNode((SRC[b.source]?SRC[b.source].split(" ")[0]+" ":"")+(b.name||"Ospite")+(b.notes?" ✎":""))])}))
     ]));
   });
   body.append(tl);
   body.append(h("p",{class:"small muted",text:"Dettagli, email e annullamenti di questo giorno sono più sotto."}));
 }
 function plMove(n){if(S.plMode==="week")S.plRef=addDays(mondayOf(S.plRef||today()),7*n);else{S.plRef=addDays(S.plRef||today(),n);S.selDay=S.plRef}render()}
+/* ---------- staff: bookings taken by phone, WhatsApp or in person ---------- */
+var SRC={phone:"📞 Telefono",whatsapp:"💬 WhatsApp",walkin:"🚶 Di persona"};
+function mbInfo(){
+  var d=el("mb-date").value,tm=el("mb-time").value,p=+el("mb-party").value||0,info=el("mb-info");
+  var dl=el("mb-times");dl.textContent="";if(d)slotsFor(d).forEach(function(x){dl.append(h("option",{value:x}))});
+  if(!d){info.textContent="";return}
+  if(!slotsFor(d).length){info.textContent="⚠ Di solito è giorno di riposo. Puoi comunque registrarla.";return}
+  if(!tm){info.textContent="Orari di arrivo: "+slotsFor(d).join(", ");return}
+  var msg=[],used=inRoomAt(d,tm),busy=seatsUsedAt(d,tm),cap=capFor(d);
+  msg.push("Alle "+tm+": "+used+" persone in sala, posti per questo orario "+busy+" su "+cap+".");
+  if(busy+p>cap)msg.push("⚠ Con questo tavolo si supera la capienza ("+(busy+p)+" su "+cap+").");
+  if(slotsFor(d).indexOf(tm)<0)msg.push("⚠ Orario fuori dagli arrivi online.");
+  if(svcOf(tm)==="dinner"){var ds=dinnerState(d);if(ds==="building"||ds==="lastcall")msg.push("Cena: "+SLBL[ds]+" ("+guests(d,"dinner")+"/"+S.settings.minGuests+"). Contando questo tavolo: "+(guests(d,"dinner")+p)+".");else if(ds==="closed")msg.push("⚠ La cena di questo giorno risulta chiusa.")}
+  info.textContent=msg.join(" ");
+}
+async function manualBook(ev){
+  ev.preventDefault();if(!db)return;
+  var m=el("mb-msg"),d=el("mb-date").value,tm=el("mb-time").value,p=+el("mb-party").value||0,name=el("mb-name").value.trim(),email=el("mb-email").value.trim();
+  if(!d||!/^\d\d:\d\d$/.test(tm)||p<1||!name){m.textContent="Servono data, ora, persone e nome.";return}
+  var src=el("mb-src").value,send=el("mb-send").checked&&!!email;
+  var g=guests(d,"dinner")+p,pend=svcOf(tm)==="dinner"&&dinnerState(d)!=="confirmed"&&g<S.settings.minGuests;
+  el("mb-save").disabled=true;m.textContent="Salvo…";
+  try{
+    await db.collection("bookings").add({date:d,time:tm,party:p,name:name,phone:el("mb-phone").value.trim(),email:email,notes:el("mb-notes").value.trim(),lang:el("mb-lang").value,status:"active",offer:"",discount:0,menuCarta:0,menuTasting:0,eventTitle:"",createdBy:"",createdAt:new Date().toISOString(),source:src,sendMail:send,pending:pend});
+    m.textContent="✓ "+name+", "+fmtDay(d)+" alle "+tm+", "+p+" pers. ("+SRC[src]+")"+(send?" · email inviata all'ospite":"");
+    ["mb-name","mb-phone","mb-email","mb-notes"].forEach(function(k){el(k).value=""});el("mb-party").value=2;
+    S.selDay=d;S.plRef=d;
+  }catch(e){m.textContent="Non salvata: "+((e&&e.message)||e)}
+  el("mb-save").disabled=false;
+}
 /* ---------- staff ---------- */
 var SLBL={confirmed:"Confermata",building:"In raccolta",lastcall:"Ultima chiamata",closed:"Chiusa",past:"Passata"};
 function renderBoard(){
@@ -1061,7 +1112,7 @@ function renderDay(){
       tb.append(h("tr",{},[
         h("td",{class:"num",text:b.time}),h("td",{text:svcOf(b.time)==="dinner"?"Cena":"Pranzo"}),h("td",{class:"num",text:String(b.party)}),h("td",{class:"small",text:(b.menuTasting!=null||b.menuCarta!=null)?("Carta "+(+b.menuCarta||0)+" · Degust. "+(+b.menuTasting||0)):"—"}),
         h("td",{},[h("div",{text:b.name||""}),h("div",{class:"small muted",text:[b.phone,b.email,b.example?"prova":""].filter(Boolean).join(" · ")})]),
-        h("td",{class:"small",text:[b.notes,b.offer?"Offerta: "+b.offer:"",b.discount?"Sconto "+b.discount+"%":"",b.eventTitle?"Evento: "+b.eventTitle:"",b.retained?"Spostata invece di annullare":"",b.source==="assistant"?"Via assistente":"",b.insight?"Cosa cercava: "+b.insight:""].filter(Boolean).join(" · ")}),
+        h("td",{class:"small",text:[b.notes,b.offer?"Offerta: "+b.offer:"",b.discount?"Sconto "+b.discount+"%":"",b.eventTitle?"Evento: "+b.eventTitle:"",b.retained?"Spostata invece di annullare":"",b.source==="assistant"?"Via assistente":"",SRC[b.source]||"",b.insight?"Cosa cercava: "+b.insight:""].filter(Boolean).join(" · ")}),
         h("td",{},[b.status==="cancelled"||!b.email?null:h("a",{class:"btn small"+(b.emailSentAt?" ghost":""),style:"display:inline-block;text-decoration:none;margin-bottom:.3rem",href:mailtoFor(b),text:b.emailSentAt?"✉ Rinvia":"✉ Conferma",onclick:function(ev){if(window.DVOR_RESEND){ev.preventDefault();DVOR_RESEND(b,this)}else markMailed(b)}}),b.emailSentAt?h("div",{class:"small muted",text:"Email inviata"}):null]),
         h("td",{},[b.status==="cancelled"?h("span",{class:"pill s-closed",text:"Annullata"}):h("button",{class:"btn ghost small",type:"button",text:"Annulla",onclick:function(){setStatus(b,"cancelled")}})])
       ]));
@@ -1117,6 +1168,7 @@ async function clearTest(){
   el("x-clear").disabled=false;
 }
 el("x-fill").addEventListener("click",fillTest);
+el("mb-form").addEventListener("submit",manualBook);["mb-date","mb-time","mb-party"].forEach(function(k){el(k).addEventListener("input",mbInfo)});el("mb-date").value=today();
 el("pl-week").addEventListener("click",function(){S.plMode="week";render()});el("pl-day").addEventListener("click",function(){S.plMode="day";S.plRef=S.selDay||S.plRef||today();render()});
 el("pl-prev").addEventListener("click",function(){plMove(-1)});el("pl-next").addEventListener("click",function(){plMove(1)});el("pl-today").addEventListener("click",function(){S.plRef=today();S.selDay=today();render()});
 el("x-clear").addEventListener("click",clearTest);
@@ -1272,7 +1324,7 @@ el("tab-guest").addEventListener("click",function(){setView("guest")});
 el("tab-staff").addEventListener("click",function(){setView("staff")});
 if(location.hash==="#staff")setTimeout(function(){setView("staff")},0);
 
-function render(){try{if(S.view==="staff"){renderPlanner();renderBoard();renderDay();renderEvAdmin()}else{renderMine();renderEvents();renderCal();renderSlots()}}catch(e){dbStatus("Errore di visualizzazione: "+(e&&e.message))}}
+function render(){try{if(S.view==="staff"){renderPlanner();mbInfo();renderBoard();renderDay();renderEvAdmin()}else{renderMine();renderEvents();renderCal();renderSlots()}}catch(e){dbStatus("Errore di visualizzazione: "+(e&&e.message))}}
 setInterval(render,60000);
 window.DVOR_LOGIC={check:check,dinnerState:dinnerState,slotsFor:slotsFor,S:S};
 boot();
