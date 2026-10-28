@@ -408,7 +408,12 @@ html.embed .wrap{max-width:none}
         </div>
         <label>Sconto % su servizi senza prenotazioni (lun, mar, ven)<input type="number" id="s-disc" min="0" max="50"></label>
         <label style="flex-basis:100%">Offerta per le cene da riempire, lun, mar, ven (vuoto = nessuna offerta)<input id="s-offer" placeholder="Un calice di Collio in omaggio"></label>
-        <div class="row"><button class="btn" id="s-save" type="button">Salva regole</button><span class="small muted" id="s-msg"></span></div>
+      <div class="stack" id="s-hours" style="gap:.5rem">
+        <h3>Orari settimanali</h3>
+        <p class="small muted">Orari di arrivo prenotabili, dal primo all'ultimo, ogni 30 minuti. Più fasce separate da virgola, vuoto = chiuso. Valgono subito per il sito e per WhatsApp.</p>
+        <div style="display:grid;grid-template-columns:minmax(5.5rem,auto) minmax(0,1fr);gap:.4rem .75rem;align-items:center"><span>Lunedì</span><input id="s-h-mon" aria-label="Orari Lunedì" placeholder="chiuso"><span>Martedì</span><input id="s-h-tue" aria-label="Orari Martedì" placeholder="chiuso"><span>Mercoledì</span><input id="s-h-wed" aria-label="Orari Mercoledì" placeholder="chiuso"><span>Giovedì</span><input id="s-h-thu" aria-label="Orari Giovedì" placeholder="chiuso"><span>Venerdì</span><input id="s-h-fri" aria-label="Orari Venerdì" placeholder="chiuso"><span>Sabato</span><input id="s-h-sat" aria-label="Orari Sabato" placeholder="chiuso"><span>Domenica</span><input id="s-h-sun" aria-label="Orari Domenica" placeholder="chiuso"></div>
+      </div>
+        <div class="row"><button class="btn" id="s-save" type="button">Salva regole e orari</button><span class="small muted" id="s-msg"></span></div>
         <p class="small muted" id="s-ro" hidden>Solo il proprietario o chi modifica può cambiare le regole.</p>
       </div>
       <div class="card stack" id="blbox">
@@ -657,7 +662,16 @@ html.embed .wrap{max-width:none}
 "use strict";
 /* ---------- config ---------- */
 var DEFAULTS={minGuests:10,extendIfAtLeast:7,hideIfAtMost:3,seats:74,weekdayPct:50,weekendPct:100,overflowPct:10,showFullFrom:50,holdMin:120,stepMin:30,offer:"",discountPct:10,reminderHours:4};
-var WINDOWS={mon:[["12:00","15:00"],["19:00","21:30"]],tue:[["12:00","15:00"],["19:00","21:30"]],wed:[],thu:[],fri:[["12:00","15:00"],["19:00","21:30"]],sat:[["11:00","21:30"]],sun:[["11:00","19:00"]]};
+var DEFAULT_WINDOWS={mon:[["12:00","15:00"],["19:00","21:30"]],tue:[["12:00","15:00"],["19:00","21:30"]],wed:[],thu:[],fri:[["12:00","15:00"],["19:00","21:30"]],sat:[["11:00","21:30"]],sun:[["11:00","19:00"]]};
+var WINDOWS=DEFAULT_WINDOWS;
+/* weekly hours: staff can change them in Impostazioni; saved in settings/main.windows (also read by the WhatsApp bot) */
+var DAY_ORDER=["mon","tue","wed","thu","fri","sat","sun"];
+var DAYS_IT={mon:"Lunedì",tue:"Martedì",wed:"Mercoledì",thu:"Giovedì",fri:"Venerdì",sat:"Sabato",sun:"Domenica"};
+var DAYS_EN={mon:"Mon",tue:"Tue",wed:"Wed",thu:"Thu",fri:"Fri",sat:"Sat",sun:"Sun"};
+function goodWindows(w){if(!w||typeof w!=="object")return null;return DAY_ORDER.every(function(d){var x=w[d];return Array.isArray(x)&&x.every(function(r){return Array.isArray(r)&&r.length===2&&/^\d\d:\d\d$/.test(r[0])&&/^\d\d:\d\d$/.test(r[1])&&r[0]<=r[1]})})?w:null}
+function hoursEn(){var open=[],closed=[];DAY_ORDER.forEach(function(d){var w=WINDOWS[d]||[];if(!w.length)closed.push(DAYS_EN[d]);else open.push(DAYS_EN[d]+" "+w.map(function(r){return r[0]+"-"+r[1]}).join(" and "))});return open.join("; ")+(closed.length?"; closed "+closed.join(", "):"")}
+function fillHours(){DAY_ORDER.forEach(function(d){var e=document.getElementById("s-h-"+d);if(e)e.value=(WINDOWS[d]||[]).map(function(r){return r[0]+"-"+r[1]}).join(", ")})}
+function readHours(){var w={},bad="";DAY_ORDER.forEach(function(d){var e=document.getElementById("s-h-"+d),t=((e&&e.value)||"").trim();w[d]=[];if(!t||/^chius/i.test(t))return;t.split(/[,;]+/).forEach(function(p){var m=p.trim().replace(/\./g,":").match(/^(\d{1,2}):(\d\d)\s*[-–]\s*(\d{1,2}):(\d\d)$/);if(!m){bad=bad||DAYS_IT[d];return}var a=(m[1].length<2?"0":"")+m[1]+":"+m[2],b=(m[3].length<2?"0":"")+m[3]+":"+m[4];if(a>b||b>"23:59"){bad=bad||DAYS_IT[d];return}w[d].push([a,b])})});return bad?{error:"Orario non valido per "+bad+": scrivi per esempio 12:00-15:00, 19:00-21:30 (vuoto = chiuso)."}:{windows:w}}
 var WD=["sun","mon","tue","wed","thu","fri","sat"];
 var DINNER_FROM=18*60;
 
@@ -808,7 +822,7 @@ function h(tag,attrs,kids){var e=document.createElement(tag);if(attrs)for(var k 
 function applyBookings(q,src){S.bookings=q.docs.map(function(d){return Object.assign({},d.data()||{},{id:d.id})});S.bkSrc=src;S.bkErr="";dbStatus(S.bookings.length+" prenotazioni caricate · aggiornato alle "+hm(new Date().getHours()*60+new Date().getMinutes()));render()}
 function applyEvents(q,src){S.evLoaded=true;S.evSrc=src;S.evErr="";S.events=q.docs.map(function(d){return Object.assign({},d.data()||{},{id:d.id})}).filter(function(e){return e.date>=today()}).sort(function(a,b){return (a.date+(a.time||"")).localeCompare(b.date+(b.time||""))});fillTimes();render()}
 function applyOverrides(q){var o={};q.docs.forEach(function(d){var x=d.data()||{};if(x.state)o[d.id]=x.state});S.overrides=o;render()}
-function applySettings(d){S.settings=Object.assign({},DEFAULTS,d.exists?d.data():{});fillSettings();aiUI();render()}
+function applySettings(d){S.settings=Object.assign({},DEFAULTS,d.exists?d.data():{});WINDOWS=goodWindows(S.settings.windows)||DEFAULT_WINDOWS;fillTimes();fillSettings();aiUI();render()}
 function dbStatus(t){var e=el("db-status");if(e)e.textContent=t}
 async function boot(){
   try{var l=localStorage.getItem("dvor-lang");if(l&&T[l])S.lang=l}catch(e){}
@@ -896,7 +910,7 @@ var RULES=function(){
   var d=new Date();
   return "You are the booking assistant of Osteria Enoteca Dvor, a restaurant in San Floriano del Collio (Italy). "+
   "Today is "+d.toDateString()+" ("+ymd(d)+"), local time "+hm(d.getHours()*60+d.getMinutes())+". "+
-  "Opening (arrival times, a table is held 2 hours): Mon, Tue, Fri lunch 12:00-15:00 and dinner 19:00-21:30; Sat 11:00-21:30 non-stop; Sun 11:00-19:00; normally closed Wed and Thu. Arrivals every 30 minutes.\n"+eventsText()+
+  "Opening (arrival times, a table is held 2 hours): "+hoursEn()+". Arrivals every 30 minutes.\n"+eventsText()+
   "Contacts: Via Castello 5, 34070 San Floriano del Collio (GO), about 6 km from Gorizia on the Slovenian border; tel +39 0481 090740; WhatsApp +39 392 388 3900; info@osteriadvor.com.\n"+
   "For any question about the restaurant (menu, dishes, wines and prices, allergies, rooms, garden, directions, private events, company dinners, parties, communions, brunch, quotes) call the site_info tool and answer only from what it returns, in the guest's language, and add the page link when useful. If the site does not say, say so kindly and give the phone or WhatsApp. Never invent dishes, prices or services.\n"+
   "Always call the check_availability tool before proposing anything or saying a day is closed, and only state facts the tool returned (the tool knows special openings). Rules:\n"+
@@ -1019,7 +1033,7 @@ function journeyText(){return S.journey.map(function(j){return "+"+j.sec+"s "+j.
 var KIND={changes:"keeps changing date or time",idle:"stopped on the booking form without confirming",exit:"is moving to leave the page"};
 async function smartNudge(kind,c){
   var langName={it:"Italian",en:"English",de:"German",sl:"Slovenian",nl:"Dutch"}[S.lang]||"Italian";
-  var prompt="You help Osteria Enoteca Dvor (restaurant, San Floriano del Collio) turn a hesitating website visitor into a booking. Today is "+ymd(new Date())+" ("+WD[new Date().getDay()]+"). Open Mon, Tue, Fri lunch 12:00-15:00 and dinner 19:00-21:30, Sat 11:00-21:30, Sun 11:00-19:00, normally closed Wed and Thu. "+eventsText()+"Dinner runs only with at least "+S.settings.minGuests+" guests.\n"+
+  var prompt="You help Osteria Enoteca Dvor (restaurant, San Floriano del Collio) turn a hesitating website visitor into a booking. Today is "+ymd(new Date())+" ("+WD[new Date().getDay()]+"). Open "+hoursEn()+". "+eventsText()+"Dinner runs only with at least "+S.settings.minGuests+" guests.\n"+
   "The visitor "+KIND[kind]+". What they looked at on this page, oldest first:\n"+journeyText()+"\n"+
   (S.turns.length?"Their chat messages: "+S.turns.filter(function(x){return x.role==="user"}).map(function(x){return x.content}).join(" | ")+"\n":"")+
   "1) Infer what they really want (preferred weekdays, lunch or dinner, time range, party size, price sensitivity, flexibility). 2) Use check_availability on the 1-3 options that best match, and pick the best one, favouring evenings that are closer to "+S.settings.minGuests+" guests when it fits their wishes. 3) Write a short, warm message ("+langName+", max 2 sentences) proposing it. Only state facts check_availability returned (seats left, discount, offer). Never mention the minimum number of guests, guest counts, or that a dinner might not take place. Never invent scarcity or discounts, never say full unless reason is slot_full.\n"+
@@ -1537,7 +1551,7 @@ el("pl-week").addEventListener("click",function(){S.plMode="week";render()});el(
 el("pl-prev").addEventListener("click",function(){plMove(-1)});el("pl-next").addEventListener("click",function(){plMove(1)});el("pl-today").addEventListener("click",function(){S.plRef=today();S.selDay=today();render()});
 SPS.forEach(function(k){el("sp-b-"+k).addEventListener("click",function(){setSp(k==="set"&&S.sp==="set"?"today":k)})});el("set-back").addEventListener("click",function(){setSp("today")});
 el("st-logout").addEventListener("click",function(){if(window.DVOR_LOGOUT)DVOR_LOGOUT();else setView("guest")});
-function fillSettings(){var s=S.settings;el("s-min").value=s.minGuests;el("s-ext").value=s.extendIfAtLeast;el("s-hide").value=s.hideIfAtMost;el("s-seats").value=s.seats;el("s-wdpct").value=s.weekdayPct;el("s-wepct").value=s.weekendPct;el("s-ovpct").value=s.overflowPct;el("s-fullfrom").value=s.showFullFrom;el("s-disc").value=s.discountPct;el("s-offer").value=s.offer||"";el("s-remh").value=s.reminderHours;botUI()}
+function fillSettings(){var s=S.settings;el("s-min").value=s.minGuests;el("s-ext").value=s.extendIfAtLeast;el("s-hide").value=s.hideIfAtMost;el("s-seats").value=s.seats;el("s-wdpct").value=s.weekdayPct;el("s-wepct").value=s.weekendPct;el("s-ovpct").value=s.overflowPct;el("s-fullfrom").value=s.showFullFrom;el("s-disc").value=s.discountPct;el("s-offer").value=s.offer||"";el("s-remh").value=s.reminderHours;fillHours();botUI()}
 /* assistant on/off: settings/main.botOff, read by the page and by the server (api.php refuses the chatbot while it is off) */
 var botKey=null;if(window.DVOR_INFO)DVOR_INFO.then(function(i){botKey=i.aiKey!==false;botUI()});
 function botUI(){var off=!!S.settings.botOff,st=el("bot-state"),b=el("bot-toggle");
@@ -1553,7 +1567,8 @@ el("bot-toggle").addEventListener("click",async function(){
 el("s-save").addEventListener("click",async function(){
   if(!db)return;var m=el("s-msg");
   var v={discountPct:Math.max(0,Math.min(50,+el("s-disc").value||0)),minGuests:Math.max(1,+el("s-min").value||10),extendIfAtLeast:Math.max(1,+el("s-ext").value||7),hideIfAtMost:Math.max(0,+el("s-hide").value||0),seats:Math.max(1,+el("s-seats").value||74),offer:el("s-offer").value.trim(),seats:Math.max(1,+el("s-seats").value||74),weekdayPct:Math.max(1,+el("s-wdpct").value||50),weekendPct:Math.max(1,+el("s-wepct").value||100),overflowPct:Math.max(0,+el("s-ovpct").value||0),showFullFrom:Math.max(0,Math.min(100,+el("s-fullfrom").value||0)),reminderHours:Math.max(0,Math.min(48,+el("s-remh").value||0)),botOff:!!S.settings.botOff};
-  try{await db.doc("settings/main").set(v);m.textContent="Regole salvate."}catch(e){m.textContent="Non salvato: solo chi modifica la pagina può cambiare le regole."}
+  var hw=readHours();if(hw.error){m.textContent=hw.error;return}v.windows=hw.windows;
+  try{await db.doc("settings/main").set(v);m.textContent="Regole e orari salvati."}catch(e){m.textContent="Non salvato: solo chi modifica la pagina può cambiare le regole."}
 });
 
 /* ---------- guest month calendar ---------- */
