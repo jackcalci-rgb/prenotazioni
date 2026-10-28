@@ -225,8 +225,9 @@ a.btn{display:inline-block;text-decoration:none;font:400 .8rem var(--sans);lette
 @media (max-width:480px){.cd{min-height:52px;padding:.25rem}.cd.closed .tag{letter-spacing:0;text-transform:none;font-size:.56rem}.cd.open{border-left-width:3px}.cd .tag.long{display:none}}
 @media (max-width:560px){.day{grid-template-columns:1fr}h1{font-size:1.8rem}}
 @media (prefers-reduced-motion:no-preference){.nudge{animation:in .35s ease-out}@keyframes in{from{transform:translateY(6px);opacity:.4}to{transform:none;opacity:1}}}
-/* Modalità incorporata (?embed=1): usata dalla pagina Prenota di osteriadvor.com. Nasconde intestazione e area staff, sfondo trasparente. */
-html.embed header{display:none}
+/* Modalità incorporata (?embed=1): usata dalla pagina Prenota di osteriadvor.com. Nasconde titolo e area staff (resta il selettore della lingua), sfondo trasparente. */
+html.embed header{padding-block:0 .4rem;border-bottom:0;margin-bottom:.6rem;justify-content:flex-end}
+html.embed header>div:first-child,html.embed .tabs{display:none}
 html.embed body{background:transparent;padding-block:0 .5rem;padding-left:0;padding-right:0}
 html.embed .wrap{max-width:none}
 </style>
