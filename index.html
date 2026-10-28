@@ -225,6 +225,11 @@ a.btn{display:inline-block;text-decoration:none;font:400 .8rem var(--sans);lette
 @media (max-width:480px){.cd{min-height:52px;padding:.25rem}.cd.closed .tag{letter-spacing:0;text-transform:none;font-size:.56rem}.cd.open{border-left-width:3px}.cd .tag.long{display:none}}
 @media (max-width:560px){.day{grid-template-columns:1fr}h1{font-size:1.8rem}}
 @media (prefers-reduced-motion:no-preference){.nudge{animation:in .35s ease-out}@keyframes in{from{transform:translateY(6px);opacity:.4}to{transform:none;opacity:1}}}
+/* Modalità incorporata (?embed=1): usata dalla pagina Prenota di osteriadvor.com. Nasconde titolo e area staff (resta il selettore della lingua), sfondo trasparente. */
+html.embed header{padding-block:0 .4rem;border-bottom:0;margin-bottom:.6rem;justify-content:flex-end}
+html.embed header>div:first-child,html.embed .tabs{display:none}
+html.embed body{background:transparent;padding-block:0 .5rem;padding-left:0;padding-right:0}
+html.embed .wrap{max-width:none}
 </style>
 
 <div class="wrap">
@@ -1800,5 +1805,24 @@ boot();
 })();
 </script>
 
+<script>
+/* Modalità incorporata: ?embed=1 (&lang=it&theme=dark). Il sito che ospita la pagina può mandare {type:"dvor-embed",lang,theme}
+   e riceve {type:"dvor-prenota-height",height} per adattare l'altezza del riquadro. L'area staff non è raggiungibile da qui. */
+(function(){
+  var q;try{q=new URLSearchParams(location.search)}catch(e){return}
+  if(q.get("embed")!=="1")return;
+  var d=document.documentElement;d.classList.add("embed");
+  if(location.hash==="#staff")location.hash="";
+  function theme(v){if(v==="dark"||v==="light")d.setAttribute("data-theme",v)}
+  function lang(v){var sel=document.getElementById("lang");if(!sel||!/^(it|en|de|sl|nl)$/.test(v||"")||sel.value===v)return;sel.value=v;sel.dispatchEvent(new Event("change"))}
+  theme(q.get("theme"));
+  window.addEventListener("load",function(){lang(q.get("lang"))});
+  window.addEventListener("message",function(e){var m=e.data;if(!m||m.type!=="dvor-embed"||e.source!==window.parent)return;theme(m.theme);lang(m.lang)});
+  var last=0;
+  function send(){var h=Math.ceil(d.getBoundingClientRect().height);if(h&&h!==last){last=h;try{window.parent.postMessage({type:"dvor-prenota-height",height:h},"*")}catch(e){}}}
+  if(window.ResizeObserver)new ResizeObserver(send).observe(d);
+  window.addEventListener("load",send);setInterval(send,800);
+})();
+</script>
 </body>
 </html>
