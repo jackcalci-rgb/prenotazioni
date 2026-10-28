@@ -440,6 +440,12 @@ function cleanBooking(array $x, bool $staff = false): array {
     'pending' => !empty($x['pending']),
   ];
   if (!empty($x['example'])) $b['example'] = true;
+  if (isset($x['marketing'])) $b['marketing'] = !empty($x['marketing']); // guest form: the marketing consent box; staff form: only when ticked
+  if (is_array($x['utm'] ?? null)) { // campaign that brought the guest to the page (utm_*, gclid, fbclid)
+    $u = [];
+    foreach (['source', 'medium', 'campaign', 'content', 'term', 'gclid', 'fbclid', 'ref'] as $k) if (is_scalar($x['utm'][$k] ?? null) && trim((string)$x['utm'][$k]) !== '') $u[$k] = $s($x['utm'][$k], 200);
+    if ($u) $b['utm'] = $u;
+  }
   if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $b['date']) || !preg_match('/^\d{2}:\d{2}$/', $b['time'])) fail('bad_request', 'Data o ora non valida');
   if ($b['party'] < 1 || $b['party'] > 74) fail('bad_request', 'Numero di persone non valido');
   if (in_array($b['source'], ['phone', 'whatsapp', 'walkin'], true)) { // taken by the staff: only the name is required
@@ -588,6 +594,57 @@ switch ($op) {
     patchDoc('bookings', $id, array_intersect_key($b, array_flip(['emailSentAt', 'emailKind', 'emailError'])), isset($b['emailError']) ? [] : ['emailError']);
     if (!$ok) fail('mail_failed', $b['emailError'] ?? 'Invio non riuscito', 502);
     out(['ok' => true]);
+  }
+
+  /* ---------- marketing: guest list for retargeting, staff only ---------- */
+  case 'leads_list': {
+    if (!$staff) fail('not_granted', 'Solo staff', 403);
+    $res = [];
+    foreach (db()->query('SELECT id, data FROM leads ORDER BY n DESC')->fetchAll(PDO::FETCH_NUM) as [$id, $data]) { $x = json_decode((string)$data, true); if (is_array($x)) $res[] = ['id' => (string)$id, 'data' => $x]; }
+    out(['leads' => $res]);
+  }
+
+  case 'leads_import': {
+    if (!$staff) fail('not_granted', 'Solo staff', 403);
+    $rows = is_array($in['rows'] ?? null) ? array_slice($in['rows'], 0, 500) : [];
+    $label = mb_substr(trim((string)($in['label'] ?? '')), 0, 120); $all = !empty($in['consentAll']);
+    $n = tx(function (PDO $pdo) use ($rows, $label, $all) {
+      $n = ['new' => 0, 'updated' => 0, 'skipped' => 0];
+      foreach ($rows as $r) $n[is_array($r) ? leadImport($pdo, $r, $label, $all) : 'skipped']++;
+      return $n;
+    });
+    out($n);
+  }
+
+  case 'leads_update': {
+    if (!$staff) fail('not_granted', 'Solo staff', 403);
+    $id = (string)($in['id'] ?? ''); $f = is_array($in['data'] ?? null) ? $in['data'] : [];
+    if (!preg_match('/^[A-Za-z0-9_-]{1,64}$/', $id)) fail('bad_path', 'Lead non valido');
+    $ok = tx(function (PDO $pdo) use ($id, $f) {
+      $q = $pdo->prepare('SELECT data FROM leads WHERE id = ? FOR UPDATE'); $q->execute([$id]);
+      $d = $q->fetchColumn(); if ($d === false) return false;
+      $L = json_decode((string)$d, true) ?: [];
+      foreach (['name' => 120, 'phone' => 40, 'email' => 160, 'city' => 80, 'notes' => 1000] as $k => $max) if (array_key_exists($k, $f)) $L[$k] = mb_substr(trim((string)$f[$k]), 0, $max);
+      if (array_key_exists('name', $f)) unset($L['firstName'], $L['lastName']);
+      if (array_key_exists('birthday', $f)) $L['birthday'] = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)$f['birthday']) ? (string)$f['birthday'] : '';
+      if (is_array($f['tags'] ?? null)) $L['tags'] = array_values(array_unique(array_filter(array_map(fn($t) => mb_substr(trim((string)$t), 0, 40), $f['tags']))));
+      if (in_array($f['consent'] ?? null, ['yes', 'no', ''], true) && $f['consent'] !== ($L['consent'] ?? '')) { $L['consent'] = $f['consent']; $L['consentAt'] = date('c'); $L['consentSource'] = 'staff'; }
+      leadSave($pdo, $id, $L); return true;
+    });
+    if (!$ok) fail('not_found', 'Lead non trovato', 404);
+    out(['ok' => true]);
+  }
+
+  case 'leads_delete': {
+    if (!$staff) fail('not_granted', 'Solo staff', 403);
+    $ids = array_values(array_filter(is_array($in['ids'] ?? null) ? $in['ids'] : [], fn($x) => is_string($x) && preg_match('/^[A-Za-z0-9_-]{1,64}$/', $x)));
+    if ($ids) db()->prepare('DELETE FROM leads WHERE id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')')->execute($ids);
+    out(['deleted' => count($ids)]);
+  }
+
+  case 'leads_rebuild': {
+    if (!$staff) fail('not_granted', 'Solo staff', 403);
+    out(['bookings' => tx(fn(PDO $pdo) => leadRebuild($pdo))]);
   }
 
   case 'claude': {

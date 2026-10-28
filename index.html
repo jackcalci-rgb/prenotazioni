@@ -131,6 +131,12 @@ th{font-weight:400;color:var(--muted);font-size:.75rem;letter-spacing:.1em;text-
 .sbar .seg button{padding:.5rem 1rem}
 .gear{flex:0 0 auto;width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--ink);display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
 .gear:hover{border-color:var(--wine)}
+@media (max-width:560px){.sbar .seg button{padding:.5rem .55rem;font-size:.8rem}}
+label.tick{flex-direction:row;align-items:flex-start;gap:.5rem;color:var(--ink);font-size:.85rem}
+label.tick input{width:auto;margin-top:.2rem;flex:0 0 auto}
+.mkr{cursor:pointer}.mkr:hover td,.mkr.on td{background:var(--alt)}
+.mkd>td{background:var(--bg)}
+.s-idle{background:var(--idle-bg);color:var(--idle)}
 .gear[aria-pressed="true"]{background:var(--wine);color:var(--on-wine);border-color:var(--wine)}
 .kpi.hot{border-color:var(--bad);background:var(--bad-bg)}
 .kpi.hot b{color:var(--bad)}
@@ -292,7 +298,7 @@ a.btn{display:inline-block;text-decoration:none;font:400 .8rem var(--sans);lette
   <section id="v-staff" class="stack" hidden>
     <div class="sbar">
       <div class="seg" role="group" aria-label="Servizio">
-        <button type="button" id="sp-b-today" aria-pressed="true">Oggi</button><button type="button" id="sp-b-cal" aria-pressed="false">Calendario</button><button type="button" id="sp-b-new" aria-pressed="false">+ Nuova</button>
+        <button type="button" id="sp-b-today" aria-pressed="true">Oggi</button><button type="button" id="sp-b-cal" aria-pressed="false">Calendario</button><button type="button" id="sp-b-new" aria-pressed="false">+ Nuova</button><button type="button" id="sp-b-mkt" aria-pressed="false">Marketing</button>
       </div>
       <button type="button" class="gear" id="sp-b-set" aria-pressed="false" aria-label="Impostazioni" title="Impostazioni, lista nera, eventi"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
     </div>
@@ -344,9 +350,42 @@ a.btn{display:inline-block;text-decoration:none;font:400 .8rem var(--sans);lette
         </div>
         <label>Note<input id="mb-notes" placeholder="Seggiolone, allergie, compleanno…"></label>
         <label style="flex-direction:row;align-items:center;gap:.5rem"><input type="checkbox" id="mb-send" style="width:auto" checked>Manda all'ospite l'email di conferma con il calendario (se c'è l'email)</label>
+        <label style="flex-direction:row;align-items:center;gap:.5rem"><input type="checkbox" id="mb-mkt" style="width:auto">L'ospite accetta di ricevere novità e offerte (consenso marketing)</label>
         <p class="small" id="mb-info" aria-live="polite"></p>
         <div class="row" style="align-items:center"><button class="btn" type="submit" id="mb-save">Aggiungi prenotazione</button><span class="small muted" id="mb-msg" aria-live="polite"></span></div>
       </form>
+    </div>
+    <div id="sp-mkt" class="stack" hidden>
+      <div class="card stack">
+        <div class="row" style="justify-content:space-between;align-items:center"><h2>Marketing · lead</h2><span class="small muted" id="mk-count" aria-live="polite"></span></div>
+        <p class="small muted">Ogni ospite che prenota entra qui da solo: giorno e ora della prenotazione, persone, com'è andata (venuto, no show, annullata), canale, consenso marketing e campagna da cui è arrivato. Le liste dei clienti passati si aggiungono dal riquadro «Importa» qui sotto. Stesso telefono o stessa email: resta un solo lead.</p>
+        <div class="kpis" id="mk-kpis"></div>
+        <div class="row">
+          <label style="flex:2 1 200px">Cerca<input id="mk-q" type="search" placeholder="Nome, telefono, email, tag"></label>
+          <label>Gruppo<select id="mk-seg"></select></label>
+          <label>Consenso<select id="mk-consent"><option value="all">Tutti</option><option value="yes">Sì</option><option value="unknown">Non indicato</option><option value="no">No</option></select></label>
+          <label>Origine<select id="mk-origin"><option value="all">Tutte</option><option value="site">Dal sito</option><option value="staff">Telefono, WhatsApp, di persona</option><option value="import">Liste importate</option></select></label>
+          <label>Tag<select id="mk-tag"></select></label>
+          <label>Visita dal<input type="date" id="mk-from"></label>
+          <label>al<input type="date" id="mk-to"></label>
+        </div>
+        <div id="mk-list" class="stack"></div>
+      </div>
+      <div class="card stack">
+        <h2>Esporta per il retargeting</h2>
+        <p class="small muted">Scarica i lead che vedi qui sopra, con i filtri scelti. Il file Excel ha tutti i dati. I file per Meta Ads (pubblico personalizzato) e Google Ads (Customer Match) hanno già le colonne che chiedono e i telefoni con il prefisso internazionale.</p>
+        <label class="tick"><input type="checkbox" id="mk-all"><span>Nei file per Meta e Google includi anche chi non ha indicato il consenso (chi ha detto no resta sempre fuori)</span></label>
+        <div class="row" style="align-items:center"><button class="btn" type="button" id="mk-x-xls">Excel (CSV)</button><button class="btn ghost" type="button" id="mk-x-meta">Meta Ads</button><button class="btn ghost" type="button" id="mk-x-goo">Google Ads</button><span id="mk-x-msg" class="small muted" aria-live="polite"></span></div>
+      </div>
+      <div class="card stack">
+        <h2>Importa i lead passati</h2>
+        <p class="small muted">File Excel (.xlsx) o CSV, una riga per cliente. Le colonne si riconoscono da sole (nome, telefono, email, data della visita, consenso…): controlla l'abbinamento prima di importare. Chi è già in elenco viene completato, non doppiato, e rilanciare lo stesso file non cambia niente.</p>
+        <label>File<input type="file" id="mk-file" accept=".xlsx,.csv,.txt,.tsv"></label>
+        <details><summary class="small" style="cursor:pointer">Oppure incolla le righe copiate dal foglio di calcolo</summary><div class="stack" style="margin-top:.5rem"><textarea id="mk-paste" rows="4" placeholder="Nome&#9;Telefono&#9;Email&#9;Ultima visita"></textarea><div><button class="btn ghost small" type="button" id="mk-paste-go">Usa queste righe</button></div></div></details>
+        <div id="mk-imp" class="stack"></div>
+        <p class="small" id="mk-imp-res" aria-live="polite"></p>
+      </div>
+      <div class="row" style="align-items:center"><button class="btn ghost small" type="button" id="mk-rebuild">Ricalcola dalle prenotazioni</button><span class="small muted" id="mk-rb-msg" aria-live="polite"></span></div>
     </div>
     <div id="sp-set" class="stack" hidden>
       <div class="row" style="justify-content:space-between;align-items:center"><h2>Impostazioni</h2><button class="btn ghost small" type="button" id="set-back">← Torna al servizio</button></div>
@@ -478,6 +517,7 @@ a.btn{display:inline-block;text-decoration:none;font:400 .8rem var(--sans);lette
     return r;
   }
   var db = { collection: function (c) { return query(c, [], 0) }, doc: docRef };
+  window.DVOR_CALL = call; // staff marketing page: leads_* operations
 
   var assets = {
     upload: function (file) {
@@ -594,11 +634,11 @@ de:{fullPct:"Der Saal ist schon zu {p}% belegt",fullShort:"{p}% belegt",lastSeat
 sl:{fullPct:"Jedilnica je že {p}% polna",fullShort:"{p}% polno",lastSeats:"Zadnja mesta",event:"Dogodek",pickTime:"Izberite uro",noTimes:"Za to število oseb ni prostih ur.",prevM:"Prejšnji mesec",nextM:"Naslednji mesec",allDay:"ves dan",events:"Prihajajoči dogodki",evLink:"Na stran dogodka",close:"Zapri",menu:"Meni",carta:"À la carte",degustazione:"Degustacijski meni",email:"E-pošta",discount:"{p}% popusta na račun za to rezervacijo",better:"{d} je v jedilnici že več gostov. Bi raje ta večer?",title:"Rezerviraj mizo",ask:"Napišite nam, kaj želite",askSub:"Na primer: »Štirje v petek okoli 20h, ena oseba vegetarijanka«.",msg:"Sporočilo",send:"Pošlji",manual:"Ali izberite sami",date:"Datum",party:"Osebe",time:"Ura",check:"Preveri",proto:"Testni prototip. Rezervacije tukaj niso prave; obrazec Odoo ostane aktiven.",aiOff:"Pomočnik tu ni na voljo. Uporabite obrazec spodaj.",thinking:"Preverjam razpoložljivost…",yourTable:"Vaša miza",name:"Ime",phone:"Telefon",notes:"Opombe (alergije, priložnosti)",book:"Potrdi rezervacijo",people:"oseb",lunch:"Kosilo",dinner:"Večerja",available:"Na voljo",notAvail:"Ni na voljo",closed:"Zaprto",seatsLeft:"Ob tej uri je še {n} mest",needN:"Za potrditev večerje manjka še {n} gostov",dinnerOk:"Večerja potrjena",pendingNote:"Potrditev vam pošljemo po e-pošti dan prej.",alts:"Druge možnosti",booked:"Rezervacija shranjena",mine:"Vaše rezervacije",cancel:"Prekliči",keep:"Obdržim rezervacijo",cancelAnyway:"Vseeno prekliči",beforeCancel:"Pred preklicem: jo raje prestavimo?",offer:"Za vas: {o}",nudgeTitle:"Še razmišljate?",choose:"Izberi",cancelled:"Preklicano",confirmed:"Potrjeno",pending:"Prejeto",errName:"Vpišite ime, telefon in veljaven e-naslov.",errSave:"Shranjevanje ni uspelo. Poskusite znova.",aiErr:"Pomočnik se ni odzval. Uporabite obrazec spodaj."},
 nl:{fullPct:"De zaal is al voor {p}% vol",fullShort:"{p}% vol",lastSeats:"Laatste plaatsen",event:"Evenement",pickTime:"Kies een tijd",noTimes:"Geen vrije tijden voor dit aantal personen.",prevM:"Vorige maand",nextM:"Volgende maand",allDay:"de hele dag",events:"Komende evenementen",evLink:"Naar de evenementpagina",close:"Sluiten",menu:"Menu",carta:"À la carte",degustazione:"Proeverijmenu",email:"E-mail",discount:"{p}% korting op de rekening bij deze reservering",better:"Op {d} is het al gezellig druk. Liever die avond?",title:"Reserveer een tafel",ask:"Vertel ons wat je wilt",askSub:"Bijvoorbeeld: “Met z'n vieren vrijdag rond 20 uur, één vegetariër”.",msg:"Bericht",send:"Verstuur",manual:"Of kies zelf",date:"Datum",party:"Personen",time:"Tijd",check:"Controleer",proto:"Testprototype. Reserveringen hier zijn niet echt; het Odoo-formulier blijft actief.",aiOff:"De assistent is hier niet beschikbaar. Gebruik het formulier.",thinking:"Beschikbaarheid controleren…",yourTable:"Jouw tafel",name:"Naam",phone:"Telefoon",notes:"Opmerkingen (allergieën, gelegenheden)",book:"Reservering bevestigen",people:"personen",lunch:"Lunch",dinner:"Diner",available:"Beschikbaar",notAvail:"Niet beschikbaar",closed:"Gesloten",seatsLeft:"Nog {n} plaatsen op dit tijdstip",needN:"Nog {n} gasten nodig om het diner te bevestigen",dinnerOk:"Diner bevestigd",pendingNote:"We mailen je de dag ervoor een bevestiging.",alts:"Alternatieven",booked:"Reservering opgeslagen",mine:"Jouw reserveringen",cancel:"Annuleren",keep:"Reservering houden",cancelAnyway:"Toch annuleren",beforeCancel:"Voor je annuleert: zullen we hem verzetten?",offer:"Voor jou: {o}",nudgeTitle:"Twijfel je nog?",choose:"Kies",cancelled:"Geannuleerd",confirmed:"Bevestigd",pending:"Ontvangen",errName:"Vul naam, telefoon en een geldig e-mailadres in.",errSave:"Opslaan mislukt. Probeer het zo opnieuw.",aiErr:"De assistent antwoordde niet. Gebruik het formulier."}
 };
-var T2={it:{addCal:"Aggiungi al tuo calendario",doneT:"Prenotazione registrata",mailTo:"Ti mandiamo la conferma via email a {e}.",limited:"Posti limitati · prenotazione consigliata",firstDisc:"Sconto del {p}% riservato a chi prenota per primo questo turno",recentH:"Ultima prenotazione ricevuta {n} fa",recentN:"{n} prenotazioni ricevute negli ultimi 7 giorni",min:"{n} min",hr:"{n} ore"},
-en:{addCal:"Add to your calendar",doneT:"Booking saved",mailTo:"We will email your confirmation to {e}.",limited:"Limited seats · booking recommended",firstDisc:"{p}% off, reserved for the first to book this service",recentH:"Last booking received {n} ago",recentN:"{n} bookings received in the last 7 days",min:"{n} min",hr:"{n} hours"},
-de:{addCal:"Zum Kalender hinzufügen",doneT:"Reservierung gespeichert",mailTo:"Wir senden die Bestätigung per E-Mail an {e}.",limited:"Begrenzte Plätze · Reservierung empfohlen",firstDisc:"{p}% Rabatt für die ersten, die diesen Termin reservieren",recentH:"Letzte Reservierung vor {n}",recentN:"{n} Reservierungen in den letzten 7 Tagen",min:"{n} Min.",hr:"{n} Std."},
-sl:{addCal:"Dodaj v koledar",doneT:"Rezervacija shranjena",mailTo:"Potrditev vam pošljemo na {e}.",limited:"Omejeno število mest · priporočamo rezervacijo",firstDisc:"{p}% popusta za prve, ki rezervirajo ta termin",recentH:"Zadnja rezervacija pred {n}",recentN:"{n} rezervacij v zadnjih 7 dneh",min:"{n} min",hr:"{n} h"},
-nl:{addCal:"Zet in je agenda",doneT:"Reservering opgeslagen",mailTo:"We mailen je bevestiging naar {e}.",limited:"Beperkt aantal plaatsen · reserveren aanbevolen",firstDisc:"{p}% korting voor wie deze shift als eerste reserveert",recentH:"Laatste reservering {n} geleden",recentN:"{n} reserveringen in de afgelopen 7 dagen",min:"{n} min",hr:"{n} uur"}};
+var T2={it:{mkt:"Voglio ricevere da Dvor novità su eventi, serate e offerte (facoltativo, puoi annullare quando vuoi)",addCal:"Aggiungi al tuo calendario",doneT:"Prenotazione registrata",mailTo:"Ti mandiamo la conferma via email a {e}.",limited:"Posti limitati · prenotazione consigliata",firstDisc:"Sconto del {p}% riservato a chi prenota per primo questo turno",recentH:"Ultima prenotazione ricevuta {n} fa",recentN:"{n} prenotazioni ricevute negli ultimi 7 giorni",min:"{n} min",hr:"{n} ore"},
+en:{mkt:"I would like to hear from Dvor about events, special evenings and offers (optional, unsubscribe anytime)",addCal:"Add to your calendar",doneT:"Booking saved",mailTo:"We will email your confirmation to {e}.",limited:"Limited seats · booking recommended",firstDisc:"{p}% off, reserved for the first to book this service",recentH:"Last booking received {n} ago",recentN:"{n} bookings received in the last 7 days",min:"{n} min",hr:"{n} hours"},
+de:{mkt:"Ich möchte von Dvor über Veranstaltungen, Themenabende und Angebote informiert werden (freiwillig, jederzeit widerrufbar)",addCal:"Zum Kalender hinzufügen",doneT:"Reservierung gespeichert",mailTo:"Wir senden die Bestätigung per E-Mail an {e}.",limited:"Begrenzte Plätze · Reservierung empfohlen",firstDisc:"{p}% Rabatt für die ersten, die diesen Termin reservieren",recentH:"Letzte Reservierung vor {n}",recentN:"{n} Reservierungen in den letzten 7 Tagen",min:"{n} Min.",hr:"{n} Std."},
+sl:{mkt:"Želim prejemati novice Dvora o dogodkih, tematskih večerih in ponudbah (neobvezno, odjava kadar koli)",addCal:"Dodaj v koledar",doneT:"Rezervacija shranjena",mailTo:"Potrditev vam pošljemo na {e}.",limited:"Omejeno število mest · priporočamo rezervacijo",firstDisc:"{p}% popusta za prve, ki rezervirajo ta termin",recentH:"Zadnja rezervacija pred {n}",recentN:"{n} rezervacij v zadnjih 7 dneh",min:"{n} min",hr:"{n} h"},
+nl:{mkt:"Ik ontvang graag nieuws van Dvor over evenementen, themaavonden en aanbiedingen (optioneel, altijd op te zeggen)",addCal:"Zet in je agenda",doneT:"Reservering opgeslagen",mailTo:"We mailen je bevestiging naar {e}.",limited:"Beperkt aantal plaatsen · reserveren aanbevolen",firstDisc:"{p}% korting voor wie deze shift als eerste reserveert",recentH:"Laatste reservering {n} geleden",recentN:"{n} reserveringen in de afgelopen 7 dagen",min:"{n} min",hr:"{n} uur"}};
 for(var _l in T2)for(var _k in T2[_l])if(T[_l])T[_l][_k]=T2[_l][_k];
 /* honest social proof: built only from real bookings (test and example data excluded) */
 function recentProof(){var now=Date.now(),last=0,n=0;S.bookings.forEach(function(b){if(b.example||b.source==="test"||!b.createdAt)return;var ts=Date.parse(b.createdAt);if(isNaN(ts))return;if(ts>last)last=ts;if(now-ts<7*864e5)n++});
@@ -895,6 +935,7 @@ function showProposal(c){
   var syncMenu=function(src){var a=el("b-carta"),b=el("b-tast"),P=c.party;var v=Math.max(0,Math.min(P,Math.round(+src.value||0)));src.value=v;(src===a?b:a).value=P-v};
   el("b-carta").addEventListener("input",function(){syncMenu(this)});el("b-tast").addEventListener("input",function(){syncMenu(this)});
   box.append(h("label",{},[t("notes"),h("textarea",{id:"b-notes"})]));
+  box.append(h("label",{class:"tick"},[h("input",{type:"checkbox",id:"b-mkt"}),h("span",{text:t("mkt")})]));
   var msg=h("p",{class:"small",id:"b-msg"});
   box.append(h("div",{class:"row"},[h("button",{class:"btn",type:"button",id:"b-go",text:t("book"),onclick:function(){book(c)}}),msg]));
   if(c.notes)el("b-notes").value=c.notes;
@@ -902,6 +943,10 @@ function showProposal(c){
   armIdle();
   if(S.pendingNudge){S.pendingNudge=false;S.changes=0;nudge("changes")}
 }
+/* campaign that brought the guest here (utm_*, gclid, fbclid, or the site they came from), kept for the whole visit */
+var UTM=(function(){var u={};try{var q=new URLSearchParams(location.search);["source","medium","campaign","content","term"].forEach(function(k){var v=q.get("utm_"+k);if(v)u[k]=v});["gclid","fbclid"].forEach(function(k){var v=q.get(k);if(v)u[k]=v});
+  var r=document.referrer&&!/^https?:\/\/[^/]*osteriadvor\.com/.test(document.referrer)&&document.referrer.indexOf(location.host)<0?document.referrer.split("?")[0]:"";if(r)u.ref=r;
+  if(Object.keys(u).length)sessionStorage.setItem("dvor-utm",JSON.stringify(u));else u=JSON.parse(sessionStorage.getItem("dvor-utm")||"{}")}catch(e){}return u})();
 async function book(c){
   var name=el("b-name").value.trim(),phone=el("b-phone").value.trim(),email=el("b-email").value.trim();
   if(!name||!phone||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){el("b-msg").textContent=t("errName");return}
@@ -909,7 +954,7 @@ async function book(c){
   if(!db){el("b-msg").textContent=t("errSave");return}
   el("b-go").disabled=true;clearTimeout(S.idleT);
   try{
-    var ref=await db.collection("bookings").add({date:c.date,time:c.time,party:c.party,name:name,phone:phone,email:email,eventTitle:(fresh.events&&fresh.events[0]&&fresh.events[0].title)||"",menuCarta:+el("b-carta").value||0,menuTasting:+el("b-tast").value||0,discount:fresh.discount||0,notes:el("b-notes").value.trim(),lang:S.lang,status:"active",offer:fresh.offer||"",createdBy:S.me||"",insight:S.intent||"",createdAt:new Date().toISOString(),source:sample&&S.turns.length?"assistant":"form",pending:svcOf(c.time)==="dinner"&&dinnerState(c.date)!=="confirmed"});
+    var ref=await db.collection("bookings").add({date:c.date,time:c.time,party:c.party,name:name,phone:phone,email:email,eventTitle:(fresh.events&&fresh.events[0]&&fresh.events[0].title)||"",menuCarta:+el("b-carta").value||0,menuTasting:+el("b-tast").value||0,discount:fresh.discount||0,notes:el("b-notes").value.trim(),lang:S.lang,status:"active",offer:fresh.offer||"",createdBy:S.me||"",insight:S.intent||"",createdAt:new Date().toISOString(),source:sample&&S.turns.length?"assistant":"form",marketing:!!(el("b-mkt")&&el("b-mkt").checked),utm:UTM,pending:svcOf(c.time)==="dinner"&&dinnerState(c.date)!=="confirmed"});
     S.lastBooked=ref.id;S.proposal=null;el("nudge").hidden=true;
     var bk={date:c.date,time:c.time,party:c.party,lang:S.lang,eventTitle:(fresh.events&&fresh.events[0]&&fresh.events[0].title)||""},pb=el("proposal");pb.textContent="";pb.hidden=false;
     pb.append(h("div",{class:"proposal stack"},[h("div",{class:"caps",text:"✓ "+t("doneT")}),h("div",{class:"big",text:fmtDay(c.date,true)+" · "+c.time+" · "+c.party+" "+t("people")})]),
@@ -1120,10 +1165,10 @@ async function manualBook(ev){
   var g=guests(d,"dinner")+p,pend=svcOf(tm)==="dinner"&&dinnerState(d)!=="confirmed"&&g<S.settings.minGuests;
   el("mb-save").disabled=true;m.textContent="Salvo…";
   try{
-    var r=await db.collection("bookings").add({date:d,time:tm,party:p,name:name,phone:el("mb-phone").value.trim(),email:email,notes:el("mb-notes").value.trim(),lang:el("mb-lang").value,status:"active",offer:"",discount:0,menuCarta:0,menuTasting:0,eventTitle:"",createdBy:"",createdAt:new Date().toISOString(),source:src,sendMail:send,pending:pend});
+    var r=await db.collection("bookings").add({date:d,time:tm,party:p,name:name,phone:el("mb-phone").value.trim(),email:email,notes:el("mb-notes").value.trim(),lang:el("mb-lang").value,status:"active",offer:"",discount:0,menuCarta:0,menuTasting:0,eventTitle:"",createdBy:"",createdAt:new Date().toISOString(),source:src,sendMail:send,pending:pend,marketing:el("mb-mkt").checked||undefined});
     if(src==="walkin"&&d===today()&&r&&r.id)try{await db.doc("bookings/"+r.id).update({arrival:"in",arrivalAt:new Date().toISOString()})}catch(e){}
     m.textContent="✓ "+name+", "+fmtDay(d)+" alle "+tm+", "+p+" pers. ("+SRC[src]+")"+(send?" · email inviata all'ospite":"");
-    ["mb-name","mb-phone","mb-email","mb-notes"].forEach(function(k){el(k).value=""});el("mb-party").value=2;
+    ["mb-name","mb-phone","mb-email","mb-notes"].forEach(function(k){el(k).value=""});el("mb-mkt").checked=false;el("mb-party").value=2;
     S.selDay=d;S.plRef=d;
     if(src==="walkin"&&d===today())setTimeout(function(){setSp("today")},600);
   }catch(e){m.textContent="Non salvata: "+((e&&e.message)||e)}
@@ -1174,7 +1219,7 @@ function renderBlacklist(){
   });
 }
 /* ---------- staff: panels and today's service (floor dashboard + check-in list) ---------- */
-var LATE_MIN=15,SPS=["today","cal","new","set"];
+var LATE_MIN=15,SPS=["today","cal","new","mkt","set"];
 function setSp(p){if(SPS.indexOf(p)<0)p="today";S.sp=p;try{sessionStorage.setItem("dvor-sp",p)}catch(e){}
   SPS.forEach(function(k){el("sp-"+k).hidden=k!==p;el("sp-b-"+k).setAttribute("aria-pressed",String(k===p))});render()}
 function nowMin(){var n=new Date();return n.getHours()*60+n.getMinutes()}
@@ -1518,13 +1563,262 @@ el("ev-form").addEventListener("submit",async function(ev){
   el("e-save").disabled=false;
 });
 
+/* ---------- staff: marketing, one lead per guest for retargeting (saved by the server with every booking, plus imported lists) ---------- */
+var MK={leads:[],view:[],at:0,busy:false,shown:200,open:"",imp:null,err:""};
+var MK_SRC={form:"Sito",assistant:"Assistente",phone:"Telefono",whatsapp:"WhatsApp",walkin:"Di persona",import:"Lista importata"};
+function mkCall(body){return window.DVOR_CALL?DVOR_CALL(body):Promise.reject({message:"disponibile solo sul sito"})}
+function mkD(d){d=String(d||"");return d.length>=10?d.slice(8,10)+"/"+d.slice(5,7)+"/"+d.slice(0,4):"—"}
+function mkAddDays(n){var d=new Date();d.setDate(d.getDate()+n);return ymd(d)}
+function mkNorm(s){return String(s==null?"":s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").trim()}
+/* automatic refresh only when nobody is editing a lead or importing a list */
+async function mkLoad(force){
+  if(MK.busy||(!force&&(MK.open||MK.imp||(MK.at&&Date.now()-MK.at<120000))))return;
+  MK.busy=true;if(!MK.at)renderMk();
+  try{var j=await mkCall({op:"leads_list"});MK.leads=(j.leads||[]).map(function(x){var L=Object.assign({},x.data);L.id=x.id;L.sum=L.sum||{};return L});MK.err=""}
+  catch(e){MK.err=(e&&e.message)||"errore"}
+  MK.busy=false;MK.at=Date.now();renderMk();
+}
+function mkVisits(L){var v=L.visits||{};return Object.keys(v).map(function(k){return Object.assign({id:k},v[k])}).sort(function(a,b){return String(b.d+b.t).localeCompare(String(a.d+a.t))})}
+function mkOrigins(L){var o={};if(L.source==="import")o.import=1;mkVisits(L).forEach(function(v){if(v.src)o[v.src]=1});return Object.keys(o)}
+function mkBday(L,days){if(!/^\d{4}-\d\d-\d\d$/.test(L.birthday||""))return false;var y=new Date().getFullYear(),b=parseD(y+L.birthday.slice(4));if(ymd(b)<today())b=parseD((y+1)+L.birthday.slice(4));return (b-parseD(today()))/864e5<=days}
+var MK_SEG={
+  all:["Tutti",function(){return true}],
+  regular:["Abituali (2 visite o più)",function(L){return (L.sum.visits||0)>=2}],
+  once:["Venuti una volta sola",function(L){return (L.sum.visits||0)===1&&!L.sum.next}],
+  lapsed:["Non tornano da 6 mesi",function(L){return !!L.sum.last&&L.sum.last<mkAddDays(-182)&&!L.sum.next}],
+  upcoming:["Con una prenotazione in arrivo",function(L){return !!L.sum.next}],
+  recent:["Nuovi negli ultimi 30 giorni",function(L){return String(L.createdAt||"").slice(0,10)>=mkAddDays(-30)}],
+  bday:["Compleanno nei prossimi 30 giorni",function(L){return mkBday(L,30)}],
+  tasting:["Hanno preso il menù degustazione",function(L){return mkVisits(L).some(function(v){return v.deg>0})}],
+  events:["Venuti a un evento",function(L){return mkVisits(L).some(function(v){return !!v.ev})}],
+  noshow:["Con almeno un no show",function(L){return (L.sum.noShows||0)>0}]
+};
+function mkFiltered(){
+  var q=mkNorm(el("mk-q").value),seg=(MK_SEG[el("mk-seg").value]||MK_SEG.all)[1],c=el("mk-consent").value,o=el("mk-origin").value,tg=el("mk-tag").value,f=el("mk-from").value,t=el("mk-to").value;
+  return MK.leads.filter(function(L){
+    if(q&&mkNorm([L.name,L.phone,L.email,L.city,L.notes,(L.tags||[]).join(" ")].join(" ")).indexOf(q)<0&&String(L.phone||"").replace(/\D/g,"").indexOf(q.replace(/\D/g,"")||"x")<0)return false;
+    if(c!=="all"&&(L.consent||"")!==(c==="unknown"?"":c))return false;
+    if(o!=="all"){var os=mkOrigins(L),has=function(a){return os.some(function(x){return a.indexOf(x)>=0})};if(!has(o==="site"?["form","assistant"]:o==="staff"?["phone","whatsapp","walkin"]:[o]))return false}
+    if(tg&&(L.tags||[]).indexOf(tg)<0)return false;
+    if(f||t){var p=L.past||{},ds=mkVisits(L).filter(function(v){return v.s!=="cancelled"}).map(function(v){return v.d}).concat([p.first,p.last].filter(Boolean));if(!ds.some(function(d){return (!f||d>=f)&&(!t||d<=t)}))return false}
+    return seg(L);
+  }).sort(function(a,b){return String(b.sum.next||b.sum.last||"").localeCompare(String(a.sum.next||a.sum.last||""))||String(b.createdAt||"").localeCompare(String(a.createdAt||""))});
+}
+function mkConsentPill(L){return L.consent==="yes"?h("span",{class:"pill s-confirmed",text:"Sì"}):L.consent==="no"?h("span",{class:"pill s-closed",text:"No"}):h("span",{class:"pill s-idle",text:"—"})}
+function renderMk(){
+  var box=el("mk-list");if(!box)return;
+  var sg=el("mk-seg");if(!sg.options.length)Object.keys(MK_SEG).forEach(function(k){sg.append(h("option",{value:k,text:MK_SEG[k][0]}))});
+  var tags={};MK.leads.forEach(function(L){(L.tags||[]).forEach(function(x){tags[x]=1})});
+  var ts=el("mk-tag"),cur=ts.value;ts.textContent="";ts.append(h("option",{value:"",text:"Tutti"}));Object.keys(tags).sort().forEach(function(x){ts.append(h("option",{value:x,text:x}))});ts.value=tags[cur]?cur:"";
+  var A=MK.leads,k=el("mk-kpis");k.textContent="";
+  [[A.length,"lead in tutto"],[A.filter(function(L){return L.consent==="yes"}).length,"con consenso marketing"],[A.filter(MK_SEG.recent[1]).length,"nuovi in 30 giorni"],[A.filter(MK_SEG.regular[1]).length,"abituali"],[A.filter(MK_SEG.lapsed[1]).length,"da riconquistare"]].forEach(function(x){k.append(h("div",{class:"kpi"},[h("b",{text:String(x[0])}),h("span",{text:x[1]})]))});
+  var L=MK.view=mkFiltered();
+  el("mk-count").textContent=MK.busy&&!MK.at?"Caricamento…":MK.err?"Non caricati: "+MK.err:L.length+(L.length===1?" lead":" lead")+(L.length!==A.length?" su "+A.length:"");
+  box.textContent="";
+  if(!L.length){box.append(h("p",{class:"small muted",text:MK.busy&&!MK.at?"":A.length?"Nessun lead con questi filtri.":"Ancora nessun lead. Arrivano da soli con le nuove prenotazioni; i clienti passati si importano qui sotto."}));return}
+  var tb=h("tbody");
+  L.slice(0,MK.shown).forEach(function(x){
+    var s=x.sum||{},tog=function(){MK.open=MK.open===x.id?"":x.id;renderMk()};
+    tb.append(h("tr",{class:"mkr"+(MK.open===x.id?" on":""),tabindex:"0","aria-expanded":String(MK.open===x.id),onclick:tog,onkeydown:function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();tog()}}},[
+      h("td",{},[h("div",{text:x.name||"Senza nome"}),h("div",{class:"small muted",text:[x.phone,x.email].filter(Boolean).join(" · ")})]),
+      h("td",{class:"small num"},[h("div",{text:mkD(s.last)}),s.next?h("div",{class:"muted",text:"Prenotato il "+mkD(s.next)}):null]),
+      h("td",{class:"small num",text:(s.visits||0)+(s.visits&&s.avgParty?" · "+String(s.avgParty).replace(".",",")+" pers.":"")+(s.noShows?" · "+s.noShows+" no show":"")}),
+      h("td",{},[mkConsentPill(x)]),
+      h("td",{class:"small",text:mkOrigins(x).map(function(o){return MK_SRC[o]||o}).join(", ")}),
+      h("td",{class:"small",text:(x.tags||[]).join(", ")})
+    ]));
+    if(MK.open===x.id)tb.append(h("tr",{class:"mkd"},[h("td",{colspan:"6"},[mkDetail(x)])]));
+  });
+  box.append(h("div",{class:"tablewrap"},[h("table",{},[h("thead",{},[h("tr",{},["Ospite","Ultima visita","Visite","Consenso","Origine","Tag"].map(function(x){return h("th",{text:x})}))]),tb])]));
+  if(L.length>MK.shown)box.append(h("div",{},[h("button",{class:"btn ghost small",type:"button",text:"Mostra altri "+Math.min(200,L.length-MK.shown),onclick:function(){MK.shown+=200;renderMk()}})]));
+}
+function mkDetail(x){
+  var f={},inp=function(k,label,type){f[k]=h("input",{type:type||"text"});f[k].value=x[k]||"";return h("label",{},[label,f[k]])};
+  var cs=h("select",{},[["yes","Sì, ha dato il consenso"],["no","No, non contattare"],["","Non indicato"]].map(function(o){var e=h("option",{value:o[0],text:o[1]});if((x.consent||"")===o[0])e.selected=true;return e}));
+  var tags=h("input",{placeholder:"vino, famiglia, aziendale"});tags.value=(x.tags||[]).join(", ");
+  var notes=h("textarea",{rows:"2"});notes.value=x.notes||"";
+  var msg=h("span",{class:"small muted","aria-live":"polite"}),u=x.utm||null,p=x.past||null,vs=mkVisits(x);
+  var ST={came:"✓ venuto",booked:"prenotato",noshow:"no show",cancelled:"annullata"};
+  var save=h("button",{class:"btn small",type:"button",text:"Salva",onclick:async function(){
+    var b=this;b.disabled=true;msg.textContent="Salvo…";
+    var d={name:f.name.value,phone:f.phone.value,email:f.email.value,birthday:f.birthday.value,city:f.city.value,notes:notes.value,consent:cs.value,tags:tags.value.split(",").map(function(t){return t.trim()}).filter(Boolean)};
+    try{await mkCall({op:"leads_update",id:x.id,data:d});msg.textContent="✓ Salvato";MK.open="";mkLoad(true)}catch(e){msg.textContent="Non salvato: "+((e&&e.message)||e);b.disabled=false}
+  }});
+  var del=h("button",{class:"btn ghost small",type:"button",text:"Elimina lead",title:"Per chi chiede di cancellare i suoi dati",onclick:function(){twoStep(this,"Eliminare? Tocca ancora",async function(){
+    try{await mkCall({op:"leads_delete",ids:[x.id]});MK.leads=MK.leads.filter(function(L){return L.id!==x.id});MK.open="";renderMk()}catch(e){msg.textContent="Non eliminato: "+((e&&e.message)||e)}
+  })}});
+  var camp=u?(u.source||u.medium||u.campaign?"Campagna: "+[u.source,u.medium,u.campaign].filter(Boolean).join(" / "):u.ref?"Arrivato da "+u.ref:"")+(u.gclid?" (clic da Google Ads)":u.fbclid?" (clic da Facebook/Instagram)":""):"";
+  var info=[x.consent?"Consenso "+(x.consent==="yes"?"sì":"no")+(x.consentSource?" ("+x.consentSource+(x.consentAt?", "+mkD(x.consentAt):"")+")":""):"Consenso non indicato",
+    x.importFile?"Importato da «"+x.importFile+"»":"",camp,x.lang?"Lingua "+x.lang.toUpperCase():"",x.createdAt?"In elenco dal "+mkD(x.createdAt):""].filter(Boolean).join(" · ");
+  var hist=vs.map(function(v){return h("div",{class:"num",text:mkD(v.d)+" "+(v.t||"")+" · "+(v.p||"?")+" pers. · "+(ST[v.s]||v.s||"")+(v.src?" · "+(MK_SRC[v.src]||v.src):"")+(v.deg?" · "+v.deg+" degustazione":"")+(v.ev?" · ✦ "+v.ev:"")})});
+  if(p&&p.count)hist.push(h("div",{class:"muted",text:"Dalla lista importata: "+p.count+(p.count===1?" visita":" visite")+(p.first&&p.first!==p.last?", dal "+mkD(p.first):"")+(p.last?", l'ultima il "+mkD(p.last):"")}));
+  return h("div",{class:"stack",style:"gap:.75rem;padding:.25rem 0"},[
+    h("div",{class:"row"},[inp("name","Nome"),inp("phone","Telefono","tel"),inp("email","Email","email"),inp("birthday","Compleanno","date"),inp("city","Città")]),
+    h("div",{class:"row"},[h("label",{},["Consenso marketing",cs]),h("label",{style:"flex:2 1 220px"},["Tag, separati da virgola",tags])]),
+    h("label",{},["Note",notes]),
+    h("div",{class:"row",style:"align-items:center"},[save,del,msg]),
+    h("p",{class:"small muted",text:info}),
+    hist.length?h("div",{class:"small stack",style:"gap:.15rem"},[h("div",{class:"caps",text:"Visite e prenotazioni"})].concat(hist)):null
+  ]);
+}
+["mk-q","mk-seg","mk-consent","mk-origin","mk-tag","mk-from","mk-to"].forEach(function(id){el(id).addEventListener(id==="mk-q"?"input":"change",function(){MK.shown=200;MK.open="";renderMk()})});
+
+/* ---------- marketing: export (Excel, Meta Ads custom audience, Google Ads Customer Match) ---------- */
+var MK_CC={"39":"IT","386":"SI","385":"HR","43":"AT","49":"DE","41":"CH","31":"NL","32":"BE","33":"FR","44":"GB","34":"ES","36":"HU","420":"CZ","421":"SK","48":"PL","45":"DK","46":"SE","47":"NO","1":"US"};
+var MK_LANG_CC={it:"+39",sl:"+386",de:"+49",nl:"+31"};
+/* phone in international format: 00 → +, no prefix → the guest's language country (Italy by default) */
+function mkE164(L){
+  var s=String(L.phone||"").trim().replace(/[^\d+]/g,"");if(s.replace(/\D/g,"").length<6)return "";
+  if(s.slice(0,2)==="00")return "+"+s.slice(2);
+  if(s.charAt(0)==="+")return "+"+s.slice(1).replace(/\D/g,"");
+  var cc="",cn=String(L.country||"").toUpperCase();for(var k in MK_CC)if(MK_CC[k]===cn)cc="+"+k;cc=cc||MK_LANG_CC[L.lang]||"+39";
+  if(/^3\d{8,9}$/.test(s)||/^0\d{5,10}$/.test(s)&&cc==="+39")return "+39"+s; // Italian mobile or landline
+  return cc+(s.charAt(0)==="0"?s.slice(1):s);
+}
+function mkCountry(L,e){var d=(e||"").slice(1);for(var n=3;n>0;n--)if(MK_CC[d.slice(0,n)])return MK_CC[d.slice(0,n)];return L.country||""}
+function mkNames(L){if(L.firstName||L.lastName)return [L.firstName||"",L.lastName||""];var p=String(L.name||"").trim().split(/\s+/);return [p[0]||"",p.slice(1).join(" ")]}
+function mkCsv(rows,sep,excel){return rows.map(function(r){return r.map(function(v){v=v==null?"":String(v);if(excel&&/^[=+\-@]/.test(v)&&!/^\+[\d ]+$/.test(v))v="'"+v;return /["\n\r;,\t]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}).join(sep)}).join("\r\n")+"\r\n"}
+function mkDownload(name,text,bom){var a=h("a",{href:URL.createObjectURL(new Blob([(bom?"﻿":"")+text],{type:"text/csv;charset=utf-8"})),download:name});document.body.append(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},2000)}
+function mkAds(){var all=el("mk-all").checked;return MK.view.filter(function(L){return (L.consent==="yes"||(all&&L.consent!=="no"))&&(L.email||mkE164(L))})}
+el("mk-x-xls").addEventListener("click",function(){
+  var CON={yes:"sì",no:"no"},rows=[["Nome","Cognome","Nome completo","Telefono","Telefono internazionale","Email","Lingua","Paese","Città","Compleanno","Prima visita","Ultima visita","Prossima prenotazione","Visite","Prenotazioni","No show","Annullate","Persone in media","Consenso marketing","Data consenso","Origine del consenso","Origine","Campagna","Tag","Note","In elenco dal"]];
+  MK.view.forEach(function(L){var s=L.sum||{},n=mkNames(L),e=mkE164(L),u=L.utm||{};
+    rows.push([n[0],n[1],L.name||"",L.phone||"",e,L.email||"",(L.lang||"").toUpperCase(),mkCountry(L,e),L.city||"",mkD(L.birthday).replace("—",""),mkD(s.first).replace("—",""),mkD(s.last).replace("—",""),mkD(s.next).replace("—",""),s.visits||0,s.bookings||0,s.noShows||0,s.cancelled||0,String(s.avgParty||"").replace(".",","),CON[L.consent]||"",L.consentAt?mkD(L.consentAt):"",L.consentSource||"",mkOrigins(L).map(function(o){return MK_SRC[o]||o}).join(", "),[u.source,u.medium,u.campaign].filter(Boolean).join(" / ")||(u.gclid?"Google Ads":u.fbclid?"Meta":u.ref||""),(L.tags||[]).join(", "),L.notes||"",mkD(L.createdAt).replace("—","")])});
+  mkDownload("dvor-lead-"+today()+".csv",mkCsv(rows,";",true),true);el("mk-x-msg").textContent="Scaricati "+MK.view.length+" lead.";
+});
+function mkAdsMsg(list,what){var out=MK.view.length-list.length;el("mk-x-msg").textContent=list.length+" contatti nel file per "+what+(out?" · "+out+" esclusi (senza consenso, oppure senza telefono ed email)":"")+"."}
+el("mk-x-meta").addEventListener("click",function(){
+  var list=mkAds(),rows=[["email","phone","fn","ln","ct","country"]];
+  list.forEach(function(L){var n=mkNames(L),e=mkE164(L);rows.push([String(L.email||"").toLowerCase(),e,n[0],n[1],L.city||"",mkCountry(L,e)])});
+  mkDownload("dvor-meta-ads-"+today()+".csv",mkCsv(rows,",",false),false);mkAdsMsg(list,"Meta Ads");
+});
+el("mk-x-goo").addEventListener("click",function(){
+  var list=mkAds(),rows=[["Email","Phone","First Name","Last Name","Country","Zip"]];
+  list.forEach(function(L){var n=mkNames(L),e=mkE164(L);rows.push([String(L.email||"").toLowerCase(),e,n[0],n[1],mkCountry(L,e),""])});
+  mkDownload("dvor-google-ads-"+today()+".csv",mkCsv(rows,",",false),false);mkAdsMsg(list,"Google Ads");
+});
+
+/* ---------- marketing: import of past leads (CSV, pasted rows or Excel .xlsx, read in the browser) ---------- */
+var MK_FIELDS=[["","— non importare —"],["name","Nome e cognome"],["firstName","Nome"],["lastName","Cognome"],["phone","Telefono"],["email","Email"],["lastVisit","Ultima visita / appuntamento"],["firstVisit","Prima visita"],["visits","Numero di visite"],["party","Persone"],["lang","Lingua"],["country","Paese"],["city","Città"],["birthday","Compleanno"],["tags","Tag"],["notes","Note"],["consent","Consenso marketing"]];
+/* header words in Italian, English, German, Slovenian and Dutch; the first rule that matches wins */
+var MK_GUESS=[[/consens|privacy|gdpr|newsletter|marketing|iscritt|opt.?in|soglas/,"consent"],[/e-?mail|posta/,"email"],[/nascita|compleann|birth|dob|geburt|rojstn|verjaard/,"birthday"],[/prima visita|first visit|primo/,"firstVisit"],[/visite|n\.? ?visit|volte|presenze|visits|count|besuche/,"visits"],[/persone|coperti|pax|guests|party|personen|oseb/,"party"],[/tel|cell|phone|mobil|whatsapp|numero|cifra/,"phone"],[/nome.*cognome|cognome.*nome|nominativ|full.?name|cliente|ospite|contatto|^name$|^naam$/,"name"],[/cognome|surname|last.?name|nachname|priimek|achternaam|family/,"lastName"],[/^nome$|first.?name|^vorname|^ime$|voornaam|given/,"firstName"],[/ultim|last|data|date|giorno|visita|appuntament|prenotaz|arrivo|datum/,"lastVisit"],[/lingua|lang|sprache|jezik|taal/,"lang"],[/paese|nazion|country|^stato|land|drzav/,"country"],[/citt|city|comune|localit|^ort$|kraj|plaats|stadt/,"city"],[/tag|etichett|categor|gruppo|segment/,"tags"],[/note|comment|osserv|opomb|notiz/,"notes"]];
+var MK_RE={email:/^[^@\s]+@[^@\s]+\.[^@\s]+$/,phone:/^\+?\d[\d\s\-\/().]{6,}$/,date:/^(\d{4}[-\/.]\d{1,2}[-\/.]\d{1,2}|\d{1,2}[-\/.]\d{1,2}[-\/.]\d{2,4})/};
+function mkDate(v){
+  v=String(v==null?"":v).trim();if(!v)return "";var m,y,mo,d;
+  if(/^\d{5}(\.\d+)?$/.test(v)&&+v>20000&&+v<80000)return new Date(Math.round((+v-25569)*864e5)).toISOString().slice(0,10); // Excel date number
+  if((m=v.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/))){y=+m[1];mo=+m[2];d=+m[3]}
+  else if((m=v.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2,4})/))){d=+m[1];mo=+m[2];y=+m[3];if(y<100)y+=y>50?1900:2000}
+  else return "";
+  return mo>=1&&mo<=12&&d>=1&&d<=31?y+"-"+pad(mo)+"-"+pad(d):"";
+}
+function mkLang(v){v=mkNorm(v);if(!v)return "";var R=[[/^(it|ita)/,"it"],[/^(en|eng|ingl)/,"en"],[/^(de|deu|ger|ted)/,"de"],[/^(sl|slo)/,"sl"],[/^(nl|ned|ola|dut)/,"nl"]];for(var i=0;i<R.length;i++)if(R[i][0].test(v))return R[i][1];return /^[a-z]{2}$/.test(v)?v:""}
+function mkCountryName(v){v=mkNorm(v);if(/^[a-z]{2}$/.test(v))return v.toUpperCase();var R=[[/^ital/,"IT"],[/^sloven/,"SI"],[/^(austri|osterr)/,"AT"],[/^(german|deutsch)/,"DE"],[/^(croa|hrvat)/,"HR"],[/^(svizz|switz|schweiz)/,"CH"],[/^(olanda|paesi bassi|nether|nederl)/,"NL"],[/^(franc)/,"FR"],[/^(regno unito|united kingdom|uk$|england|inghil)/,"GB"],[/^(stati uniti|usa|united states)/,"US"],[/^(belg)/,"BE"],[/^(ungher|hungar)/,"HU"],[/^(spagn|spain|espa)/,"ES"],[/^(polon|poland)/,"PL"],[/^(repubblica ceca|czech|ceca)/,"CZ"]];for(var i=0;i<R.length;i++)if(R[i][0].test(v))return R[i][1];return ""}
+function mkParseCsv(text){
+  text=String(text||"").replace(/^﻿/,"");
+  var first=(text.split(/\r?\n/).filter(function(l){return l.trim()})[0])||"",sep=[["\t",0],[";",0],[",",0]].map(function(c){c[1]=first.split(c[0]).length;return c}).sort(function(a,b){return b[1]-a[1]})[0][0];
+  var rows=[],row=[],cell="",q=false;
+  for(var i=0;i<text.length;i++){var ch=text[i];
+    if(q){if(ch==='"'){if(text[i+1]==='"'){cell+='"';i++}else q=false}else cell+=ch}
+    else if(ch==='"'&&cell==="")q=true;
+    else if(ch===sep){row.push(cell);cell=""}
+    else if(ch==="\n"||ch==="\r"){if(ch==="\r"&&text[i+1]==="\n")i++;row.push(cell);rows.push(row);row=[];cell=""}
+    else cell+=ch}
+  if(cell!==""||row.length){row.push(cell);rows.push(row)}
+  return rows;
+}
+/* .xlsx is a zip of XML files: read the first sheet with the browser's own unzip (DecompressionStream) */
+async function mkReadXlsx(buf){
+  if(typeof DecompressionStream==="undefined")throw {message:"questo browser non legge i file Excel: salvalo come CSV e riprova"};
+  var u=new Uint8Array(buf),dv=new DataView(buf),e=u.length-22,files={},dec=new TextDecoder();
+  while(e>=0&&dv.getUint32(e,true)!==0x06054b50)e--;
+  if(e<0)throw {message:"non sembra un file Excel .xlsx (i vecchi .xls vanno salvati come .xlsx o CSV)"};
+  for(var i=0,n=dv.getUint16(e+10,true),off=dv.getUint32(e+16,true);i<n;i++){
+    var nl=dv.getUint16(off+28,true);files[dec.decode(u.subarray(off+46,off+46+nl))]={m:dv.getUint16(off+10,true),c:dv.getUint32(off+20,true),lo:dv.getUint32(off+42,true)};
+    off+=46+nl+dv.getUint16(off+30,true)+dv.getUint16(off+32,true)}
+  async function get(name){var f=files[name];if(!f)return "";var st=f.lo+30+dv.getUint16(f.lo+26,true)+dv.getUint16(f.lo+28,true),data=u.subarray(st,st+f.c);
+    if(f.m===0)return dec.decode(data);return dec.decode(await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer())}
+  var X=function(t){return new DOMParser().parseFromString(t,"application/xml")},tags=function(d,t){return Array.from(d.getElementsByTagNameNS("*",t))},txt=function(n){return tags(n,"t").map(function(t){return t.textContent}).join("")};
+  var ss=[],sst=await get("xl/sharedStrings.xml");if(sst)ss=tags(X(sst),"si").map(txt);
+  var sheet="xl/worksheets/sheet1.xml";
+  try{var sh=tags(X(await get("xl/workbook.xml")),"sheet")[0],rid=sh.getAttribute("r:id")||sh.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships","id");
+    tags(X(await get("xl/_rels/workbook.xml.rels")),"Relationship").forEach(function(r){if(r.getAttribute("Id")===rid){var t=r.getAttribute("Target");sheet=t.charAt(0)==="/"?t.slice(1):"xl/"+t.replace(/^\.\//,"")}})}catch(err){}
+  var xml=await get(sheet);if(!xml)throw {message:"nel file non c'è un foglio da leggere"};
+  return tags(X(xml),"row").map(function(r){var row=[];
+    tags(r,"c").forEach(function(c){var ref=(c.getAttribute("r")||"").replace(/\d+/g,""),col=0,t=c.getAttribute("t"),v=tags(c,"v")[0],val=v?v.textContent:"";
+      for(var k=0;k<ref.length;k++)col=col*26+ref.charCodeAt(k)-64;col=ref?col-1:row.length;
+      if(t==="s")val=ss[+val]||"";else if(t==="inlineStr")val=txt(c);else if(t==="b")val=val==="1"?"sì":"no";
+      row[col]=val});
+    return Array.from(row,function(x){return x==null?"":x})});
+}
+async function mkReadText(file){var buf=await file.arrayBuffer(),t=new TextDecoder("utf-8").decode(buf);return t.indexOf("�")>=0?new TextDecoder("windows-1252").decode(buf):t}
+function mkPrepare(rows,label){
+  rows=rows.filter(function(r){return r.some(function(c){return String(c).trim()})});
+  if(!rows.length)throw {message:"non ci sono righe"};
+  var w=Math.max.apply(null,rows.map(function(r){return r.length}));rows=rows.map(function(r){while(r.length<w)r.push("");return r});
+  var r0=rows[0].map(function(c){return String(c).trim()}),isHead=!r0.some(function(c){return MK_RE.email.test(c)||MK_RE.phone.test(c)||MK_RE.date.test(c)});
+  var head=isHead?r0.map(function(c,i){return c||"Colonna "+(i+1)}):r0.map(function(c,i){return "Colonna "+(i+1)}),data=isHead?rows.slice(1):rows;
+  var map=head.map(function(){return ""}),taken={};
+  if(isHead)head.forEach(function(hd,i){var n=mkNorm(hd);for(var k=0;k<MK_GUESS.length;k++){var f=MK_GUESS[k][1];if(MK_GUESS[k][0].test(n)){if(!taken[f]){map[i]=f;taken[f]=1}break}}});
+  var share=function(i,re){var v=data.slice(0,80).map(function(r){return String(r[i]).trim()}).filter(Boolean);return v.length?v.filter(function(x){return re.test(x)}).length/v.length:0};
+  head.forEach(function(hd,i){if(map[i])return;
+    if(!taken.email&&share(i,MK_RE.email)>.5){map[i]="email";taken.email=1}
+    else if(!taken.phone&&share(i,MK_RE.phone)>.6&&share(i,MK_RE.date)<.3){map[i]="phone";taken.phone=1}
+    else if(!taken.lastVisit&&share(i,MK_RE.date)>.6){map[i]="lastVisit";taken.lastVisit=1}});
+  if(taken.firstName&&!taken.lastName)map[map.indexOf("firstName")]="name";
+  if(taken.name&&taken.lastName&&!taken.firstName)map[map.indexOf("name")]="firstName";
+  MK.imp={label:String(label||"Lista").slice(0,120),head:head,data:data,map:map,consentAll:false};MK.open="";
+  el("mk-imp-res").textContent="";renderImp();
+}
+function renderImp(){
+  var box=el("mk-imp"),I=MK.imp;box.textContent="";if(!I)return;
+  var used={};I.map.forEach(function(f){if(f)used[f]=1});
+  var tb=h("tbody");
+  I.head.forEach(function(name,i){
+    var sel=h("select",{"aria-label":"Colonna "+name,onchange:function(){var v=this.value;I.map=I.map.map(function(f,j){return j===i?v:f===v&&v?"":f});renderImp()}},MK_FIELDS.map(function(f){var o=h("option",{value:f[0],text:f[1]});if(I.map[i]===f[0])o.selected=true;return o}));
+    var ex=I.data.map(function(r){return String(r[i]).trim()}).filter(Boolean).slice(0,3).join(" · ");
+    tb.append(h("tr",{},[h("td",{text:name}),h("td",{},[sel]),h("td",{class:"small muted",text:ex})]));
+  });
+  box.append(h("p",{class:"small",text:"«"+I.label+"»: "+I.data.length+(I.data.length===1?" riga":" righe")+". Controlla a cosa corrisponde ogni colonna:"}),
+    h("div",{class:"tablewrap"},[h("table",{},[h("thead",{},[h("tr",{},["Colonna del file","Diventa","Esempi"].map(function(t){return h("th",{text:t})}))]),tb])]));
+  var ok=!!(used.phone||used.email);
+  if(!ok)box.append(h("p",{class:"small",style:"color:var(--bad)",text:"Serve almeno una colonna Telefono o Email: senza, il lead non si può usare per il retargeting."}));
+  if(!used.consent){var cb=h("input",{type:"checkbox"});cb.checked=!!I.consentAll;cb.addEventListener("change",function(){I.consentAll=this.checked});
+    box.append(h("label",{class:"tick"},[cb,h("span",{text:"Tutte le persone di questa lista hanno dato il consenso a ricevere novità e offerte (per esempio gli iscritti alla newsletter). Se non lo sai, lascia vuoto."})]))}
+  var msg=h("span",{class:"small muted","aria-live":"polite"});
+  var go=h("button",{class:"btn",type:"button",text:"Importa "+I.data.length+" lead",onclick:function(){mkImport(this,msg)}});go.disabled=!ok;
+  box.append(h("div",{class:"row",style:"align-items:center"},[go,h("button",{class:"btn ghost",type:"button",text:"Annulla",onclick:function(){MK.imp=null;el("mk-file").value="";renderImp()}}),msg]));
+}
+async function mkImport(btn,msg){
+  var I=MK.imp;btn.disabled=true;
+  var rows=I.data.map(function(r){var o={};I.map.forEach(function(f,i){if(!f)return;var v=String(r[i]==null?"":r[i]).trim();
+    if(f==="lastVisit"||f==="firstVisit"||f==="birthday")v=mkDate(v);else if(f==="visits"||f==="party")v=String(parseFloat(v.replace(",","."))||"");else if(f==="lang")v=mkLang(v);else if(f==="country")v=mkCountryName(v);
+    o[f]=v});return o});
+  var tot={new:0,updated:0,skipped:0};
+  for(var i=0;i<rows.length;i+=400){
+    msg.textContent="Importo… "+Math.min(i+400,rows.length)+" di "+rows.length;
+    try{var j=await mkCall({op:"leads_import",rows:rows.slice(i,i+400),label:I.label,consentAll:!!I.consentAll});tot.new+=j.new||0;tot.updated+=j.updated||0;tot.skipped+=j.skipped||0}
+    catch(e){msg.textContent="Interrotto: "+((e&&e.message)||e)+". Le righe già passate restano; rilanciando non si doppiano.";btn.disabled=false;return}
+  }
+  MK.imp=null;el("mk-file").value="";el("mk-paste").value="";renderImp();
+  el("mk-imp-res").textContent="✓ «"+I.label+"»: "+tot.new+" nuovi lead, "+tot.updated+" già presenti e completati"+(tot.skipped?", "+tot.skipped+" saltati perché senza telefono né email":"")+".";
+  mkLoad(true);
+}
+el("mk-file").addEventListener("change",async function(){
+  var f=this.files&&this.files[0],m=el("mk-imp-res");if(!f)return;m.textContent="Leggo il file…";
+  try{mkPrepare(/\.xlsx$/i.test(f.name)?await mkReadXlsx(await f.arrayBuffer()):mkParseCsv(await mkReadText(f)),f.name.replace(/\.[^.]+$/,""))}
+  catch(e){MK.imp=null;renderImp();m.textContent="File non letto: "+((e&&e.message)||e)}
+});
+el("mk-paste-go").addEventListener("click",function(){try{mkPrepare(mkParseCsv(el("mk-paste").value),"Incollata il "+mkD(today()))}catch(e){el("mk-imp-res").textContent="Righe non lette: "+((e&&e.message)||e)}});
+el("mk-rebuild").addEventListener("click",async function(){var b=this,m=el("mk-rb-msg");b.disabled=true;m.textContent="Ricalcolo…";
+  try{var j=await mkCall({op:"leads_rebuild"});m.textContent="✓ Ripassate "+j.bookings+" prenotazioni.";mkLoad(true)}catch(e){m.textContent="Non riuscito: "+((e&&e.message)||e)}b.disabled=false});
+
 /* ---------- tabs ---------- */
 function setView(v){S.view=v;el("tab-guest").setAttribute("aria-selected",String(v==="guest"));el("tab-staff").setAttribute("aria-selected",String(v==="staff"));el("v-guest").hidden=v!=="guest";el("v-staff").hidden=v!=="staff";el("lang").hidden=v!=="guest";if(v==="staff"&&!S.selDay)S.selDay=today();applyLang();if(v==="staff"){var sp=null;try{sp=sessionStorage.getItem("dvor-sp")}catch(e){}setSp(sp||"today")}else render()}
 el("tab-guest").addEventListener("click",function(){setView("guest")});
 el("tab-staff").addEventListener("click",function(){setView("staff")});
 if(location.hash==="#staff")setTimeout(function(){setView("staff")},0);
 
-function render(){try{if(S.view==="staff"){renderToday();renderPlanner();mbInfo();renderBlacklist();renderBoard();renderDay();renderEvAdmin()}else{renderMine();renderEvents();renderCal();renderSlots()}}catch(e){dbStatus("Errore di visualizzazione: "+(e&&e.message))}}
+function render(){try{if(S.view==="staff"){renderToday();renderPlanner();mbInfo();renderBlacklist();renderBoard();renderDay();renderEvAdmin();if(S.sp==="mkt")mkLoad(false)}else{renderMine();renderEvents();renderCal();renderSlots()}}catch(e){dbStatus("Errore di visualizzazione: "+(e&&e.message))}}
 setInterval(render,60000);
 window.DVOR_LOGIC={check:check,dinnerState:dinnerState,slotsFor:slotsFor,S:S};
 boot();
