@@ -361,6 +361,7 @@ a.btn{display:inline-block;text-decoration:none;font:400 .8rem var(--sans);lette
           <label>Capienza nel weekend (%)<input type="number" id="s-wepct" min="1" max="200"></label>
           <label>Extra automatico quando è pieno (%)<input type="number" id="s-ovpct" min="0" max="100"></label>
           <label>Mostra all'ospite quanto è pieno da (%)<input type="number" id="s-fullfrom" min="0" max="100"></label>
+          <label>Promemoria email prima dell'arrivo (ore, 0 = nessuno)<input type="number" id="s-remh" min="0" max="48"></label>
         </div>
         <label>Sconto % su servizi senza prenotazioni (lun, mar, ven)<input type="number" id="s-disc" min="0" max="50"></label>
         <label style="flex-basis:100%">Offerta per le cene da riempire, lun, mar, ven (vuoto = nessuna offerta)<input id="s-offer" placeholder="Un calice di Collio in omaggio"></label>
@@ -579,7 +580,7 @@ a.btn{display:inline-block;text-decoration:none;font:400 .8rem var(--sans);lette
 (function(){
 "use strict";
 /* ---------- config ---------- */
-var DEFAULTS={minGuests:10,extendIfAtLeast:7,hideIfAtMost:3,seats:74,weekdayPct:50,weekendPct:100,overflowPct:10,showFullFrom:50,holdMin:120,stepMin:30,offer:"",discountPct:10};
+var DEFAULTS={minGuests:10,extendIfAtLeast:7,hideIfAtMost:3,seats:74,weekdayPct:50,weekendPct:100,overflowPct:10,showFullFrom:50,holdMin:120,stepMin:30,offer:"",discountPct:10,reminderHours:4};
 var WINDOWS={mon:[["12:00","15:00"],["19:00","21:30"]],tue:[["12:00","15:00"],["19:00","21:30"]],wed:[],thu:[],fri:[["12:00","15:00"],["19:00","21:30"]],sat:[["11:00","21:30"]],sun:[["11:00","19:00"]]};
 var WD=["sun","mon","tue","wed","thu","fri","sat"];
 var DINNER_FROM=18*60;
@@ -1311,7 +1312,7 @@ function renderDay(){
         h("td",{class:"num",text:b.time}),h("td",{text:svcOf(b.time)==="dinner"?"Cena":"Pranzo"}),h("td",{class:"num",text:String(b.party)}),h("td",{class:"small",text:(b.menuTasting!=null||b.menuCarta!=null)?("Carta "+(+b.menuCarta||0)+" · Degust. "+(+b.menuTasting||0)):"—"}),
         h("td",{},[h("div",{text:b.name||""}),blFind(b)?h("span",{class:"pill s-closed",text:"⚠ Lista nera · "+(blFind(b).count||1)+" no show"}):null,h("div",{class:"small muted",text:[b.phone,b.email,b.example?"prova":""].filter(Boolean).join(" · ")})]),
         h("td",{class:"small",text:[b.notes,b.offer?"Offerta: "+b.offer:"",b.discount?"Sconto "+b.discount+"%":"",b.eventTitle?"Evento: "+b.eventTitle:"",b.retained?"Spostata invece di annullare":"",b.source==="assistant"?"Via assistente":"",SRC[b.source]||"",b.insight?"Cosa cercava: "+b.insight:""].filter(Boolean).join(" · ")}),
-        h("td",{},[b.status==="cancelled"||!b.email?null:h("a",{class:"btn small"+(b.emailSentAt?" ghost":""),style:"display:inline-block;text-decoration:none;margin-bottom:.3rem",href:mailtoFor(b),text:b.emailSentAt?"✉ Rinvia":"✉ Conferma",onclick:function(ev){if(window.DVOR_RESEND){ev.preventDefault();DVOR_RESEND(b,this)}else markMailed(b)}}),b.emailSentAt?h("div",{class:"small muted",text:"Email inviata"}):null]),
+        h("td",{},[b.status==="cancelled"||!b.email?null:h("a",{class:"btn small"+(b.emailSentAt?" ghost":""),style:"display:inline-block;text-decoration:none;margin-bottom:.3rem",href:mailtoFor(b),text:b.emailSentAt?"✉ Rinvia":"✉ Conferma",onclick:function(ev){if(window.DVOR_RESEND){ev.preventDefault();DVOR_RESEND(b,this)}else markMailed(b)}}),b.emailSentAt?h("div",{class:"small muted",text:"Email inviata"}):null,b.reminderSentAt&&b.reminderFor===b.date+" "+b.time?h("div",{class:"small muted",text:"⏰ Promemoria inviato"}):b.reminderError?h("div",{class:"small",style:"color:var(--bad)",text:"Promemoria non partito"}):null]),
         h("td",{},[h("div",{class:"stack",style:"gap:.3rem"},[arrivalCell(b),b.status==="cancelled"?h("span",{class:"pill s-closed",text:"Annullata"}):b.arrival?null:h("button",{class:"btn ghost small",type:"button",style:"align-self:flex-start",text:"Annulla prenotazione",onclick:function(){twoStep(this,"Confermi annullamento?",function(){setStatus(b,"cancelled")})}})])])
       ]));
     });
@@ -1372,10 +1373,10 @@ el("pl-prev").addEventListener("click",function(){plMove(-1)});el("pl-next").add
 el("x-clear").addEventListener("click",clearTest);
 SPS.forEach(function(k){el("sp-b-"+k).addEventListener("click",function(){setSp(k==="set"&&S.sp==="set"?"today":k)})});el("set-back").addEventListener("click",function(){setSp("today")});
 el("st-logout").addEventListener("click",function(){if(window.DVOR_LOGOUT)DVOR_LOGOUT();else setView("guest")});
-function fillSettings(){var s=S.settings;el("s-min").value=s.minGuests;el("s-ext").value=s.extendIfAtLeast;el("s-hide").value=s.hideIfAtMost;el("s-seats").value=s.seats;el("s-wdpct").value=s.weekdayPct;el("s-wepct").value=s.weekendPct;el("s-ovpct").value=s.overflowPct;el("s-fullfrom").value=s.showFullFrom;el("s-disc").value=s.discountPct;el("s-offer").value=s.offer||""}
+function fillSettings(){var s=S.settings;el("s-min").value=s.minGuests;el("s-ext").value=s.extendIfAtLeast;el("s-hide").value=s.hideIfAtMost;el("s-seats").value=s.seats;el("s-wdpct").value=s.weekdayPct;el("s-wepct").value=s.weekendPct;el("s-ovpct").value=s.overflowPct;el("s-fullfrom").value=s.showFullFrom;el("s-disc").value=s.discountPct;el("s-offer").value=s.offer||"";el("s-remh").value=s.reminderHours}
 el("s-save").addEventListener("click",async function(){
   if(!db)return;var m=el("s-msg");
-  var v={discountPct:Math.max(0,Math.min(50,+el("s-disc").value||0)),minGuests:Math.max(1,+el("s-min").value||10),extendIfAtLeast:Math.max(1,+el("s-ext").value||7),hideIfAtMost:Math.max(0,+el("s-hide").value||0),seats:Math.max(1,+el("s-seats").value||74),offer:el("s-offer").value.trim(),seats:Math.max(1,+el("s-seats").value||74),weekdayPct:Math.max(1,+el("s-wdpct").value||50),weekendPct:Math.max(1,+el("s-wepct").value||100),overflowPct:Math.max(0,+el("s-ovpct").value||0),showFullFrom:Math.max(0,Math.min(100,+el("s-fullfrom").value||0))};
+  var v={discountPct:Math.max(0,Math.min(50,+el("s-disc").value||0)),minGuests:Math.max(1,+el("s-min").value||10),extendIfAtLeast:Math.max(1,+el("s-ext").value||7),hideIfAtMost:Math.max(0,+el("s-hide").value||0),seats:Math.max(1,+el("s-seats").value||74),offer:el("s-offer").value.trim(),seats:Math.max(1,+el("s-seats").value||74),weekdayPct:Math.max(1,+el("s-wdpct").value||50),weekendPct:Math.max(1,+el("s-wepct").value||100),overflowPct:Math.max(0,+el("s-ovpct").value||0),showFullFrom:Math.max(0,Math.min(100,+el("s-fullfrom").value||0)),reminderHours:Math.max(0,Math.min(48,+el("s-remh").value||0))};
   try{await db.doc("settings/main").set(v);m.textContent="Regole salvate."}catch(e){m.textContent="Non salvato: solo chi modifica la pagina può cambiare le regole."}
 });
 

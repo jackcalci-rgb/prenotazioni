@@ -13,7 +13,8 @@ Sistema di prenotazione tavoli di **prenota.osteriadvor.com**. Contiene la pagin
 | `config.example.php` | Modello della configurazione |
 | `seed/` | Eventi e impostazioni iniziali, usati solo al primo avvio |
 | `strumenti/installa.sh` | Prima installazione sul VPS |
-| `strumenti/aggiorna.sh` | Scarica l'ultima versione da GitHub |
+| `strumenti/aggiorna.sh` | Scarica l'ultima versione da GitHub e attiva il cron dei promemoria |
+| `strumenti/promemoria.php` | Manda i promemoria via email prima dell'arrivo (da cron) |
 | `strumenti/database.sh` | Crea il database MySQL e ci copia i vecchi file JSON |
 | `strumenti/importa-json.php` | Solo l'importazione dei file JSON nel database |
 
@@ -82,6 +83,7 @@ bash /home/*/domains/prenota.osteriadvor.com/public_html/strumenti/aggiorna.sh
 
 - **Invio:** le email partono dal Postfix del VPS (`smtp_host` `127.0.0.1`, porta 25).
 - **Messaggi automatici:** «Prenotazione confermata», «Prenotazione ricevuta» (per le cene in attesa), «Spostata» e «Annullata», ognuna con Google Calendar, Outlook e il file `dvor.ics`.
+- **Promemoria:** 4 ore prima dell'arrivo parte all'ospite un'email «Promemoria» (le ore si cambiano dall'⚙, 0 = nessun promemoria). Non parte per chi ha prenotato o spostato dopo l'inizio della finestra, per le cene ancora in attesa e per i tavoli già arrivati. La manda `strumenti/promemoria.php`, che `aggiorna.sh` mette in cron ogni 15 minuti (`/etc/cron.d/dvor-promemoria`). Prova a mano: `sudo -u <utente> php strumenti/promemoria.php`.
 - **Copia allo staff:** va a `notify_to`.
 - **Se un'email non arriva:**
   - `tail prenota-data/mail.log` dice se è partita dal programma.

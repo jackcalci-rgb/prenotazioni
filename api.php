@@ -84,7 +84,7 @@ function patchDoc(string $coll, string $id, array $fields, array $drop = []): vo
 
 /* ---------- seats: the server has the last word, so two guests cannot take the same last seats ---------- */
 function settingsMain(): array {
-  return array_merge(['seats' => 74, 'weekdayPct' => 50, 'weekendPct' => 100, 'overflowPct' => 10, 'holdMin' => 120], getDoc('settings', 'main') ?? []);
+  return array_merge(['seats' => 74, 'weekdayPct' => 50, 'weekendPct' => 100, 'overflowPct' => 10, 'holdMin' => 120, 'reminderHours' => 4], getDoc('settings', 'main') ?? []);
 }
 /* same rule as the page: a share of the seats (weekday or weekend) plus the overflow share */
 function capFor(string $date, array $st): int {
@@ -186,26 +186,31 @@ function icsFor(array $b, array $C, string $method = 'PUBLISH', bool $cancel = f
 function L(array $b): array {
   static $T = [
     'it' => ['people' => 'persone', 'loc' => 'it_IT', 'ok' => 'Prenotazione confermata', 'rec' => 'Prenotazione ricevuta', 'moved' => 'Prenotazione spostata', 'canc' => 'Prenotazione annullata',
+      'rem' => 'Promemoria', 'body_rem' => 'ti ricordiamo la tua prenotazione da Dvor:',
       'hi' => 'Ciao {n},', 'body_ok' => 'la tua prenotazione da Dvor è confermata:', 'body_rec' => 'abbiamo ricevuto la tua prenotazione da Dvor:', 'pending' => 'Ti confermiamo la cena via email il giorno prima.',
       'body_moved' => 'abbiamo spostato la tua prenotazione:', 'body_canc' => 'la tua prenotazione è stata annullata:',
       'add' => 'Aggiungila al tuo calendario', 'ics' => 'Oppure apri il file allegato (Apple, Outlook e altri calendari).', 'where' => 'Ci trovi in Via Castello 5, San Floriano del Collio (GO).',
       'change' => 'Per modifiche o disdette: tel. +39 0481 090740, WhatsApp +39 392 388 3900.', 'bye' => 'A presto!', 'at' => 'alle', 'tast' => 'Menù degustazione', 'carta' => 'Alla carta', 'disc' => 'Sconto del {p}% sul conto'],
     'en' => ['people' => 'guests', 'loc' => 'en_GB', 'ok' => 'Booking confirmed', 'rec' => 'Booking received', 'moved' => 'Booking moved', 'canc' => 'Booking cancelled',
+      'rem' => 'Reminder', 'body_rem' => 'a reminder of your table at Dvor:',
       'hi' => 'Hello {n},', 'body_ok' => 'your table at Dvor is confirmed:', 'body_rec' => 'we have received your booking at Dvor:', 'pending' => 'We will confirm the dinner by email the day before.',
       'body_moved' => 'we have moved your booking:', 'body_canc' => 'your booking has been cancelled:',
       'add' => 'Add it to your calendar', 'ics' => 'Or open the attached file (Apple, Outlook and other calendars).', 'where' => 'Find us at Via Castello 5, San Floriano del Collio (GO), Italy.',
       'change' => 'To change or cancel: tel. +39 0481 090740, WhatsApp +39 392 388 3900.', 'bye' => 'See you soon!', 'at' => 'at', 'tast' => 'Tasting menu', 'carta' => 'À la carte', 'disc' => '{p}% off your bill'],
     'de' => ['people' => 'Personen', 'loc' => 'de_DE', 'ok' => 'Reservierung bestätigt', 'rec' => 'Reservierung erhalten', 'moved' => 'Reservierung verschoben', 'canc' => 'Reservierung storniert',
+      'rem' => 'Erinnerung', 'body_rem' => 'wir erinnern Sie an Ihre Reservierung im Dvor:',
       'hi' => 'Hallo {n},', 'body_ok' => 'Ihr Tisch im Dvor ist bestätigt:', 'body_rec' => 'wir haben Ihre Reservierung im Dvor erhalten:', 'pending' => 'Das Abendessen bestätigen wir am Vortag per E-Mail.',
       'body_moved' => 'wir haben Ihre Reservierung verschoben:', 'body_canc' => 'Ihre Reservierung wurde storniert:',
       'add' => 'Zum Kalender hinzufügen', 'ics' => 'Oder öffnen Sie die angehängte Datei (Apple, Outlook und andere Kalender).', 'where' => 'Sie finden uns in der Via Castello 5, San Floriano del Collio (GO), Italien.',
       'change' => 'Änderungen oder Stornierung: Tel. +39 0481 090740, WhatsApp +39 392 388 3900.', 'bye' => 'Bis bald!', 'at' => 'um', 'tast' => 'Degustationsmenü', 'carta' => 'À la carte', 'disc' => '{p}% Rabatt auf die Rechnung'],
     'sl' => ['people' => 'oseb', 'loc' => 'sl_SI', 'ok' => 'Rezervacija potrjena', 'rec' => 'Rezervacija prejeta', 'moved' => 'Rezervacija prestavljena', 'canc' => 'Rezervacija preklicana',
+      'rem' => 'Opomnik', 'body_rem' => 'spominjamo vas na vašo rezervacijo v Dvoru:',
       'hi' => 'Pozdravljeni {n},', 'body_ok' => 'vaša miza v Dvoru je potrjena:', 'body_rec' => 'prejeli smo vašo rezervacijo v Dvoru:', 'pending' => 'Večerjo vam potrdimo po e-pošti dan prej.',
       'body_moved' => 'vašo rezervacijo smo prestavili:', 'body_canc' => 'vaša rezervacija je preklicana:',
       'add' => 'Dodajte v koledar', 'ics' => 'Ali odprite priloženo datoteko (Apple, Outlook in drugi koledarji).', 'where' => 'Najdete nas na Via Castello 5, San Floriano del Collio (GO), Italija.',
       'change' => 'Za spremembe ali odpoved: tel. +39 0481 090740, WhatsApp +39 392 388 3900.', 'bye' => 'Se vidimo!', 'at' => 'ob', 'tast' => 'Degustacijski meni', 'carta' => 'À la carte', 'disc' => '{p}% popusta na račun'],
     'nl' => ['people' => 'personen', 'loc' => 'nl_NL', 'ok' => 'Reservering bevestigd', 'rec' => 'Reservering ontvangen', 'moved' => 'Reservering verplaatst', 'canc' => 'Reservering geannuleerd',
+      'rem' => 'Herinnering', 'body_rem' => 'een herinnering aan je reservering bij Dvor:',
       'hi' => 'Hallo {n},', 'body_ok' => 'je tafel bij Dvor is bevestigd:', 'body_rec' => 'we hebben je reservering bij Dvor ontvangen:', 'pending' => 'We bevestigen het diner de dag ervoor per e-mail.',
       'body_moved' => 'we hebben je reservering verplaatst:', 'body_canc' => 'je reservering is geannuleerd:',
       'add' => 'Zet het in je agenda', 'ics' => 'Of open het bijgevoegde bestand (Apple, Outlook en andere agenda\'s).', 'where' => 'Je vindt ons op Via Castello 5, San Floriano del Collio (GO), Italië.',
@@ -261,7 +266,7 @@ function LX(array $b): array {
   ];
   return $X[$b['lang'] ?? 'it'] ?? $X['it'];
 }
-/* kind: ok | rec | moved | canc */
+/* kind: ok | rec | moved | canc | rem (reminder a few hours before, without calendar) */
 function guestMail(array $b, array $C, string $kind): array {
   $t = L($b); $x = LX($b); $h = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
   $site = rtrim($C['site_url'] ?? 'https://www.osteriadvor.com', '/');
@@ -276,12 +281,13 @@ function guestMail(array $b, array $C, string $kind): array {
   $hi = str_replace('{n}', $b['name'] ?? '', $t['hi']);
   $subject = $t[$kind] . ' · Osteria Dvor · ' . $day . ' ' . $b['time'];
   $l = calLinks($b, $C);
-  $care = $kind === 'canc' ? [$x['canc_more']] : [$x['tip'], $x['occasion'], $x['diet'], $x['events']];
+  $care = $kind === 'canc' ? [$x['canc_more']] : ($kind === 'rem' ? [$x['tip'], $x['diet']] : [$x['tip'], $x['occasion'], $x['diet'], $x['events']]);
+  $cal = $kind !== 'canc' && $kind !== 'rem';
 
   /* plain text */
   $txt = "$hi\n\n$intro\n\n$when\n" . implode("\n", $lines) . "\n";
   if ($kind === 'rec') $txt .= "\n" . $t['pending'] . "\n";
-  if ($kind !== 'canc') $txt .= "\n{$t['add']}:\nGoogle Calendar: {$l['google']}\nOutlook: {$l['outlook']}\n{$t['ics']}\n";
+  if ($cal) $txt .= "\n{$t['add']}:\nGoogle Calendar: {$l['google']}\nOutlook: {$l['outlook']}\n{$t['ics']}\n";
   $txt .= "\n" . implode("\n", $care) . "\n";
   if ($kind === 'canc' && $bookUrl) $txt .= "{$x['book_again']}: $bookUrl\n";
   $txt .= "\n{$x['site']}: $site\n\n{$t['where']}\n{$t['change']}\n\n" . ($kind === 'canc' ? $t['bye'] : $x['thanks']) . "\nOsteria Enoteca Dvor\n";
@@ -305,7 +311,7 @@ function guestMail(array $b, array $C, string $kind): array {
     . '</td></tr></table>'
     . ($kind === 'rec' ? '<p style="margin:12px 0 0;font-size:15px;line-height:1.5">' . $h($t['pending']) . '</p>' : '')
     . '</td></tr>'
-    . ($kind !== 'canc' ? '<tr><td style="padding:0 28px 6px"><div style="font-family:Helvetica,Arial,sans-serif;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:' . $muted . ';margin-bottom:6px">' . $h($t['add']) . '</div>'
+    . ($cal ? '<tr><td style="padding:0 28px 6px"><div style="font-family:Helvetica,Arial,sans-serif;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:' . $muted . ';margin-bottom:6px">' . $h($t['add']) . '</div>'
       . $btn($l['google'], 'Google Calendar') . $btn($l['outlook'], 'Outlook')
       . '<p style="margin:6px 0 0;font-family:Helvetica,Arial,sans-serif;font-size:12px;color:' . $muted . '">' . $h($t['ics']) . '</p></td></tr>' : '')
     . '<tr><td style="padding:18px 28px 4px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ' . $line . '"><tr><td style="padding-top:16px">'
@@ -320,7 +326,7 @@ function guestMail(array $b, array $C, string $kind): array {
     . '<a href="' . $h($site) . '" style="color:' . $wine . '">' . $h(preg_replace('#^https?://#', '', $site)) . '</a>'
     . '</td></tr></table>'
     . '</td></tr></table></body></html>';
-  $ics = icsFor($b, $C, $kind === 'canc' ? 'CANCEL' : 'PUBLISH', $kind === 'canc', $kind === 'rec');
+  $ics = $kind === 'rem' ? '' : icsFor($b, $C, $kind === 'canc' ? 'CANCEL' : 'PUBLISH', $kind === 'canc', $kind === 'rec');
   return ['subject' => $subject, 'text' => $txt, 'html' => $html, 'ics' => $ics, 'logo' => !empty($C['_logo_cid'])];
 }
 function encHeader(string $s): string { return preg_match('/[^\x20-\x7E]/', $s) ? '=?UTF-8?B?' . base64_encode($s) . '?=' : $s; }
@@ -427,6 +433,31 @@ function mailGuest(array $C, array &$b, string $kind): bool {
   catch (Throwable $e) { $b['emailError'] = $e->getMessage(); logMail("guest ERR $kind {$b['id']} " . $e->getMessage()); return false; }
 }
 
+/* ---------- reminder: one email a few hours before the table (settings: reminderHours, 0 = off), run by strumenti/promemoria.php from cron ---------- */
+function sendReminders(array $C): array {
+  $hours = (float)(settingsMain()['reminderHours'] ?? 4); $sent = []; $now = time();
+  if ($hours <= 0) return $sent;
+  $today = date('Y-m-d'); $until = date('Y-m-d', $now + (int)ceil($hours * 3600) + 86400);
+  $over = load('overrides');
+  foreach (load('bookings', [['date', '>=', $today], ['date', '<=', $until]]) as $id => $b) {
+    if (($b['status'] ?? '') === 'cancelled' || ($b['reminderFor'] ?? '') === ($b['date'] ?? '') . ' ' . ($b['time'] ?? '') || !empty($b['arrival']) || empty($b['email'])) continue;
+    if (($b['source'] ?? '') === 'test' || !empty($b['example'])) continue;
+    $start = strtotime(($b['date'] ?? '') . ' ' . ($b['time'] ?? '')); if (!$start) continue;
+    $from = $start - (int)round($hours * 3600);
+    if ($now < $from || $now >= $start) continue;
+    $made = strtotime((string)($b['movedAt'] ?? $b['createdAt'] ?? '')); if ($made && $made > $from) continue; // booked or moved within the window: the confirmation is enough
+    if (!empty($b['pending']) && ($b['emailKind'] ?? '') !== 'ok' && (($over[$b['date']]['state'] ?? '') !== 'open')) continue; // dinner not confirmed yet
+    $b['id'] = $id; $for = $b['date'] . ' ' . $b['time']; // a booking moved to another day gets a new reminder
+    try { sendMail($C, $b['email'], guestMail($b, $C, 'rem')); patchDoc('bookings', $id, ['reminderSentAt' => date('c'), 'reminderFor' => $for], ['reminderError', 'reminderTries']); logMail("guest ok rem $id"); $sent[] = "$id {$b['date']} {$b['time']}"; }
+    catch (Throwable $e) { // retried at the next runs, at most 3 tries
+      $tries = (int)($b['reminderTries'] ?? 0) + 1;
+      patchDoc('bookings', $id, ['reminderTries' => $tries, 'reminderError' => $e->getMessage()] + ($tries >= 3 ? ['reminderFor' => $for] : []));
+      logMail("guest ERR rem $id " . $e->getMessage());
+    }
+  }
+  return $sent;
+}
+
 /* ---------- validation ---------- */
 function cleanBooking(array $x, bool $staff = false): array {
   $s = fn($v, $n = 200) => mb_substr(trim((string)$v), 0, $n);
@@ -450,6 +481,8 @@ function cleanBooking(array $x, bool $staff = false): array {
   if ($b['source'] !== 'test' && ($b['name'] === '' || $b['phone'] === '' || !filter_var($b['email'], FILTER_VALIDATE_EMAIL))) fail('bad_request', 'Nome, telefono ed email sono obbligatori');
   return $b;
 }
+
+if (defined('DVOR_NO_REQUEST')) return; // included by a command-line tool (strumenti/promemoria.php)
 
 /* ---------- request ---------- */
 $staff = isStaff($C); $cid = clientId();
