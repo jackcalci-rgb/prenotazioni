@@ -26,14 +26,23 @@ return [
   'smtp_user'     => 'prenotazioni@profumidistria.com',
   'smtp_pass'     => '',
 
+  // Database MySQL / MariaDB: in Virtualmin, Modifica database → Crea un nuovo database.
+  // Utente e password sono quelli del server virtuale (o quelli indicati nella scheda «Accesso»).
+  'db' => [
+    'host' => 'localhost',
+    'name' => 'prenota',
+    'user' => '',
+    'pass' => '',
+  ],
+
   // Facoltativo: chat dello chef. Senza chiave la chat non compare.
   'anthropic_api_key' => '',
   'anthropic_model'   => 'claude-haiku-5-5',
 
-  // Durata del tavolo nel file calendario (minuti)
-  // Cartella dei dati (prenotazioni). Meglio fuori dalla cartella pubblica, es. '/var/lib/dvor-prenota'
+  // Cartella del registro email (mail.log) e dei vecchi file JSON da importare. Meglio fuori dalla cartella pubblica.
   'data_dir' => __DIR__ . '/data',
 
+  // Durata del tavolo nel file calendario (minuti)
   'hold_min' => 120,
   'timezone' => 'Europe/Rome',
 ];
