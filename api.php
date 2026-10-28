@@ -15,7 +15,7 @@ set_exception_handler(function (Throwable $e) {
 
 const COLLS = ['bookings', 'events', 'overrides', 'settings', 'blacklist'];
 const STAFF_ONLY = ['blacklist']; // staff only, also for reading
-const GUEST_FIELDS = ['date', 'time', 'party', 'status', 'createdAt', 'source', 'example'];
+const GUEST_FIELDS = ['date', 'time', 'party', 'status', 'createdAt', 'source'];
 const GUEST_UPDATABLE = ['status', 'cancelledAt', 'date', 'time', 'movedAt', 'retained'];
 
 function out($x, int $code = 200): void { http_response_code($code); echo json_encode($x, JSON_UNESCAPED_UNICODE); exit; }
@@ -467,10 +467,9 @@ function cleanBooking(array $x, bool $staff = false): array {
     'eventTitle' => $s($x['eventTitle'] ?? '', 200), 'menuCarta' => max(0, (int)($x['menuCarta'] ?? 0)), 'menuTasting' => max(0, (int)($x['menuTasting'] ?? 0)),
     'discount' => max(0, min(50, (int)($x['discount'] ?? 0))), 'notes' => $s($x['notes'] ?? '', 1000), 'lang' => preg_match('/^[a-z]{2}$/', (string)($x['lang'] ?? '')) ? $x['lang'] : 'it',
     'status' => 'active', 'offer' => $s($x['offer'] ?? '', 300), 'insight' => $s($x['insight'] ?? '', 500),
-    'createdAt' => date('c'), 'source' => in_array($x['source'] ?? '', $staff ? ['assistant', 'form', 'test', 'phone', 'whatsapp', 'walkin'] : ['assistant', 'form', 'test'], true) ? $x['source'] : 'form',
+    'createdAt' => date('c'), 'source' => in_array($x['source'] ?? '', $staff ? ['assistant', 'form', 'phone', 'whatsapp', 'walkin'] : ['assistant', 'form'], true) ? $x['source'] : 'form',
     'pending' => !empty($x['pending']),
   ];
-  if (!empty($x['example'])) $b['example'] = true;
   if (isset($x['marketing'])) $b['marketing'] = !empty($x['marketing']); // guest form: the marketing consent box; staff form: only when ticked
   if (is_array($x['utm'] ?? null)) { // campaign that brought the guest to the page (utm_*, gclid, fbclid)
     $u = [];
@@ -484,7 +483,7 @@ function cleanBooking(array $x, bool $staff = false): array {
     if ($b['email'] !== '' && !filter_var($b['email'], FILTER_VALIDATE_EMAIL)) fail('bad_request', 'Email non valida');
     return $b;
   }
-  if ($b['source'] !== 'test' && ($b['name'] === '' || $b['phone'] === '' || !filter_var($b['email'], FILTER_VALIDATE_EMAIL))) fail('bad_request', 'Nome, telefono ed email sono obbligatori');
+  if (($b['name'] === '' || $b['phone'] === '' || !filter_var($b['email'], FILTER_VALIDATE_EMAIL))) fail('bad_request', 'Nome, telefono ed email sono obbligatori');
   return $b;
 }
 
@@ -511,7 +510,8 @@ $op = $in['op'] ?? ($_GET['op'] ?? '');
 
 switch ($op) {
   case 'info':
-    out(['ai' => !empty($C['anthropic_api_key']), 'staff' => $staff]);
+    $key = !empty($C['anthropic_api_key']);
+    out(['ai' => $key && empty(settingsMain()['botOff']), 'aiKey' => $key, 'staff' => $staff]);
 
   case 'login':
     usleep(400000);
@@ -544,24 +544,22 @@ switch ($op) {
     $coll = (string)($in['coll'] ?? ''); checkColl($coll);
     $data = is_array($in['data'] ?? null) ? $in['data'] : [];
     if ($coll === 'bookings') {
-      $isTest = ($data['source'] ?? '') === 'test';
-      if ($isTest && !$staff) fail('not_granted', 'Solo staff', 403);
       $b = cleanBooking($data, $staff); $b['createdBy'] = $cid;
       $manual = in_array($b['source'], ['phone', 'whatsapp', 'walkin'], true);
-      if (!$isTest && !$manual) rateLimit('book', 12, 3600);
+      if (!$manual) rateLimit('book', 12, 3600);
       $id = newId();
       /* guests are checked against the seats inside the transaction; the staff can always add a table by hand */
-      $full = tx(function () use ($id, $b, $isTest, $manual) {
-        if (!$isTest && !$manual && seatsLeft($b['date'], $b['time']) < $b['party']) return true;
+      $full = tx(function () use ($id, $b, $manual) {
+        if (!$manual && seatsLeft($b['date'], $b['time']) < $b['party']) return true;
         putDoc('bookings', $id, $b); return false;
       });
       if ($full) fail('slot_full', 'Questo orario si è appena riempito: scegli un altro orario', 409);
       $b['id'] = $id;
-      if ($manual ? !empty($data['sendMail']) && $b['email'] !== '' : !$isTest) {
+      if (!$manual || (!empty($data['sendMail']) && $b['email'] !== '')) {
         mailGuest($C, $b, $b['pending'] ? 'rec' : 'ok');
         patchDoc('bookings', $id, array_intersect_key($b, array_flip(['emailSentAt', 'emailKind', 'emailError'])));
       }
-      if (!$manual && !$isTest) notifyStaff($C, $b, 'Nuova prenotazione');
+      if (!$manual) notifyStaff($C, $b, 'Nuova prenotazione');
       out(['id' => $id]);
     }
     if (!$staff) fail('not_granted', 'Solo staff', 403);
@@ -621,7 +619,7 @@ switch ($op) {
     if (!$staff) fail('not_granted', 'Solo staff', 403);
     $id = (string)($in['id'] ?? ''); $b = preg_match('/^[A-Za-z0-9_-]{1,64}$/', $id) ? getDoc('bookings', $id) : null;
     if ($b === null) fail('not_found', 'Prenotazione non trovata', 404);
-    $b['id'] = $id; $b['source'] = ($b['source'] ?? '') === 'test' ? 'test-resend' : $b['source']; unset($b['example']);
+    $b['id'] = $id;
     $kind = ($b['status'] ?? '') === 'cancelled' ? 'canc' : (!empty($in['confirm']) || empty($b['pending']) ? 'ok' : 'rec');
     $ok = mailGuest($C, $b, $kind);
     patchDoc('bookings', $id, array_intersect_key($b, array_flip(['emailSentAt', 'emailKind', 'emailError'])), isset($b['emailError']) ? [] : ['emailError']);
@@ -682,6 +680,7 @@ switch ($op) {
 
   case 'claude': {
     if (empty($C['anthropic_api_key'])) fail('not_granted', 'Assistente non configurato', 403);
+    if (!empty(settingsMain()['botOff'])) fail('not_granted', 'Assistente spento dallo staff', 403); // ⚙ → Assistente
     rateLimit('ai', 40, 600);
     $body = [
       'model' => $C['anthropic_model'] ?: 'claude-haiku-5-5',

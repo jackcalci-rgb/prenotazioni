@@ -10,6 +10,8 @@ sudo -u "$OWNER" git reset -q --hard origin/main
 echo "Aggiornato alla versione $(sudo -u "$OWNER" git log -1 --format='%h · %s · %cd' --date=format:'%d/%m %H:%M')"
 # dalla versione con MySQL: se config.php non ha ancora il database, lo prepara e importa i file JSON
 php -r '$c = require "config.php"; exit(empty($c["db"]["user"]) ? 1 : 0);' || bash "$PUB/strumenti/database.sh"
+# via le prove (prenotazioni finte, lista nera di prova) e copertina di San Martino: si può rilanciare senza danni
+sudo -u "$OWNER" php "$PUB/strumenti/vai-live.php" || echo "Attenzione: pulizia delle prove non riuscita, rilancia: sudo -u $OWNER php $PUB/strumenti/vai-live.php"
 # promemoria email prima della prenotazione: cron ogni 15 minuti (una volta sola)
 if [ -d /etc/cron.d ] && [ ! -f /etc/cron.d/dvor-promemoria ]; then
   echo "*/15 * * * * $OWNER $(command -v php) $PUB/strumenti/promemoria.php >/dev/null 2>&1" > /etc/cron.d/dvor-promemoria

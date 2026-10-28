@@ -8,3 +8,4 @@ uploads/*
 !uploads/03b4e244b2dca69a1043a191df11bedb.jpg
 !uploads/f032c0c03d9ae36ccb4e526290fbae95.jpg
 *.log
+!uploads/9ecdaac6ea4da1f311b577a447b1da80.jpg
