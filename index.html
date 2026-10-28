@@ -96,7 +96,7 @@ th{font-weight:400;color:var(--muted);font-size:.75rem;letter-spacing:.1em;text-
 .tablewrap{overflow-x:auto}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}
 .seg button{border:0;background:var(--card);color:var(--ink);font:400 .85rem var(--sans);padding:.35rem .9rem;cursor:pointer}
-.seg button[aria-pressed="true"]{background:var(--wine);color:#fff}
+.seg button[aria-pressed="true"]{background:var(--wine);color:var(--on-wine)}
 .wk{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.5rem}
 .wkd{border:1px solid var(--line);border-radius:8px;background:var(--card);padding:.6rem .7rem;display:flex;flex-direction:column;gap:.35rem;text-align:left;font:inherit;color:inherit;cursor:pointer;min-width:0}
 .wkd:hover{border-color:var(--wine)}
@@ -127,8 +127,35 @@ th{font-weight:400;color:var(--muted);font-size:.75rem;letter-spacing:.1em;text-
 .tbl.bl{border-color:var(--bad);color:var(--bad)}
 .arr{display:flex;flex-wrap:wrap;gap:.3rem;align-items:center}
 .blr{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.5rem;align-items:center;border-bottom:1px solid var(--line);padding:.5rem 0}
-#blbox summary{cursor:pointer;list-style:none}
-#blbox[open] summary{margin-bottom:.5rem}
+.sbar{display:flex;justify-content:space-between;align-items:center;gap:.75rem}
+.sbar .seg button{padding:.5rem 1rem}
+.gear{flex:0 0 auto;width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--ink);display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.gear:hover{border-color:var(--wine)}
+.gear[aria-pressed="true"]{background:var(--wine);color:var(--on-wine);border-color:var(--wine)}
+.kpi.hot{border-color:var(--bad);background:var(--bad-bg)}
+.kpi.hot b{color:var(--bad)}
+.kpi.good b{color:var(--ok)}
+.kpi small{display:block;font-size:.72rem;color:var(--muted)}
+.flow{display:flex;flex-direction:column;gap:2px}
+.flr{display:grid;grid-template-columns:3rem 1fr 5.5rem;gap:.6rem;align-items:center;font-size:.8rem;font-variant-numeric:tabular-nums;padding:.1rem .3rem;border-radius:4px}
+.flr .meter{height:8px;min-width:0}
+.flr.now{background:var(--warn-bg)}
+.flr.now .t{font-weight:600;color:var(--warn)}
+.flr.gone{opacity:.45}
+.flr .n{text-align:right;color:var(--muted)}
+.know{margin:0;padding-left:1.1rem;display:flex;flex-direction:column;gap:.25rem}
+.chk{display:grid;grid-template-columns:3.4rem 2.4rem minmax(0,1fr) auto;gap:.2rem .75rem;align-items:center;padding:.6rem .2rem;border-bottom:1px solid var(--line)}
+.chk .t{font-variant-numeric:tabular-nums;font-weight:600}
+.chk .p{font-family:var(--serif);font-size:1.6rem;line-height:1;text-align:center;font-variant-numeric:tabular-nums}
+.chk .who{min-width:0;overflow-wrap:anywhere}
+.chk .who a{color:inherit}
+.chk.done{background:color-mix(in srgb,var(--ok-bg) 45%,transparent)}
+.chk.done .p,.chk.done .t{color:var(--ok)}
+.chk.ns{opacity:.5}
+.chk.late .t{color:var(--bad)}
+.chk .late-l{color:var(--bad);font-size:.8rem}
+.svh{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem;padding-top:.6rem;border-bottom:1px solid var(--wine)}
+@media (max-width:600px){.chk{grid-template-columns:3rem 2.2rem minmax(0,1fr)}.chk .arr{grid-column:3/-1}}
 @media (max-width:520px){.tlr{grid-template-columns:3rem 1fr}.tlr .tbls{grid-column:1/-1}}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem}
 .copy{white-space:pre-wrap;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:.6rem;font-size:.85rem}
@@ -261,108 +288,126 @@ a.btn{display:inline-block;text-decoration:none;font:400 .8rem var(--sans);lette
     <p class="small muted" id="diag">Controllo prototipo: caricamento…</p>
   </section>
 
-  <!-- STAFF -->
+  <!-- STAFF: service panels (today, calendar, new booking) up front; rules, blacklist, events and tests behind the gear -->
   <section id="v-staff" class="stack" hidden>
-    <form class="card stack" id="mb-form" autocomplete="off">
-      <h2>Nuova prenotazione</h2>
-      <p class="small muted">Per le prenotazioni prese al telefono, su WhatsApp o di persona. Nome obbligatorio; telefono ed email facoltativi.</p>
-      <div class="row">
-        <label>Canale<select id="mb-src"><option value="phone">📞 Telefono</option><option value="whatsapp">💬 WhatsApp</option><option value="walkin">🚶 Di persona</option></select></label>
-        <label>Data<input type="date" id="mb-date" required></label>
-        <label>Ora<input type="time" id="mb-time" list="mb-times" step="900" required><datalist id="mb-times"></datalist></label>
-        <label>Persone<input type="number" id="mb-party" min="1" max="74" value="2" required></label>
+    <div class="sbar">
+      <div class="seg" role="group" aria-label="Servizio">
+        <button type="button" id="sp-b-today" aria-pressed="true">Oggi</button><button type="button" id="sp-b-cal" aria-pressed="false">Calendario</button><button type="button" id="sp-b-new" aria-pressed="false">+ Nuova</button>
       </div>
-      <div class="row">
-        <label>Nome<input id="mb-name" required></label>
-        <label>Telefono<input id="mb-phone" type="tel"></label>
-        <label>Email<input id="mb-email" type="email"></label>
-        <label>Lingua email<select id="mb-lang"><option value="it">Italiano</option><option value="en">English</option><option value="de">Deutsch</option><option value="sl">Slovenščina</option><option value="nl">Nederlands</option></select></label>
-      </div>
-      <label>Note<input id="mb-notes" placeholder="Seggiolone, allergie, compleanno…"></label>
-      <label style="flex-direction:row;align-items:center;gap:.5rem"><input type="checkbox" id="mb-send" style="width:auto" checked>Manda all'ospite l'email di conferma con il calendario (se c'è l'email)</label>
-      <p class="small" id="mb-info" aria-live="polite"></p>
-      <div class="row" style="align-items:center"><button class="btn" type="submit" id="mb-save">Aggiungi prenotazione</button><span class="small muted" id="mb-msg" aria-live="polite"></span></div>
-    </form>
-    <div class="card stack" id="planner">
-      <div class="row" style="justify-content:space-between;align-items:center">
-        <h2>Calendario sala</h2>
-        <div class="seg" role="group" aria-label="Vista"><button type="button" id="pl-week" aria-pressed="true">Settimana</button><button type="button" id="pl-day" aria-pressed="false">Giorno</button></div>
-      </div>
-      <div class="row" style="align-items:center;gap:.5rem">
-        <button class="btn ghost small" type="button" id="pl-prev" aria-label="Precedente">‹</button>
-        <strong id="pl-title" style="flex:1;text-align:center"></strong>
-        <button class="btn ghost small" type="button" id="pl-next" aria-label="Successivo">›</button>
-        <button class="btn ghost small" type="button" id="pl-today">Oggi</button>
-      </div>
-      <div id="pl-body" class="stack"></div>
-      <p class="small muted">Ogni prenotazione è un tavolo. Gli orari sono gli arrivi; "in sala" conta le persone sedute in quel momento (il tavolo resta 2 ore).</p>
+      <button type="button" class="gear" id="sp-b-set" aria-pressed="false" aria-label="Impostazioni" title="Impostazioni, lista nera, eventi"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
     </div>
-    <div class="card stack">
-      <div class="row" style="justify-content:space-between;align-items:center">
-        <h2>Prossimi 14 giorni</h2>
-        <span class="small muted" id="now-label"></span></div>
-      <p class="small muted" id="db-status">Caricamento…</p>
-      <p class="small muted">La cena apre con almeno <b id="lbl-min">10</b> ospiti. Il giorno prima alle 18:00 il sistema decide: con 7–9 ospiti aspetta fino alle 15:00 del giorno stesso, sotto i 7 chiude. Sopra il minimo è confermata subito.</p>
-      <p class="small muted" id="diag2"></p>
-      <div class="board" id="board"></div>
+    <div id="sp-today" class="stack">
+      <div class="card stack" id="td-dash"></div>
+      <div class="card stack" id="td-list"></div>
     </div>
-    <div class="card stack" id="dayview"></div>
-    <details class="card stack" id="blbox">
-      <summary><h2 style="display:inline">Lista nera</h2> <span class="pill s-closed" id="bl-count">0</span></summary>
-      <p class="small muted">Ospiti segnati «No show». Quando uno di loro prenota di nuovo, con lo stesso telefono o la stessa email, lo vedi segnalato in rosso e l'email allo staff lo indica nell'oggetto.</p>
-      <div id="bl-list" class="stack"></div>
-    </details>
-    <div class="card stack" id="eventsbox">
-      <h2>Eventi</h2>
-      <p class="small muted">Cene a tema, feste e celebrazioni. Gli ospiti li vedono in cima alla pagina di prenotazione: un clic apre l'anteprima, il pulsante porta alla pagina dell'evento.</p>
-      <div id="ev-list"></div>
-      <form id="ev-form" class="stack">
-        <h3 id="ev-form-title">Nuovo evento</h3>
+    <div id="sp-cal" class="stack" hidden>
+      <div class="card stack" id="planner">
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <h2>Calendario sala</h2>
+          <div class="seg" role="group" aria-label="Vista"><button type="button" id="pl-week" aria-pressed="true">Settimana</button><button type="button" id="pl-day" aria-pressed="false">Giorno</button></div>
+        </div>
+        <div class="row" style="align-items:center;gap:.5rem">
+          <button class="btn ghost small" type="button" id="pl-prev" aria-label="Precedente">‹</button>
+          <strong id="pl-title" style="flex:1;text-align:center"></strong>
+          <button class="btn ghost small" type="button" id="pl-next" aria-label="Successivo">›</button>
+          <button class="btn ghost small" type="button" id="pl-today">Oggi</button>
+        </div>
+        <div id="pl-body" class="stack"></div>
+        <p class="small muted">Ogni prenotazione è un tavolo. Gli orari sono gli arrivi; "in sala" conta le persone sedute in quel momento (il tavolo resta 2 ore).</p>
+      </div>
+      <div class="card stack" id="dayview"></div>
+      <div class="card stack">
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <h2>Prossimi 14 giorni</h2>
+          <span class="small muted" id="now-label"></span></div>
+        <p class="small muted" id="db-status">Caricamento…</p>
+        <p class="small muted">La cena apre con almeno <b id="lbl-min">10</b> ospiti. Il giorno prima alle 18:00 il sistema decide: con 7–9 ospiti aspetta fino alle 15:00 del giorno stesso, sotto i 7 chiude. Sopra il minimo è confermata subito.</p>
+        <p class="small muted" id="diag2"></p>
+        <div class="board" id="board"></div>
+      </div>
+    </div>
+    <div id="sp-new" class="stack" hidden>
+      <form class="card stack" id="mb-form" autocomplete="off">
+        <h2>Nuova prenotazione</h2>
+        <p class="small muted">Per le prenotazioni prese al telefono, su WhatsApp o di persona. Nome obbligatorio; telefono ed email facoltativi.</p>
         <div class="row">
-          <label>Titolo (italiano)<input id="e-title-it" required></label>
-          <label>Titolo (inglese)<input id="e-title-en"></label>
+          <label>Canale<select id="mb-src"><option value="phone">📞 Telefono</option><option value="whatsapp">💬 WhatsApp</option><option value="walkin">🚶 Di persona</option></select></label>
+          <label>Data<input type="date" id="mb-date" required></label>
+          <label>Ora<input type="time" id="mb-time" list="mb-times" step="900" required><datalist id="mb-times"></datalist></label>
+          <label>Persone<input type="number" id="mb-party" min="1" max="74" value="2" required></label>
         </div>
         <div class="row">
-          <label>Data<input type="date" id="e-date" required></label>
-          <label>Ora (facoltativa)<input type="time" id="e-time"></label>
-          <label style="flex:0 1 auto;flex-direction:row;align-items:center;gap:.5rem;padding-bottom:.6rem"><input type="checkbox" id="e-allday" style="width:auto">Tutto il giorno</label>
+          <label>Nome<input id="mb-name" required></label>
+          <label>Telefono<input id="mb-phone" type="tel"></label>
+          <label>Email<input id="mb-email" type="email"></label>
+          <label>Lingua email<select id="mb-lang"><option value="it">Italiano</option><option value="en">English</option><option value="de">Deutsch</option><option value="sl">Slovenščina</option><option value="nl">Nederlands</option></select></label>
         </div>
-        <div class="row">
-          <span class="small muted" style="flex-basis:100%">Apri le prenotazioni dal sito in questo giorno, anche se di solito è chiuso:</span>
-          <label style="flex:0 1 auto;flex-direction:row;align-items:center;gap:.5rem"><input type="checkbox" id="e-open-l" style="width:auto">A pranzo (12:00–15:00)</label>
-          <label style="flex:0 1 auto;flex-direction:row;align-items:center;gap:.5rem"><input type="checkbox" id="e-open-d" style="width:auto">A cena (19:00–21:30, senza minimo di ospiti)</label>
-          <label>Prezzo (facoltativo)<input id="e-price" placeholder="45 € a persona, vini inclusi"></label>
-        </div>
-        <label>Descrizione (italiano)<textarea id="e-desc-it" rows="4"></textarea></label>
-        <label>Descrizione (inglese)<textarea id="e-desc-en" rows="3"></textarea></label>
-        <label>Link alla pagina dell'evento<input id="e-link" type="url" placeholder="https://www.osteriadvor.com/eventi.html"></label>
-        <label>Immagine o locandina (facoltativa)<input id="e-img" type="file" accept="image/*"></label>
-        <div class="row"><button class="btn" type="submit" id="e-save">Salva evento</button><button class="btn ghost" type="button" id="e-cancel" hidden>Annulla modifica</button><span class="small muted" id="e-msg"></span></div>
+        <label>Note<input id="mb-notes" placeholder="Seggiolone, allergie, compleanno…"></label>
+        <label style="flex-direction:row;align-items:center;gap:.5rem"><input type="checkbox" id="mb-send" style="width:auto" checked>Manda all'ospite l'email di conferma con il calendario (se c'è l'email)</label>
+        <p class="small" id="mb-info" aria-live="polite"></p>
+        <div class="row" style="align-items:center"><button class="btn" type="submit" id="mb-save">Aggiungi prenotazione</button><span class="small muted" id="mb-msg" aria-live="polite"></span></div>
       </form>
     </div>
-    <div class="card stack" id="testbox">
-      <h2>Prove</h2>
-      <p class="small muted">Riempie i prossimi 14 giorni con prenotazioni finte, segnate come "prova", per vedere come si comportano le regole. Sere diverse ricevono quantità diverse: alcune superano 10, altre restano basse o vuote.</p>
-      <div class="row"><button class="btn" id="x-fill" type="button">Genera prenotazioni di prova</button><button class="btn ghost" id="x-clear" type="button">Cancella le prove</button><span class="small muted" id="x-msg"></span></div>
-    </div>
-    <div class="card stack" id="settings">
-      <h2>Regole e offerte</h2>
-      <div class="row">
-        <label>Minimo ospiti cena<input type="number" id="s-min" min="1"></label>
-        <label>Aspetta fino al giorno stesso se almeno<input type="number" id="s-ext" min="1"></label>
-        <label>Suggerisci altre sere se al massimo<input type="number" id="s-hide" min="0"></label>
-        <label>Posti totali del locale<input type="number" id="s-seats" min="1"></label>
-        <label>Capienza in settimana (%)<input type="number" id="s-wdpct" min="1" max="200"></label>
-        <label>Capienza nel weekend (%)<input type="number" id="s-wepct" min="1" max="200"></label>
-        <label>Extra automatico quando è pieno (%)<input type="number" id="s-ovpct" min="0" max="100"></label>
-        <label>Mostra all'ospite quanto è pieno da (%)<input type="number" id="s-fullfrom" min="0" max="100"></label>
+    <div id="sp-set" class="stack" hidden>
+      <div class="row" style="justify-content:space-between;align-items:center"><h2>Impostazioni</h2><button class="btn ghost small" type="button" id="set-back">← Torna al servizio</button></div>
+      <div class="card stack" id="settings">
+        <h2>Regole e offerte</h2>
+        <div class="row">
+          <label>Minimo ospiti cena<input type="number" id="s-min" min="1"></label>
+          <label>Aspetta fino al giorno stesso se almeno<input type="number" id="s-ext" min="1"></label>
+          <label>Suggerisci altre sere se al massimo<input type="number" id="s-hide" min="0"></label>
+          <label>Posti totali del locale<input type="number" id="s-seats" min="1"></label>
+          <label>Capienza in settimana (%)<input type="number" id="s-wdpct" min="1" max="200"></label>
+          <label>Capienza nel weekend (%)<input type="number" id="s-wepct" min="1" max="200"></label>
+          <label>Extra automatico quando è pieno (%)<input type="number" id="s-ovpct" min="0" max="100"></label>
+          <label>Mostra all'ospite quanto è pieno da (%)<input type="number" id="s-fullfrom" min="0" max="100"></label>
+        </div>
+        <label>Sconto % su servizi senza prenotazioni (lun, mar, ven)<input type="number" id="s-disc" min="0" max="50"></label>
+        <label style="flex-basis:100%">Offerta per le cene da riempire, lun, mar, ven (vuoto = nessuna offerta)<input id="s-offer" placeholder="Un calice di Collio in omaggio"></label>
+        <div class="row"><button class="btn" id="s-save" type="button">Salva regole</button><span class="small muted" id="s-msg"></span></div>
+        <p class="small muted" id="s-ro" hidden>Solo il proprietario o chi modifica può cambiare le regole.</p>
       </div>
-      <label>Sconto % su servizi senza prenotazioni (lun, mar, ven)<input type="number" id="s-disc" min="0" max="50"></label>
-      <label style="flex-basis:100%">Offerta per le cene da riempire, lun, mar, ven (vuoto = nessuna offerta)<input id="s-offer" placeholder="Un calice di Collio in omaggio"></label>
-      <div class="row"><button class="btn" id="s-save" type="button">Salva regole</button><span class="small muted" id="s-msg"></span></div>
-      <p class="small muted" id="s-ro" hidden>Solo il proprietario o chi modifica può cambiare le regole.</p>
+      <div class="card stack" id="blbox">
+        <div class="row" style="justify-content:space-between;align-items:center"><h2>Lista nera</h2><span class="pill s-closed" id="bl-count">0</span></div>
+        <p class="small muted">Ospiti segnati «No show». Quando uno di loro prenota di nuovo, con lo stesso telefono o la stessa email, lo vedi segnalato in rosso e l'email allo staff lo indica nell'oggetto.</p>
+        <div id="bl-list" class="stack"></div>
+      </div>
+      <div class="card stack" id="eventsbox">
+        <h2>Eventi</h2>
+        <p class="small muted">Cene a tema, feste e celebrazioni. Gli ospiti li vedono in cima alla pagina di prenotazione: un clic apre l'anteprima, il pulsante porta alla pagina dell'evento.</p>
+        <div id="ev-list"></div>
+        <form id="ev-form" class="stack">
+          <h3 id="ev-form-title">Nuovo evento</h3>
+          <div class="row">
+            <label>Titolo (italiano)<input id="e-title-it" required></label>
+            <label>Titolo (inglese)<input id="e-title-en"></label>
+          </div>
+          <div class="row">
+            <label>Data<input type="date" id="e-date" required></label>
+            <label>Ora (facoltativa)<input type="time" id="e-time"></label>
+            <label style="flex:0 1 auto;flex-direction:row;align-items:center;gap:.5rem;padding-bottom:.6rem"><input type="checkbox" id="e-allday" style="width:auto">Tutto il giorno</label>
+          </div>
+          <div class="row">
+            <span class="small muted" style="flex-basis:100%">Apri le prenotazioni dal sito in questo giorno, anche se di solito è chiuso:</span>
+            <label style="flex:0 1 auto;flex-direction:row;align-items:center;gap:.5rem"><input type="checkbox" id="e-open-l" style="width:auto">A pranzo (12:00–15:00)</label>
+            <label style="flex:0 1 auto;flex-direction:row;align-items:center;gap:.5rem"><input type="checkbox" id="e-open-d" style="width:auto">A cena (19:00–21:30, senza minimo di ospiti)</label>
+            <label>Prezzo (facoltativo)<input id="e-price" placeholder="45 € a persona, vini inclusi"></label>
+          </div>
+          <label>Descrizione (italiano)<textarea id="e-desc-it" rows="4"></textarea></label>
+          <label>Descrizione (inglese)<textarea id="e-desc-en" rows="3"></textarea></label>
+          <label>Link alla pagina dell'evento<input id="e-link" type="url" placeholder="https://www.osteriadvor.com/eventi.html"></label>
+          <label>Immagine o locandina (facoltativa)<input id="e-img" type="file" accept="image/*"></label>
+          <div class="row"><button class="btn" type="submit" id="e-save">Salva evento</button><button class="btn ghost" type="button" id="e-cancel" hidden>Annulla modifica</button><span class="small muted" id="e-msg"></span></div>
+        </form>
+      </div>
+      <div class="card stack" id="testbox">
+        <h2>Prove</h2>
+        <p class="small muted">Riempie i prossimi 14 giorni con prenotazioni finte, segnate come "prova", per vedere come si comportano le regole. Sere diverse ricevono quantità diverse: alcune superano 10, altre restano basse o vuote.</p>
+        <div class="row"><button class="btn" id="x-fill" type="button">Genera prenotazioni di prova</button><button class="btn ghost" id="x-clear" type="button">Cancella le prove</button><span class="small muted" id="x-msg"></span></div>
+      </div>
+      <div class="row"><button class="btn ghost small" type="button" id="st-logout">Esci dall'area staff</button></div>
     </div>
-  </section>
+</section>
 </div>
 <dialog id="evdlg" aria-labelledby="evd-title">
   <div class="pic" id="evd-pic"></div>
@@ -676,7 +721,7 @@ var db=null,sample=null,user=null,perms=null,assets=null;
 function el(id){return document.getElementById(id)}
 function h(tag,attrs,kids){var e=document.createElement(tag);if(attrs)for(var k in attrs){if(k==="text")e.textContent=attrs[k];else if(k==="class")e.className=attrs[k];else if(k.slice(0,2)==="on")e.addEventListener(k.slice(2),attrs[k]);else e.setAttribute(k,attrs[k])}(kids||[]).forEach(function(c){if(c!=null)e.append(c)});return e}
 
-var BUILD="host-v30";
+var BUILD="host-v31";
 function applyBookings(q,src){S.bookings=q.docs.map(function(d){return Object.assign({},d.data()||{},{id:d.id})});S.bkSrc=src;S.bkErr="";diag();dbStatus(S.bookings.length+" prenotazioni caricate · aggiornato alle "+hm(new Date().getHours()*60+new Date().getMinutes()));render()}
 function applyEvents(q,src){S.evLoaded=true;S.evSrc=src;S.evErr="";S.events=q.docs.map(function(d){return Object.assign({},d.data()||{},{id:d.id})}).filter(function(e){return e.date>=today()}).sort(function(a,b){return (a.date+(a.time||"")).localeCompare(b.date+(b.time||""))});fillTimes();render();diag()}
 function applyOverrides(q){var o={};q.docs.forEach(function(d){var x=d.data()||{};if(x.state)o[d.id]=x.state});S.overrides=o;render()}
@@ -1075,10 +1120,12 @@ async function manualBook(ev){
   var g=guests(d,"dinner")+p,pend=svcOf(tm)==="dinner"&&dinnerState(d)!=="confirmed"&&g<S.settings.minGuests;
   el("mb-save").disabled=true;m.textContent="Salvo…";
   try{
-    await db.collection("bookings").add({date:d,time:tm,party:p,name:name,phone:el("mb-phone").value.trim(),email:email,notes:el("mb-notes").value.trim(),lang:el("mb-lang").value,status:"active",offer:"",discount:0,menuCarta:0,menuTasting:0,eventTitle:"",createdBy:"",createdAt:new Date().toISOString(),source:src,sendMail:send,pending:pend});
+    var r=await db.collection("bookings").add({date:d,time:tm,party:p,name:name,phone:el("mb-phone").value.trim(),email:email,notes:el("mb-notes").value.trim(),lang:el("mb-lang").value,status:"active",offer:"",discount:0,menuCarta:0,menuTasting:0,eventTitle:"",createdBy:"",createdAt:new Date().toISOString(),source:src,sendMail:send,pending:pend});
+    if(src==="walkin"&&d===today()&&r&&r.id)try{await db.doc("bookings/"+r.id).update({arrival:"in",arrivalAt:new Date().toISOString()})}catch(e){}
     m.textContent="✓ "+name+", "+fmtDay(d)+" alle "+tm+", "+p+" pers. ("+SRC[src]+")"+(send?" · email inviata all'ospite":"");
     ["mb-name","mb-phone","mb-email","mb-notes"].forEach(function(k){el(k).value=""});el("mb-party").value=2;
     S.selDay=d;S.plRef=d;
+    if(src==="walkin"&&d===today())setTimeout(function(){setSp("today")},600);
   }catch(e){m.textContent="Non salvata: "+((e&&e.message)||e)}
   el("mb-save").disabled=false;
 }
@@ -1125,6 +1172,96 @@ function renderBlacklist(){
       h("button",{class:"btn ghost small",type:"button",text:"Togli dalla lista",onclick:function(){twoStep(this,"Sicuro? Tocca ancora",function(){db.doc("blacklist/"+x.id).delete().catch(function(){})})}})
     ]));
   });
+}
+/* ---------- staff: panels and today's service (floor dashboard + check-in list) ---------- */
+var LATE_MIN=15,SPS=["today","cal","new","set"];
+function setSp(p){if(SPS.indexOf(p)<0)p="today";S.sp=p;try{sessionStorage.setItem("dvor-sp",p)}catch(e){}
+  SPS.forEach(function(k){el("sp-"+k).hidden=k!==p;el("sp-b-"+k).setAttribute("aria-pressed",String(k===p))});render()}
+function nowMin(){var n=new Date();return n.getHours()*60+n.getMinutes()}
+function persons(l){return l.reduce(function(a,b){return a+(+b.party||0)},0)}
+function lateBy(b,nm){return b.arrival?-1:nm-mins(b.time)}
+/* seated now: guests checked in whose table is still within the hold time from their arrival */
+function seatedNow(list,nm){var H=S.settings.holdMin||120;return persons(list.filter(function(b){if(b.arrival!=="in")return false;var a=b.arrivalAt?new Date(b.arrivalAt):null,m=a&&!isNaN(a)&&ymd(a)===b.date?a.getHours()*60+a.getMinutes():mins(b.time);return nm<m+H}))}
+function walkIn(){setSp("new");var n=nowMin(),r=Math.round(n/15)*15;el("mb-src").value="walkin";el("mb-date").value=today();el("mb-time").value=hm(Math.min(r,23*60+45));el("mb-party").value=2;el("mb-msg").textContent="";mbInfo();el("mb-name").focus()}
+function renderToday(){
+  var d=today(),nm=nowMin(),dash=el("td-dash"),box=el("td-list");dash.textContent="";box.textContent="";
+  var all=S.bookings.filter(function(b){return b.date===d}).sort(function(a,b){return a.time.localeCompare(b.time)||String(a.name||"").localeCompare(String(b.name||""))});
+  var list=all.filter(active),canc=all.filter(function(b){return !active(b)});
+  var arr=list.filter(function(b){return b.arrival==="in"}),ns=list.filter(function(b){return b.arrival==="noshow"}),wait=list.filter(function(b){return !b.arrival});
+  var late=wait.filter(function(b){return lateBy(b,nm)>=LATE_MIN}),soon=wait.filter(function(b){var m=mins(b.time);return m>nm-LATE_MIN&&m<=nm+60});
+  var next=wait.filter(function(b){return mins(b.time)>=nm})[0],cap=capFor(d),ds=hasDinner(d)?dinnerState(d):"none";
+  /* dashboard */
+  dash.append(h("div",{class:"row",style:"justify-content:space-between;align-items:center"},[h("div",{},[h("div",{class:"caps",text:"Servizio di oggi"}),h("h2",{style:"text-transform:capitalize",text:fmtDay(d,true)})]),h("span",{class:"small muted",text:"Ore "+hm(nm)+" · si aggiorna da solo"})]));
+  if(!slotsFor(d).length&&!list.length){dash.append(h("p",{class:"muted",text:"Oggi è giorno di riposo e non ci sono prenotazioni."}));}
+  else{
+    var k=[
+      kpi2(persons(list),"coperti previsti",list.length+(list.length===1?" tavolo":" tavoli")),
+      kpi2(persons(arr)+"/"+persons(list),"arrivati",arr.length+" su "+list.length+" tavoli",arr.length&&!wait.length?"good":""),
+      kpi2(persons(wait),"da arrivare",wait.length+(wait.length===1?" tavolo":" tavoli")),
+      kpi2(seatedNow(list,nm)+"/"+cap,"in sala ora","posti di oggi "+cap),
+      kpi2(persons(soon),"in arrivo entro 1 ora",next?"prossimo "+next.time+" · "+(next.name||"Ospite")+" ("+next.party+")":"nessun altro arrivo")
+    ];
+    if(late.length)k.push(kpi2(late.length,late.length===1?"tavolo in ritardo":"tavoli in ritardo","oltre "+LATE_MIN+" min","hot"));
+    if(ns.length)k.push(kpi2(persons(ns),"no show",ns.length+(ns.length===1?" tavolo":" tavoli")));
+    dash.append(h("div",{class:"kpis"},k));
+    var sv=[];["lunch","dinner"].forEach(function(s){var l=list.filter(function(b){return svcOf(b.time)===s});if(!l.length&&!slotsFor(d).some(function(x){return svcOf(x)===s}))return;
+      var ts=l.reduce(function(a,b){return a+(+b.menuTasting||0)},0),txt=(s==="lunch"?"Pranzo":"Cena")+": "+tp(tabsOf(l))+(ts?" · "+ts+" menù degustazione":"");
+      sv.push(h("div",{class:"row",style:"gap:.5rem;align-items:center"},[h("span",{text:txt}),s==="dinner"&&ds!=="none"&&ds!=="past"?h("span",{class:"pill s-"+ds,text:SLBL[ds]+(ds!=="confirmed"?" "+guests(d,"dinner")+"/"+S.settings.minGuests:"")}):null]))});
+    if(sv.length)dash.append(h("div",{class:"stack",style:"gap:.3rem"},sv));
+    /* room flow by arrival slot, now highlighted */
+    var times=slotsFor(d).concat(list.map(function(b){return b.time})).filter(function(x,i,a){return a.indexOf(x)===i}).sort();
+    if(times.length){
+      var g=bySlot(list),fl=h("div",{class:"flow"}),step=S.settings.stepMin||30;
+      times.forEach(function(tm,i){
+        var m=mins(tm),nx=i+1<times.length?mins(times[i+1]):m+step,inRoom=inRoomAt(d,tm),ar=persons(g[tm]||[]);
+        fl.append(h("div",{class:"flr"+(nm>=m&&nm<nx?" now":nm>=nx?" gone":""),title:"Alle "+tm+": "+ar+" persone in arrivo, "+inRoom+" in sala su "+cap},[
+          h("span",{class:"t",text:tm}),h("span",{class:"meter"},[h("i",{style:"width:"+Math.min(100,Math.round(inRoom/cap*100))+"%"})]),h("span",{class:"n",text:(ar?"+"+ar+" · ":"")+inRoom+" in sala"})]));
+      });
+      dash.append(h("details",{},[h("summary",{class:"small",style:"cursor:pointer",text:"Flusso della sala (persone sedute per orario)"}),fl]));
+    }
+    /* things the floor should know */
+    var kn=[];
+    S.events.filter(function(e){return e.date===d}).forEach(function(e){kn.push("✦ Evento: "+e.title_it+(e.time&&!e.allDay?" alle "+e.time:""))});
+    late.forEach(function(b){kn.push("⏱ "+b.time+" "+(b.name||"Ospite")+" ("+b.party+") è in ritardo di "+lateBy(b,nm)+" min"+(b.phone?", tel. "+b.phone:""))});
+    list.forEach(function(b){var bl=blFind(b),who=b.time+" "+(b.name||"Ospite")+" ("+b.party+")";
+      if(bl)kn.push("⚠ "+who+": in lista nera, "+(bl.count||1)+" no show");
+      if(b.notes)kn.push("✎ "+who+": "+b.notes);
+      if(+b.party>=6)kn.push("👥 "+who+": tavolo grande, prepara per tempo");
+      if(b.offer||b.discount)kn.push("🎁 "+who+": "+[b.offer,b.discount?"sconto "+b.discount+"% sul conto":""].filter(Boolean).join(", "))});
+    if(ds==="building"||ds==="lastcall")kn.push("Cena non ancora confermata: "+guests(d,"dinner")+" ospiti su "+S.settings.minGuests+". Decidi dal Calendario.");
+    if(kn.length)dash.append(h("div",{class:"stack",style:"gap:.3rem"},[h("h3",{text:"Da sapere"}),h("ul",{class:"know small"},kn.map(function(x){return h("li",{text:x})}))]));
+  }
+  /* check-in list */
+  var f=S.tdFilter||"all",cnt={all:list.length,wait:wait.length,in:arr.length};
+  var seg=h("div",{class:"seg",role:"group","aria-label":"Filtra"},[["all","Tutte"],["wait","Da arrivare"],["in","Arrivati"]].map(function(x){return h("button",{type:"button","aria-pressed":String(f===x[0]),text:x[1]+" "+cnt[x[0]],onclick:function(){S.tdFilter=x[0];renderToday()}})}));
+  box.append(h("div",{class:"row",style:"justify-content:space-between;align-items:center"},[h("h2",{text:"Prenotazioni e arrivi"}),h("button",{class:"btn small",type:"button",text:"🚶 Walk-in",title:"Ospiti arrivati senza prenotazione",onclick:walkIn})]));
+  seg.style.alignSelf="flex-start";box.append(seg);
+  var shown=list.filter(function(b){return f==="all"||(f==="wait"?!b.arrival:b.arrival==="in")});
+  if(!shown.length)box.append(h("p",{class:"muted",text:!list.length?"Nessuna prenotazione per oggi.":f==="wait"?"Sono arrivati tutti.":"Nessun arrivo segnato."}));
+  ["lunch","dinner"].forEach(function(s){
+    var l=shown.filter(function(b){return svcOf(b.time)===s});if(!l.length)return;
+    box.append(h("div",{class:"svh"},[h("h3",{text:s==="lunch"?"Pranzo":"Cena"}),h("span",{class:"small muted",text:tp(tabsOf(l))})]));
+    l.forEach(function(b){box.append(chkRow(b,nm))});
+  });
+  if(canc.length)box.append(h("details",{},[h("summary",{class:"small muted",style:"cursor:pointer",text:"Annullate oggi ("+canc.length+")"}),h("ul",{class:"know small muted"},canc.map(function(b){return h("li",{text:b.time+" "+(b.name||"Ospite")+" ("+b.party+")"})}))]));
+  box.append(h("p",{class:"small muted",text:"Email, annullamenti e decisioni sulla cena sono nel Calendario. In ritardo = non ancora arrivati "+LATE_MIN+" minuti dopo l'orario."}));
+}
+function kpi2(v,l,sub,cls){return h("div",{class:"kpi"+(cls?" "+cls:"")},[h("b",{text:String(v)}),h("span",{text:l}),sub?h("small",{text:sub}):null])}
+function chkRow(b,nm){
+  var lb=lateBy(b,nm),bl=blFind(b),late=lb>=LATE_MIN;
+  var det=[b.phone?h("a",{href:"tel:"+String(b.phone).replace(/[^\d+]/g,""),text:b.phone}):null].concat([b.notes?"✎ "+b.notes:"",+b.menuTasting?b.menuTasting+" degustazione":"",b.offer?"🎁 "+b.offer:"",b.discount?"Sconto "+b.discount+"%":"",b.eventTitle?"✦ "+b.eventTitle:"",b.example?"prova":""].filter(Boolean)).filter(Boolean);
+  var detEl=h("div",{class:"small muted"});det.forEach(function(x,i){if(i)detEl.append(" · ");detEl.append(x)});
+  return h("div",{class:"chk"+(b.arrival==="in"?" done":b.arrival==="noshow"?" ns":late?" late":"")},[
+    h("div",{class:"t",text:b.time}),
+    h("div",{class:"p",text:String(b.party),title:b.party+" persone"}),
+    h("div",{class:"who"},[
+      h("div",{},[h("strong",{text:b.name||"Ospite"}),SRC[b.source]?h("span",{class:"small muted",text:" "+SRC[b.source].split(" ")[0],title:SRC[b.source]}):null]),
+      bl?h("span",{class:"pill s-closed",text:"⚠ Lista nera · "+(bl.count||1)+" no show"}):null,
+      late?h("div",{class:"late-l",text:"In ritardo di "+lb+" min"}):null,
+      det.length?detEl:null
+    ]),
+    arrivalCell(b)
+  ]);
 }
 /* ---------- staff ---------- */
 var SLBL={confirmed:"Confermata",building:"In raccolta",lastcall:"Ultima chiamata",closed:"Chiusa",past:"Passata"};
@@ -1233,6 +1370,8 @@ el("mb-form").addEventListener("submit",manualBook);["mb-date","mb-time","mb-par
 el("pl-week").addEventListener("click",function(){S.plMode="week";render()});el("pl-day").addEventListener("click",function(){S.plMode="day";S.plRef=S.selDay||S.plRef||today();render()});
 el("pl-prev").addEventListener("click",function(){plMove(-1)});el("pl-next").addEventListener("click",function(){plMove(1)});el("pl-today").addEventListener("click",function(){S.plRef=today();S.selDay=today();render()});
 el("x-clear").addEventListener("click",clearTest);
+SPS.forEach(function(k){el("sp-b-"+k).addEventListener("click",function(){setSp(k==="set"&&S.sp==="set"?"today":k)})});el("set-back").addEventListener("click",function(){setSp("today")});
+el("st-logout").addEventListener("click",function(){if(window.DVOR_LOGOUT)DVOR_LOGOUT();else setView("guest")});
 function fillSettings(){var s=S.settings;el("s-min").value=s.minGuests;el("s-ext").value=s.extendIfAtLeast;el("s-hide").value=s.hideIfAtMost;el("s-seats").value=s.seats;el("s-wdpct").value=s.weekdayPct;el("s-wepct").value=s.weekendPct;el("s-ovpct").value=s.overflowPct;el("s-fullfrom").value=s.showFullFrom;el("s-disc").value=s.discountPct;el("s-offer").value=s.offer||""}
 el("s-save").addEventListener("click",async function(){
   if(!db)return;var m=el("s-msg");
@@ -1380,12 +1519,12 @@ el("ev-form").addEventListener("submit",async function(ev){
 });
 
 /* ---------- tabs ---------- */
-function setView(v){S.view=v;el("tab-guest").setAttribute("aria-selected",String(v==="guest"));el("tab-staff").setAttribute("aria-selected",String(v==="staff"));el("v-guest").hidden=v!=="guest";el("v-staff").hidden=v!=="staff";el("lang").hidden=v!=="guest";if(v==="staff"&&!S.selDay)S.selDay=today();applyLang();render()}
+function setView(v){S.view=v;el("tab-guest").setAttribute("aria-selected",String(v==="guest"));el("tab-staff").setAttribute("aria-selected",String(v==="staff"));el("v-guest").hidden=v!=="guest";el("v-staff").hidden=v!=="staff";el("lang").hidden=v!=="guest";if(v==="staff"&&!S.selDay)S.selDay=today();applyLang();if(v==="staff"){var sp=null;try{sp=sessionStorage.getItem("dvor-sp")}catch(e){}setSp(sp||"today")}else render()}
 el("tab-guest").addEventListener("click",function(){setView("guest")});
 el("tab-staff").addEventListener("click",function(){setView("staff")});
 if(location.hash==="#staff")setTimeout(function(){setView("staff")},0);
 
-function render(){try{if(S.view==="staff"){renderPlanner();mbInfo();renderBlacklist();renderBoard();renderDay();renderEvAdmin()}else{renderMine();renderEvents();renderCal();renderSlots()}}catch(e){dbStatus("Errore di visualizzazione: "+(e&&e.message))}}
+function render(){try{if(S.view==="staff"){renderToday();renderPlanner();mbInfo();renderBlacklist();renderBoard();renderDay();renderEvAdmin()}else{renderMine();renderEvents();renderCal();renderSlots()}}catch(e){dbStatus("Errore di visualizzazione: "+(e&&e.message))}}
 setInterval(render,60000);
 window.DVOR_LOGIC={check:check,dinnerState:dinnerState,slotsFor:slotsFor,S:S};
 boot();

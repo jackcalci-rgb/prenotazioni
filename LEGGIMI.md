@@ -6,7 +6,7 @@ Sistema di prenotazione tavoli di **prenota.osteriadvor.com**. Contiene la pagin
 
 | File | A cosa serve |
 |---|---|
-| `index.html` | Pagina clienti e area staff (`/#staff`) |
+| `index.html` | Pagina clienti e area staff (`/#staff`): «Oggi» con cruscotto di sala e arrivi, «Calendario», «+ Nuova»; dietro l'ingranaggio ⚙ regole, lista nera, eventi e prove |
 | `api.php` | Server: prenotazioni, eventi, impostazioni, email |
 | `db.php` | Collegamento al database MySQL/MariaDB (le tabelle si creano da sole) |
 | `email-logo.png` | Logo nelle email |
