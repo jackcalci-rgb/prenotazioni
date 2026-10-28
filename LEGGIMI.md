@@ -99,10 +99,16 @@ A ogni aggiornamento `aggiorna.sh` lancia anche `vai-live.php`, che cancella le 
 
 Dall'area staff, ⚙ → **Assistente**: un pulsante lo spegne e lo riaccende. Spento, gli ospiti prenotano dal calendario scegliendo giorno e orario, e il server rifiuta le richieste al chatbot. Serve la chiave `anthropic_api_key` in `config.php`; senza chiave l'assistente resta spento e il pulsante lo segnala.
 
+## Modificare una prenotazione
+
+- **Staff:** ogni prenotazione, nel Calendario e in «Oggi», ha il tasto **✎ Modifica**. Si cambiano giorno, ora, persone, nome, telefono, email, lingua, menù, note e stato (anche per riattivare un'annullata). La finestra avvisa se si supera la capienza o se l'orario è fuori dagli arrivi online, ma lascia salvare. La casella «Avvisa l'ospite via email» manda la mail «Spostata» o «Modificata» con il calendario aggiornato; tolta la spunta, l'ospite non riceve nulla.
+- **Cliente:** in «Le tue prenotazioni» ha **✎ Modifica** e **Annulla**. Può cambiare giorno, orario, persone (fino a 20), menù e note fino all'ora della prenotazione. Vede solo gli orari ancora liberi per il nuovo numero di persone, e il server ricontrolla i posti prima di salvare. Riceve l'email «Spostata» o «Modificata», e lo staff riceve la copia a `notify_to`.
+- **Da qualsiasi telefono:** ogni email all'ospite (conferma, ricevuta, spostata, modificata, promemoria) ha il pulsante **Modifica o annulla**, con un link personale firmato (`?gestisci=…`). Così il cliente gestisce la prenotazione anche da un dispositivo diverso da quello con cui ha prenotato.
+
 ## Email
 
 - **Invio:** le email partono dal Postfix del VPS (`smtp_host` `127.0.0.1`, porta 25).
-- **Messaggi automatici:** «Prenotazione confermata», «Prenotazione ricevuta» (per le cene in attesa), «Spostata» e «Annullata», ognuna con Google Calendar, Outlook e il file `dvor.ics`.
+- **Messaggi automatici:** «Prenotazione confermata», «Prenotazione ricevuta» (per le cene in attesa), «Spostata», «Modificata» e «Annullata», ognuna con Google Calendar, Outlook e il file `dvor.ics`.
 - **Promemoria:** 4 ore prima dell'arrivo parte all'ospite un'email «Promemoria» (le ore si cambiano dall'⚙, 0 = nessun promemoria). Non parte per chi ha prenotato o spostato dopo l'inizio della finestra, per le cene ancora in attesa e per i tavoli già arrivati. La manda `strumenti/promemoria.php`, che `aggiorna.sh` mette in cron ogni 15 minuti (`/etc/cron.d/dvor-promemoria`). Prova a mano: `sudo -u <utente> php strumenti/promemoria.php`.
 - **Copia allo staff:** va a `notify_to`.
 - **Se un'email non arriva:**
