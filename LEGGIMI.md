@@ -6,7 +6,7 @@ Sistema di prenotazione tavoli di **prenota.osteriadvor.com**. Contiene la pagin
 
 | File | A cosa serve |
 |---|---|
-| `index.html` | Pagina clienti e area staff (`/#staff`): «Oggi» con cruscotto di sala e arrivi, «Calendario», «+ Nuova», «Marketing» con i lead; dietro l'ingranaggio ⚙ regole, lista nera, eventi e prove |
+| `index.html` | Pagina clienti e area staff (`/#staff`): «Oggi» con cruscotto di sala e arrivi, «Calendario», «+ Nuova», «Marketing» con i lead; dietro l'ingranaggio ⚙ interruttore dell'assistente, regole, lista nera ed eventi |
 | `api.php` | Server: prenotazioni, eventi, impostazioni, email |
 | `db.php` | Collegamento al database MySQL/MariaDB (le tabelle si creano da sole) |
 | `email-logo.png` | Logo nelle email |
@@ -14,6 +14,7 @@ Sistema di prenotazione tavoli di **prenota.osteriadvor.com**. Contiene la pagin
 | `seed/` | Eventi e impostazioni iniziali, usati solo al primo avvio |
 | `strumenti/installa.sh` | Prima installazione sul VPS |
 | `strumenti/aggiorna.sh` | Scarica l'ultima versione da GitHub e attiva il cron dei promemoria |
+| `strumenti/vai-live.php` | Cancella le prenotazioni di prova rimaste dai test e mette la copertina di San Martino (lo lancia `aggiorna.sh`) |
 | `strumenti/promemoria.php` | Manda i promemoria via email prima dell'arrivo (da cron) |
 | `strumenti/database.sh` | Crea il database MySQL e ci copia i vecchi file JSON |
 | `strumenti/importa-json.php` | Solo l'importazione dei file JSON nel database |
@@ -38,7 +39,7 @@ Tabelle (create da sole al primo avvio):
 
 Nell'area staff, scheda **Marketing**:
 
-- **Da soli:** ogni prenotazione (dal sito, dall'assistente, al telefono, su WhatsApp, di persona) aggiorna il lead dell'ospite con data, ora, persone, esito (venuto, no show, annullata), menù degustazione, evento, campagna di provenienza (`utm_source`, `utm_campaign`, `gclid`, `fbclid`) e consenso marketing. Le prove non entrano.
+- **Da soli:** ogni prenotazione (dal sito, dall'assistente, al telefono, su WhatsApp, di persona) aggiorna il lead dell'ospite con data, ora, persone, esito (venuto, no show, annullata), menù degustazione, evento, campagna di provenienza (`utm_source`, `utm_campaign`, `gclid`, `fbclid`) e consenso marketing.
 - **Consenso (GDPR):** nel modulo dell'ospite c'è la casella facoltativa «Voglio ricevere novità…», non spuntata. Nel modulo «+ Nuova» lo staff la spunta solo se l'ospite ha detto di sì. Sul singolo lead si può cambiare (per esempio «No, non contattare») o eliminarlo, se qualcuno chiede di cancellare i suoi dati.
 - **Importare i clienti passati:** file Excel `.xlsx` o CSV (anche righe incollate dal foglio). Le colonne si riconoscono da sole e si possono correggere prima di importare. Chi c'è già viene completato, non doppiato.
 - **Esportare:** Excel (CSV con tutti i dati), Meta Ads (pubblico personalizzato) e Google Ads (Customer Match), sempre sui lead filtrati. Nei file per Meta e Google vanno solo i lead con consenso, a meno di spuntare l'opzione apposita; chi ha detto no resta sempre fuori.
@@ -91,6 +92,12 @@ bash /home/*/domains/prenota.osteriadvor.com/public_html/strumenti/aggiorna.sh
 ```
 
 `config.php` e le prenotazioni non vengono toccati. Al primo aggiornamento alla versione con MySQL, se `config.php` non ha ancora il database, lo script lancia da solo `database.sh`. Se non succede, lancialo tu una volta.
+
+A ogni aggiornamento `aggiorna.sh` lancia anche `vai-live.php`, che cancella le eventuali prenotazioni di prova (quelle create dal vecchio pulsante «Genera prenotazioni di prova») e mai quelle vere.
+
+## Assistente (chatbot)
+
+Dall'area staff, ⚙ → **Assistente**: un pulsante lo spegne e lo riaccende. Spento, gli ospiti prenotano dal calendario scegliendo giorno e orario, e il server rifiuta le richieste al chatbot. Serve la chiave `anthropic_api_key` in `config.php`; senza chiave l'assistente resta spento e il pulsante lo segnala.
 
 ## Email
 
