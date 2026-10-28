@@ -178,6 +178,7 @@ dialog .pic img{width:100%;max-height:320px;object-fit:cover;display:block}
 dialog .in{padding:1.1rem 1.25rem;display:flex;flex-direction:column;gap:.6rem}
 dialog .desc{white-space:pre-wrap}
 dialog p{margin:0}
+#eddlg{max-height:calc(100vh - 32px);overflow:auto}
 a.btn{display:inline-block;text-decoration:none;font:400 .8rem var(--sans);letter-spacing:.14em;text-transform:uppercase;border:1px solid var(--wine);background:var(--wine);color:var(--on-wine);padding:.65rem 1.1rem;border-radius:6px}
 .evrow{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--line)}
 .evrow>div{min-width:0}
@@ -447,6 +448,33 @@ html.embed .wrap{max-width:none}
     </div>
 </section>
 </div>
+<dialog id="eddlg" aria-labelledby="ed-title">
+  <form class="in stack" id="ed-form" autocomplete="off">
+    <h2 id="ed-title">Modifica prenotazione</h2>
+    <div class="row">
+      <label>Data<input type="date" id="ed-date" required></label>
+      <label>Ora<input type="time" id="ed-time" list="ed-times" step="900" required><datalist id="ed-times"></datalist></label>
+      <label>Persone<input type="number" id="ed-party" min="1" max="200" required></label>
+    </div>
+    <div class="row">
+      <label>Nome<input id="ed-name" required></label>
+      <label>Telefono<input id="ed-phone" type="tel"></label>
+    </div>
+    <div class="row">
+      <label>Email<input id="ed-email" type="email"></label>
+      <label>Lingua email<select id="ed-lang"><option value="it">Italiano</option><option value="en">English</option><option value="de">Deutsch</option><option value="sl">Slovenščina</option><option value="nl">Nederlands</option></select></label>
+    </div>
+    <div class="row">
+      <label>Alla carta<input type="number" id="ed-carta" min="0"></label>
+      <label>Degustazione<input type="number" id="ed-tast" min="0"></label>
+      <label>Stato<select id="ed-status"><option value="active">Attiva</option><option value="cancelled">Annullata</option></select></label>
+    </div>
+    <label>Note<input id="ed-notes" placeholder="Seggiolone, allergie, compleanno…"></label>
+    <label style="flex-direction:row;align-items:center;gap:.5rem"><input type="checkbox" id="ed-mail" style="width:auto" checked><span id="ed-mail-l">Avvisa l'ospite via email (nuovo giorno, ora o numero di persone, con il calendario aggiornato)</span></label>
+    <p class="small" id="ed-info" aria-live="polite"></p>
+    <div class="row" style="align-items:center"><button class="btn" type="submit" id="ed-save">Salva modifiche</button><button class="btn ghost" type="button" id="ed-close">Chiudi</button><span class="small muted" id="ed-msg" aria-live="polite"></span></div>
+  </form>
+</dialog>
 <dialog id="evdlg" aria-labelledby="evd-title">
   <div class="pic" id="evd-pic"></div>
   <div class="in">
@@ -468,7 +496,16 @@ html.embed .wrap{max-width:none}
   var cid = store("dvor-cid");
   if (!cid) { cid = "c" + Math.random().toString(36).slice(2) + Date.now().toString(36); store("dvor-cid", cid) }
   function token() { var t = sstore("dvor-staff"); if (!t) return ""; var exp = +t.split(".")[1] || 0; if (exp * 1000 < Date.now()) { sstore("dvor-staff", null); return "" } return t }
-  function headers() { var h = { "Content-Type": "application/json", "X-Client-Id": cid }; var t = token(); if (t) h["X-Staff-Token"] = t; return h }
+  /* manage keys: one per booking made here or opened from the email link (?gestisci=id.key), so the guest can change it from any device */
+  function keys() { try { return JSON.parse(store("dvor-keys") || "{}") || {} } catch (e) { return {} } }
+  function addKey(id, key) { if (!/^[A-Za-z0-9_-]{1,64}$/.test(id) || !/^[a-f0-9]{32}$/.test(key)) return; var k = keys(); k[id] = key; store("dvor-keys", JSON.stringify(k)) }
+  (function () {
+    var m = /[?&]gestisci=([A-Za-z0-9_-]{1,64})\.([a-f0-9]{32})/.exec(location.search); if (!m) return;
+    addKey(m[1], m[2]); window.DVOR_OPEN_MANAGE = m[1];
+    try { history.replaceState(null, "", location.pathname + location.search.replace(/[?&]gestisci=[^&]*/, "").replace(/^&/, "?") + location.hash) } catch (e) { }
+  })();
+  window.DVOR_MANAGED = function (id) { return !!keys()[id] };
+  function headers() { var h = { "Content-Type": "application/json", "X-Client-Id": cid }; var t = token(); if (t) h["X-Staff-Token"] = t; var k = keys(), list = Object.keys(k).slice(-30).map(function (i) { return i + "." + k[i] }); if (list.length) h["X-Manage-Keys"] = list.join(","); return h }
   function call(body) {
     return fetch(API, { method: "POST", headers: headers(), body: JSON.stringify(body), cache: "no-store" }).then(function (r) {
       return r.json().catch(function () { return {} }).then(function (j) {
@@ -493,7 +530,7 @@ html.embed .wrap{max-width:none}
         tick(); var iv = setInterval(tick, POLL); ticks.push(tick);
         return function () { stop = true; clearInterval(iv); ticks = ticks.filter(function (f) { return f !== tick }) };
       },
-      add: function (data) { return call({ op: "add", coll: coll, data: data }).then(function (j) { refreshAll(); return { id: j.id } }) },
+      add: function (data) { return call({ op: "add", coll: coll, data: data }).then(function (j) { if (j.key) addKey(j.id, j.key); refreshAll(); return { id: j.id } }) },
       doc: function (id) { return docRef(coll + "/" + id) }
     };
     return q;
@@ -504,7 +541,7 @@ html.embed .wrap{max-width:none}
       id: id,
       get: function () { return call({ op: "getdoc", path: path }).then(function (j) { return docSnap(id, j.data, j.exists) }) },
       set: function (data) { return call({ op: "set", path: path, data: data }).then(function (j) { refreshAll(); return j }) },
-      update: function (data) { return call({ op: "update", path: path, data: data }).then(function (j) { refreshAll(); return j }) },
+      update: function (data, opts) { var body = { op: "update", path: path, data: data }; if (opts && "mail" in opts) body.mail = !!opts.mail; return call(body).then(function (j) { refreshAll(); return j }) },
       delete: function () { return call({ op: "delete", path: path }).then(function (j) { refreshAll(); return j }) },
       onSnapshot: function (next, err) {
         var stop = false;
@@ -640,6 +677,13 @@ de:{mkt:"Ich möchte von Dvor über Veranstaltungen, Themenabende und Angebote i
 sl:{mkt:"Želim prejemati novice Dvora o dogodkih, tematskih večerih in ponudbah (neobvezno, odjava kadar koli)",addCal:"Dodaj v koledar",doneT:"Rezervacija shranjena",mailTo:"Potrditev vam pošljemo na {e}.",limited:"Omejeno število mest · priporočamo rezervacijo",firstDisc:"{p}% popusta za prve, ki rezervirajo ta termin",recentH:"Zadnja rezervacija pred {n}",recentN:"{n} rezervacij v zadnjih 7 dneh",min:"{n} min",hr:"{n} h"},
 nl:{mkt:"Ik ontvang graag nieuws van Dvor over evenementen, themaavonden en aanbiedingen (optioneel, altijd op te zeggen)",addCal:"Zet in je agenda",doneT:"Reservering opgeslagen",mailTo:"We mailen je bevestiging naar {e}.",limited:"Beperkt aantal plaatsen · reserveren aanbevolen",firstDisc:"{p}% korting voor wie deze shift als eerste reserveert",recentH:"Laatste reservering {n} geleden",recentN:"{n} reserveringen in de afgelopen 7 dagen",min:"{n} min",hr:"{n} uur"}};
 for(var _l in T2)for(var _k in T2[_l])if(T[_l])T[_l][_k]=T2[_l][_k];
+var T3={
+it:{edit:"Modifica",editTitle:"Modifica la prenotazione",save:"Salva le modifiche",saving:"Salvo…",saved:"Prenotazione aggiornata. Ti abbiamo mandato un'email con i nuovi dati.",savedNotes:"Modifica salvata.",noChange:"Non hai cambiato nulla.",noSlotDay:"Nessun orario libero quel giorno per {n} persone: prova un altro giorno.",bigParty:"Per più di {n} persone chiamaci al +39 0481 090740.",editErr:"Non salvata: {m}",editHint:"Puoi cambiare giorno, orario, persone e note fino al giorno della prenotazione."},
+en:{edit:"Change",editTitle:"Change your booking",save:"Save changes",saving:"Saving…",saved:"Booking updated. We have emailed you the new details.",savedNotes:"Change saved.",noChange:"Nothing has changed.",noSlotDay:"No free time that day for {n} guests: try another day.",bigParty:"For more than {n} guests please call +39 0481 090740.",editErr:"Not saved: {m}",editHint:"You can change day, time, guests and notes up to the day of your booking."},
+de:{edit:"Ändern",editTitle:"Reservierung ändern",save:"Änderungen speichern",saving:"Speichern…",saved:"Reservierung geändert. Wir haben Ihnen die neuen Daten per E-Mail geschickt.",savedNotes:"Änderung gespeichert.",noChange:"Es wurde nichts geändert.",noSlotDay:"An diesem Tag ist keine Uhrzeit für {n} Personen frei: versuchen Sie einen anderen Tag.",bigParty:"Für mehr als {n} Personen rufen Sie uns bitte an: +39 0481 090740.",editErr:"Nicht gespeichert: {m}",editHint:"Tag, Uhrzeit, Personen und Notizen können Sie bis zum Tag der Reservierung ändern."},
+sl:{edit:"Spremeni",editTitle:"Spremeni rezervacijo",save:"Shrani spremembe",saving:"Shranjujem…",saved:"Rezervacija posodobljena. Nove podatke smo vam poslali po e-pošti.",savedNotes:"Sprememba shranjena.",noChange:"Nič ni spremenjeno.",noSlotDay:"Ta dan ni prostega termina za {n} oseb: poskusite drug dan.",bigParty:"Za več kot {n} oseb nas pokličite: +39 0481 090740.",editErr:"Ni shranjeno: {m}",editHint:"Dan, uro, število oseb in opombe lahko spremenite do dneva rezervacije."},
+nl:{edit:"Wijzigen",editTitle:"Reservering wijzigen",save:"Wijzigingen opslaan",saving:"Opslaan…",saved:"Reservering bijgewerkt. We hebben je de nieuwe gegevens gemaild.",savedNotes:"Wijziging opgeslagen.",noChange:"Er is niets gewijzigd.",noSlotDay:"Die dag is er geen tijd vrij voor {n} personen: probeer een andere dag.",bigParty:"Voor meer dan {n} personen bel ons: +39 0481 090740.",editErr:"Niet opgeslagen: {m}",editHint:"Je kunt dag, tijd, personen en notities wijzigen tot de dag van je reservering."}};
+for(var _l3 in T3)for(var _k3 in T3[_l3])if(T[_l3])T[_l3][_k3]=T3[_l3][_k3];
 /* honest social proof: built only from real bookings (test and example data excluded) */
 function recentProof(){var now=Date.now(),last=0,n=0;S.bookings.forEach(function(b){if(b.example||b.source==="test"||!b.createdAt)return;var ts=Date.parse(b.createdAt);if(isNaN(ts))return;if(ts>last)last=ts;if(now-ts<7*864e5)n++});
   if(last&&now-last<48*36e5){var m=Math.max(1,Math.round((now-last)/6e4));return t("recentH",{n:m<60?t("min",{n:m}):t("hr",{n:Math.round(m/60)})})}
@@ -1016,32 +1060,91 @@ function ruleNudge(c){
 }
 
 /* ---------- guest: my bookings + cancel retention ---------- */
+function isMine(b){return (S.me&&b.createdBy===S.me)||(window.DVOR_MANAGED&&DVOR_MANAGED(b.id))}
 function renderMine(){
+  if(S.mineLock)return; // an edit or cancel panel is open: the 20 s refresh must not wipe what the guest is typing
   var box=el("mine");box.textContent="";
-  var mine=S.bookings.filter(function(b){return S.me&&b.createdBy===S.me&&b.date>=today()}).sort(function(a,b){return (a.date+a.time).localeCompare(b.date+b.time)});
+  var mine=S.bookings.filter(function(b){return isMine(b)&&b.date>=today()}).sort(function(a,b){return (a.date+a.time).localeCompare(b.date+b.time)});
   if(!mine.length){box.hidden=true;return}
   box.hidden=false;box.append(h("h3",{text:t("mine")}));
   mine.forEach(function(b){
     var st=b.status==="cancelled"?"cancelled":(svcOf(b.time)==="dinner"&&dinnerState(b.date)!=="confirmed"?"pending":"confirmed");
     var cls={cancelled:"s-closed",pending:"s-building",confirmed:"s-confirmed"}[st];
+    var open=b.status!=="cancelled"&&!b.arrival&&at(b.date,b.time)>new Date();
     var row=h("div",{class:"row",style:"justify-content:space-between;align-items:center"},[
       h("div",{},[h("div",{class:"num",text:fmtDay(b.date,true)+" · "+b.time+" · "+b.party+" "+t("people")}),h("span",{class:"pill "+cls,text:t(st)})]),
-      b.status!=="cancelled"?h("button",{class:"btn ghost small",type:"button",text:t("cancel"),onclick:function(){retain(b,row)}}):null
+      open?h("div",{class:"row",style:"gap:.4rem"},[
+        h("button",{class:"btn small",type:"button",text:"✎ "+t("edit"),onclick:function(){editMine(b,row)}}),
+        h("button",{class:"btn ghost small",type:"button",text:t("cancel"),onclick:function(){retain(b,row)}})]):null
     ]);
     box.append(row);if(b.status!=="cancelled")box.append(calButtons(b));
   });
+  if(S.mineNote&&Date.now()<S.mineNote.until)box.append(h("p",{class:"small",text:"✓ "+S.mineNote.text}));
+  /* opened from the link in the email: bring the booking into view */
+  if(window.DVOR_OPEN_MANAGE&&mine.some(function(b){return b.id===DVOR_OPEN_MANAGE})){window.DVOR_OPEN_MANAGE=null;setTimeout(function(){box.scrollIntoView({behavior:"smooth",block:"start"})},100)}
+}
+/* guest edit: day, time, people, menus and notes. Free times are worked out without the guest's own table, the server checks the seats again */
+var GUEST_MAX=20;
+function editMine(b,row){
+  if(row.nextSibling&&row.nextSibling.classList&&row.nextSibling.classList.contains("mine-ed"))return;
+  S.mineLock=true;
+  var wrap=h("div",{class:"nudge stack mine-ed"});
+  var maxP=Math.max(GUEST_MAX,+b.party||0);
+  var fD=h("input",{type:"date",min:today(),value:b.date}),fP=h("input",{type:"number",min:"1",max:String(maxP),value:String(b.party)}),fT=h("select",{});
+  var fC=h("input",{type:"number",min:"0",value:String(+b.menuCarta||0)}),fG=h("input",{type:"number",min:"0",value:String(+b.menuTasting||0)});
+  var fN=h("input",{value:b.notes||"",maxlength:"1000",placeholder:t("notes")}),msg=h("p",{class:"small","aria-live":"polite"});
+  var save=h("button",{class:"btn small",type:"submit",text:t("save")});
+  function without(fn){var keep=S.bookings;S.bookings=keep.filter(function(x){return x.id!==b.id});try{return fn()}finally{S.bookings=keep}}
+  function times(){
+    var d=fD.value,p=Math.max(1,+fP.value||1),cur=fT.value||b.time;fT.textContent="";msg.textContent="";
+    if(p>maxP){msg.textContent=t("bigParty",{n:GUEST_MAX});save.disabled=true;return}
+    var ok=d?without(function(){return slotsFor(d).filter(function(tm){return checkNoAlt(d,tm,p).ok})}):[];
+    ok.forEach(function(tm){fT.append(h("option",{value:tm,text:tm}))});
+    if(ok.indexOf(cur)>=0)fT.value=cur;
+    save.disabled=!ok.length;if(d&&!ok.length)msg.textContent=t("noSlotDay",{n:p});
+  }
+  fD.addEventListener("change",times);fP.addEventListener("input",times);times();
+  function close(){S.mineLock=false;wrap.remove();render()}
+  var form=h("form",{class:"stack"},[
+    h("strong",{text:t("editTitle")}),h("p",{class:"small muted",text:t("editHint")}),
+    h("div",{class:"row"},[h("label",{},[t("date"),fD]),h("label",{},[t("time"),fT]),h("label",{},[t("party"),fP])]),
+    h("div",{class:"row"},[h("label",{},[t("carta"),fC]),h("label",{},[t("degustazione"),fG])]),
+    h("label",{},[t("notes"),fN]),msg,
+    h("div",{class:"row"},[save,h("button",{class:"btn ghost small",type:"button",text:t("close"),onclick:close})])
+  ]);
+  form.addEventListener("submit",async function(ev){
+    ev.preventDefault();if(!db)return;
+    var d=fD.value,tm=fT.value,p=Math.max(1,Math.round(+fP.value||1)),data={};
+    if(!d||!tm)return;
+    if(d!==b.date)data.date=d;if(tm!==b.time)data.time=tm;if(p!==+b.party)data.party=p;
+    var c=Math.min(p,Math.max(0,+fC.value||0)),g=Math.min(p,Math.max(0,+fG.value||0)),n=fN.value.trim();
+    if(c!==(+b.menuCarta||0))data.menuCarta=c;if(g!==(+b.menuTasting||0))data.menuTasting=g;if(n!==(b.notes||""))data.notes=n;
+    if(!Object.keys(data).length){msg.textContent=t("noChange");return}
+    var chk=without(function(){return check(d,tm,p)});
+    if(!chk.ok){msg.textContent=t("noSlotDay",{n:p});times();return}
+    if(data.date||data.time){data.movedAt=new Date().toISOString();data.pending=svcOf(tm)==="dinner"&&!!chk.dinner&&chk.dinner.state!=="confirmed"&&chk.dinner.neededAfterThisBooking>0}
+    data.editedAt=new Date().toISOString();
+    save.disabled=true;msg.textContent=t("saving");
+    try{
+      await db.doc("bookings/"+b.id).update(data);
+      var mailed=data.date||data.time||data.party||"menuCarta" in data||"menuTasting" in data;
+      S.mineLock=false;S.mineNote={text:t(mailed&&b.email?"saved":"savedNotes"),until:Date.now()+15000};render();
+    }catch(e){save.disabled=false;msg.textContent=t("editErr",{m:(e&&e.message)||e})}
+  });
+  wrap.append(form);row.after(wrap);
 }
 function retain(b,row){
+  S.mineLock=true;
   var wrap=h("div",{class:"nudge stack"});
   wrap.append(h("strong",{text:t("beforeCancel")}));
   var tmp=S.bookings;S.bookings=S.bookings.filter(function(x){return x.id!==b.id});
   var r={date:b.date,time:b.time,party:b.party,alternatives:[]};addAlternatives(r,new Date());
   var g=guests(b.date,"dinner");S.bookings=tmp;
   if(svcOf(b.time)==="dinner"&&S.settings.offer&&weekdayPromo(b.date)&&g<S.settings.minGuests+ (+b.party))wrap.append(h("p",{text:t("offer",{o:S.settings.offer})}));
-  if(r.alternatives.length)wrap.append(h("div",{class:"chips"},r.alternatives.map(function(a){return h("button",{class:"chip",type:"button",text:fmtDay(a.date)+" · "+a.time,onclick:function(){move(b,a)}})})));
+  if(r.alternatives.length)wrap.append(h("div",{class:"chips"},r.alternatives.map(function(a){return h("button",{class:"chip",type:"button",text:fmtDay(a.date)+" · "+a.time,onclick:function(){S.mineLock=false;move(b,a)}})})));
   wrap.append(h("div",{class:"row"},[
-    h("button",{class:"btn small",type:"button",text:t("keep"),onclick:function(){wrap.remove()}}),
-    h("button",{class:"btn ghost small",type:"button",text:t("cancelAnyway"),onclick:function(){setStatus(b,"cancelled")}})
+    h("button",{class:"btn small",type:"button",text:t("keep"),onclick:function(){S.mineLock=false;wrap.remove();render()}}),
+    h("button",{class:"btn ghost small",type:"button",text:t("cancelAnyway"),onclick:function(){S.mineLock=false;setStatus(b,"cancelled")}})
   ]));
   row.after(wrap);
 }
@@ -1174,6 +1277,54 @@ async function manualBook(ev){
   }catch(e){m.textContent="Non salvata: "+((e&&e.message)||e)}
   el("mb-save").disabled=false;
 }
+/* ---------- staff: edit a booking (✎ Modifica). The staff can go over the seats, as with «+ Nuova»: the window only warns ---------- */
+var ED=null;
+function openEdit(b){
+  ED=b;el("ed-title").textContent="Modifica prenotazione · "+(b.name||"Ospite");
+  el("ed-date").value=b.date;el("ed-time").value=b.time;el("ed-party").value=b.party;el("ed-name").value=b.name||"";el("ed-phone").value=b.phone||"";el("ed-email").value=b.email||"";
+  el("ed-lang").value=b.lang||"it";el("ed-carta").value=+b.menuCarta||0;el("ed-tast").value=+b.menuTasting||0;el("ed-notes").value=b.notes||"";el("ed-status").value=b.status==="cancelled"?"cancelled":"active";
+  el("ed-mail").checked=true;el("ed-msg").textContent="";el("ed-save").disabled=false;edInfo();
+  el("eddlg").showModal();
+}
+function edInfo(){
+  if(!ED)return;var d=el("ed-date").value,tm=el("ed-time").value,p=+el("ed-party").value||0,info=el("ed-info"),em=el("ed-email").value.trim();
+  el("ed-mail").disabled=!em;el("ed-mail-l").style.opacity=em?"":".5";
+  var dl=el("ed-times");dl.textContent="";if(d)slotsFor(d).forEach(function(x){dl.append(h("option",{value:x}))});
+  if(!d||!/^\d\d:\d\d$/.test(tm)){info.textContent="";return}
+  var keep=S.bookings;S.bookings=keep.filter(function(x){return x.id!==ED.id});
+  try{
+    var msg=[],busy=seatsUsedAt(d,tm),cap=capFor(d);
+    if(!slotsFor(d).length)msg.push("⚠ Di solito è giorno di riposo.");
+    else if(slotsFor(d).indexOf(tm)<0)msg.push("⚠ Orario fuori dagli arrivi online.");
+    msg.push("Alle "+tm+" senza questo tavolo: "+busy+" posti occupati su "+cap+".");
+    if(busy+p>cap)msg.push("⚠ Con questo tavolo si supera la capienza ("+(busy+p)+" su "+cap+").");
+    if(svcOf(tm)==="dinner"&&dinnerState(d)==="closed")msg.push("⚠ La cena di questo giorno risulta chiusa.");
+    info.textContent=msg.join(" ");
+  }finally{S.bookings=keep}
+}
+async function saveEdit(ev){
+  ev.preventDefault();if(!db||!ED)return;var b=ED,m=el("ed-msg");
+  var v={date:el("ed-date").value,time:el("ed-time").value,party:Math.round(+el("ed-party").value||0),name:el("ed-name").value.trim(),phone:el("ed-phone").value.trim(),email:el("ed-email").value.trim(),lang:el("ed-lang").value,notes:el("ed-notes").value.trim(),status:el("ed-status").value};
+  v.menuCarta=Math.max(0,Math.min(v.party,+el("ed-carta").value||0));v.menuTasting=Math.max(0,Math.min(v.party,+el("ed-tast").value||0));
+  if(!v.date||!/^\d\d:\d\d$/.test(v.time)||v.party<1||!v.name){m.textContent="Servono data, ora, persone e nome.";return}
+  var data={};Object.keys(v).forEach(function(k){if(String(v[k])!==String(b[k]==null?(k==="menuCarta"||k==="menuTasting"?0:k==="status"?"active":k==="lang"?"it":""):b[k]))data[k]=v[k]});
+  if(!Object.keys(data).length){m.textContent="Nessuna modifica.";return}
+  if(data.date||data.time){data.movedAt=new Date().toISOString();var g=guests(v.date,"dinner")+(b.date===v.date&&svcOf(b.time)==="dinner"&&active(b)?0:v.party);data.pending=svcOf(v.time)==="dinner"&&dinnerState(v.date)!=="confirmed"&&g<S.settings.minGuests}
+  if(data.status==="cancelled")data.cancelledAt=new Date().toISOString();
+  data.editedAt=new Date().toISOString();data.editedBy="staff";
+  el("ed-save").disabled=true;m.textContent="Salvo…";
+  var mail=el("ed-mail").checked&&!!v.email;
+  try{
+    await db.doc("bookings/"+b.id).update(data,{mail:mail});
+    var tell=mail&&(data.date||data.time||data.party||data.status||"menuCarta" in data||"menuTasting" in data||data.name||data.email);
+    m.textContent="✓ Salvata"+(tell?" · email inviata all'ospite":"");
+    S.selDay=v.date;S.plRef=v.date;setTimeout(function(){el("eddlg").close()},700);
+  }catch(e){m.textContent="Non salvata: "+((e&&e.message)||e);el("ed-save").disabled=false}
+}
+el("ed-form").addEventListener("submit",saveEdit);el("ed-close").addEventListener("click",function(){el("eddlg").close()});
+["ed-date","ed-time","ed-party","ed-email"].forEach(function(k){el(k).addEventListener("input",edInfo)});
+el("eddlg").addEventListener("close",function(){ED=null});
+function editBtn(b){return h("button",{class:"btn ghost small",type:"button",style:"align-self:flex-start",text:"✎ Modifica",title:"Cambia giorno, ora, persone, contatti o note",onclick:function(){openEdit(b)}})}
 /* ---------- staff: arrivals, no-shows and the blacklist ---------- */
 function nPhone(x){var d=String(x||"").replace(/\D/g,"");return d.length>=6?d.slice(-9):""}
 function nEmail(x){x=String(x||"").trim().toLowerCase();return x.indexOf("@")>0?x:""}
@@ -1303,7 +1454,8 @@ function chkRow(b,nm){
       h("div",{},[h("strong",{text:b.name||"Ospite"}),SRC[b.source]?h("span",{class:"small muted",text:" "+SRC[b.source].split(" ")[0],title:SRC[b.source]}):null]),
       bl?h("span",{class:"pill s-closed",text:"⚠ Lista nera · "+(bl.count||1)+" no show"}):null,
       late?h("div",{class:"late-l",text:"In ritardo di "+lb+" min"}):null,
-      det.length?detEl:null
+      det.length?detEl:null,
+      editBtn(b)
     ]),
     arrivalCell(b)
   ]);
@@ -1357,7 +1509,7 @@ function renderDay(){
         h("td",{},[h("div",{text:b.name||""}),blFind(b)?h("span",{class:"pill s-closed",text:"⚠ Lista nera · "+(blFind(b).count||1)+" no show"}):null,h("div",{class:"small muted",text:[b.phone,b.email].filter(Boolean).join(" · ")})]),
         h("td",{class:"small",text:[b.notes,b.offer?"Offerta: "+b.offer:"",b.discount?"Sconto "+b.discount+"%":"",b.eventTitle?"Evento: "+b.eventTitle:"",b.retained?"Spostata invece di annullare":"",b.source==="assistant"?"Via assistente":"",SRC[b.source]||"",b.insight?"Cosa cercava: "+b.insight:""].filter(Boolean).join(" · ")}),
         h("td",{},[b.status==="cancelled"||!b.email?null:h("a",{class:"btn small"+(b.emailSentAt?" ghost":""),style:"display:inline-block;text-decoration:none;margin-bottom:.3rem",href:mailtoFor(b),text:b.emailSentAt?"✉ Rinvia":"✉ Conferma",onclick:function(ev){if(window.DVOR_RESEND){ev.preventDefault();DVOR_RESEND(b,this)}else markMailed(b)}}),b.emailSentAt?h("div",{class:"small muted",text:"Email inviata"}):null,b.reminderSentAt&&b.reminderFor===b.date+" "+b.time?h("div",{class:"small muted",text:"⏰ Promemoria inviato"}):b.reminderError?h("div",{class:"small",style:"color:var(--bad)",text:"Promemoria non partito"}):null]),
-        h("td",{},[h("div",{class:"stack",style:"gap:.3rem"},[arrivalCell(b),b.status==="cancelled"?h("span",{class:"pill s-closed",text:"Annullata"}):b.arrival?null:h("button",{class:"btn ghost small",type:"button",style:"align-self:flex-start",text:"Annulla prenotazione",onclick:function(){twoStep(this,"Confermi annullamento?",function(){setStatus(b,"cancelled")})}})])])
+        h("td",{},[h("div",{class:"stack",style:"gap:.3rem"},[arrivalCell(b),editBtn(b),b.status==="cancelled"?h("span",{class:"pill s-closed",text:"Annullata"}):b.arrival?null:h("button",{class:"btn ghost small",type:"button",style:"align-self:flex-start",text:"Annulla prenotazione",onclick:function(){twoStep(this,"Confermi annullamento?",function(){setStatus(b,"cancelled")})}})])])
       ]));
     });
     var tl=list.filter(function(b){return active(b)&&svcOf(b.time)==="lunch"}).reduce(function(x,b){return x+(+b.menuTasting||0)},0),td=list.filter(function(b){return active(b)&&svcOf(b.time)==="dinner"}).reduce(function(x,b){return x+(+b.menuTasting||0)},0);

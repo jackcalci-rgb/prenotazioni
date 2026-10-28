@@ -16,7 +16,8 @@ set_exception_handler(function (Throwable $e) {
 const COLLS = ['bookings', 'events', 'overrides', 'settings', 'blacklist'];
 const STAFF_ONLY = ['blacklist']; // staff only, also for reading
 const GUEST_FIELDS = ['date', 'time', 'party', 'status', 'createdAt', 'source'];
-const GUEST_UPDATABLE = ['status', 'cancelledAt', 'date', 'time', 'movedAt', 'retained'];
+const GUEST_UPDATABLE = ['status', 'cancelledAt', 'date', 'time', 'movedAt', 'retained', 'party', 'notes', 'menuCarta', 'menuTasting', 'pending', 'editedAt'];
+const GUEST_MAX_PARTY = 20; // same limit as the guest form; bigger tables go through the staff
 
 function out($x, int $code = 200): void { http_response_code($code); echo json_encode($x, JSON_UNESCAPED_UNICODE); exit; }
 function fail(string $code, string $msg, int $http = 400): void { out(['error' => ['code' => $code, 'message' => $msg]], $http); }
@@ -120,6 +121,22 @@ function isStaff(array $C): bool {
   return hash_equals(hash_hmac('sha256', 'staff|' . $m[2], $C['secret']), $m[1]);
 }
 function clientId(): string { $c = $_SERVER['HTTP_X_CLIENT_ID'] ?? ''; return preg_match('/^[A-Za-z0-9_-]{8,64}$/', $c) ? $c : ''; }
+/* manage link in the guest emails (?gestisci=id.key): opens the booking from any phone or computer, not only the one used to book */
+function manageKey(string $id): string { global $C; return substr(hash_hmac('sha256', 'manage|' . $id, $C['secret']), 0, 32); }
+function manageUrl(array $b, array $C): string {
+  $u = rtrim((string)($C['booking_url'] ?? ''), '/'); if ($u === '' || empty($b['id'])) return '';
+  return $u . '/?gestisci=' . rawurlencode($b['id'] . '.' . manageKey($b['id']));
+}
+/* ids whose manage key the browser sends in X-Manage-Keys (comma separated id.key) */
+function managedIds(): array {
+  static $ids = null; if ($ids !== null) return $ids;
+  $ids = [];
+  foreach (array_slice(explode(',', (string)($_SERVER['HTTP_X_MANAGE_KEYS'] ?? '')), 0, 30) as $k) {
+    if (preg_match('/^([A-Za-z0-9_-]{1,64})\.([a-f0-9]{32})$/', trim($k), $m) && hash_equals(manageKey($m[1]), $m[2])) $ids[$m[1]] = true;
+  }
+  return $ids;
+}
+function ownsBooking(array $doc, string $id, string $cid): bool { return ($cid !== '' && ($doc['createdBy'] ?? '') === $cid) || isset(managedIds()[$id]); }
 function rateLimit(string $key, int $max, int $windowSec): void {
   $ip = $_SERVER['REMOTE_ADDR'] ?? 'x'; $k = $key . '|' . $ip; $now = time();
   $pdo = db();
@@ -139,8 +156,8 @@ function matches(array $doc, array $where): bool {
   }
   return true;
 }
-function redact(array $doc, bool $staff, string $cid): array {
-  if ($staff || ($cid !== '' && ($doc['createdBy'] ?? '') === $cid)) return $doc;
+function redact(array $doc, bool $staff, string $cid, string $id = ''): array {
+  if ($staff || ownsBooking($doc, $id, $cid)) return $doc;
   return array_intersect_key($doc, array_flip(GUEST_FIELDS));
 }
 
@@ -185,31 +202,31 @@ function icsFor(array $b, array $C, string $method = 'PUBLISH', bool $cancel = f
 }
 function L(array $b): array {
   static $T = [
-    'it' => ['people' => 'persone', 'loc' => 'it_IT', 'ok' => 'Prenotazione confermata', 'rec' => 'Prenotazione ricevuta', 'moved' => 'Prenotazione spostata', 'canc' => 'Prenotazione annullata',
+    'it' => ['people' => 'persone', 'loc' => 'it_IT', 'ok' => 'Prenotazione confermata', 'rec' => 'Prenotazione ricevuta', 'mod' => 'Prenotazione modificata', 'body_mod' => 'abbiamo aggiornato la tua prenotazione:', 'manage' => 'Modifica o annulla', 'moved' => 'Prenotazione spostata', 'canc' => 'Prenotazione annullata',
       'rem' => 'Promemoria', 'body_rem' => 'ti ricordiamo la tua prenotazione da Dvor:',
       'hi' => 'Ciao {n},', 'body_ok' => 'la tua prenotazione da Dvor è confermata:', 'body_rec' => 'abbiamo ricevuto la tua prenotazione da Dvor:', 'pending' => 'Ti confermiamo la cena via email il giorno prima.',
       'body_moved' => 'abbiamo spostato la tua prenotazione:', 'body_canc' => 'la tua prenotazione è stata annullata:',
       'add' => 'Aggiungila al tuo calendario', 'ics' => 'Oppure apri il file allegato (Apple, Outlook e altri calendari).', 'where' => 'Ci trovi in Via Castello 5, San Floriano del Collio (GO).',
       'change' => 'Per modifiche o disdette: tel. +39 0481 090740, WhatsApp +39 392 388 3900.', 'bye' => 'A presto!', 'at' => 'alle', 'tast' => 'Menù degustazione', 'carta' => 'Alla carta', 'disc' => 'Sconto del {p}% sul conto'],
-    'en' => ['people' => 'guests', 'loc' => 'en_GB', 'ok' => 'Booking confirmed', 'rec' => 'Booking received', 'moved' => 'Booking moved', 'canc' => 'Booking cancelled',
+    'en' => ['people' => 'guests', 'loc' => 'en_GB', 'ok' => 'Booking confirmed', 'rec' => 'Booking received', 'mod' => 'Booking updated', 'body_mod' => 'we have updated your booking:', 'manage' => 'Change or cancel', 'moved' => 'Booking moved', 'canc' => 'Booking cancelled',
       'rem' => 'Reminder', 'body_rem' => 'a reminder of your table at Dvor:',
       'hi' => 'Hello {n},', 'body_ok' => 'your table at Dvor is confirmed:', 'body_rec' => 'we have received your booking at Dvor:', 'pending' => 'We will confirm the dinner by email the day before.',
       'body_moved' => 'we have moved your booking:', 'body_canc' => 'your booking has been cancelled:',
       'add' => 'Add it to your calendar', 'ics' => 'Or open the attached file (Apple, Outlook and other calendars).', 'where' => 'Find us at Via Castello 5, San Floriano del Collio (GO), Italy.',
       'change' => 'To change or cancel: tel. +39 0481 090740, WhatsApp +39 392 388 3900.', 'bye' => 'See you soon!', 'at' => 'at', 'tast' => 'Tasting menu', 'carta' => 'À la carte', 'disc' => '{p}% off your bill'],
-    'de' => ['people' => 'Personen', 'loc' => 'de_DE', 'ok' => 'Reservierung bestätigt', 'rec' => 'Reservierung erhalten', 'moved' => 'Reservierung verschoben', 'canc' => 'Reservierung storniert',
+    'de' => ['people' => 'Personen', 'loc' => 'de_DE', 'ok' => 'Reservierung bestätigt', 'rec' => 'Reservierung erhalten', 'mod' => 'Reservierung geändert', 'body_mod' => 'wir haben Ihre Reservierung aktualisiert:', 'manage' => 'Ändern oder stornieren', 'moved' => 'Reservierung verschoben', 'canc' => 'Reservierung storniert',
       'rem' => 'Erinnerung', 'body_rem' => 'wir erinnern Sie an Ihre Reservierung im Dvor:',
       'hi' => 'Hallo {n},', 'body_ok' => 'Ihr Tisch im Dvor ist bestätigt:', 'body_rec' => 'wir haben Ihre Reservierung im Dvor erhalten:', 'pending' => 'Das Abendessen bestätigen wir am Vortag per E-Mail.',
       'body_moved' => 'wir haben Ihre Reservierung verschoben:', 'body_canc' => 'Ihre Reservierung wurde storniert:',
       'add' => 'Zum Kalender hinzufügen', 'ics' => 'Oder öffnen Sie die angehängte Datei (Apple, Outlook und andere Kalender).', 'where' => 'Sie finden uns in der Via Castello 5, San Floriano del Collio (GO), Italien.',
       'change' => 'Änderungen oder Stornierung: Tel. +39 0481 090740, WhatsApp +39 392 388 3900.', 'bye' => 'Bis bald!', 'at' => 'um', 'tast' => 'Degustationsmenü', 'carta' => 'À la carte', 'disc' => '{p}% Rabatt auf die Rechnung'],
-    'sl' => ['people' => 'oseb', 'loc' => 'sl_SI', 'ok' => 'Rezervacija potrjena', 'rec' => 'Rezervacija prejeta', 'moved' => 'Rezervacija prestavljena', 'canc' => 'Rezervacija preklicana',
+    'sl' => ['people' => 'oseb', 'loc' => 'sl_SI', 'ok' => 'Rezervacija potrjena', 'rec' => 'Rezervacija prejeta', 'mod' => 'Rezervacija spremenjena', 'body_mod' => 'vašo rezervacijo smo posodobili:', 'manage' => 'Spremeni ali prekliči', 'moved' => 'Rezervacija prestavljena', 'canc' => 'Rezervacija preklicana',
       'rem' => 'Opomnik', 'body_rem' => 'spominjamo vas na vašo rezervacijo v Dvoru:',
       'hi' => 'Pozdravljeni {n},', 'body_ok' => 'vaša miza v Dvoru je potrjena:', 'body_rec' => 'prejeli smo vašo rezervacijo v Dvoru:', 'pending' => 'Večerjo vam potrdimo po e-pošti dan prej.',
       'body_moved' => 'vašo rezervacijo smo prestavili:', 'body_canc' => 'vaša rezervacija je preklicana:',
       'add' => 'Dodajte v koledar', 'ics' => 'Ali odprite priloženo datoteko (Apple, Outlook in drugi koledarji).', 'where' => 'Najdete nas na Via Castello 5, San Floriano del Collio (GO), Italija.',
       'change' => 'Za spremembe ali odpoved: tel. +39 0481 090740, WhatsApp +39 392 388 3900.', 'bye' => 'Se vidimo!', 'at' => 'ob', 'tast' => 'Degustacijski meni', 'carta' => 'À la carte', 'disc' => '{p}% popusta na račun'],
-    'nl' => ['people' => 'personen', 'loc' => 'nl_NL', 'ok' => 'Reservering bevestigd', 'rec' => 'Reservering ontvangen', 'moved' => 'Reservering verplaatst', 'canc' => 'Reservering geannuleerd',
+    'nl' => ['people' => 'personen', 'loc' => 'nl_NL', 'ok' => 'Reservering bevestigd', 'rec' => 'Reservering ontvangen', 'mod' => 'Reservering gewijzigd', 'body_mod' => 'we hebben je reservering bijgewerkt:', 'manage' => 'Wijzigen of annuleren', 'moved' => 'Reservering verplaatst', 'canc' => 'Reservering geannuleerd',
       'rem' => 'Herinnering', 'body_rem' => 'een herinnering aan je reservering bij Dvor:',
       'hi' => 'Hallo {n},', 'body_ok' => 'je tafel bij Dvor is bevestigd:', 'body_rec' => 'we hebben je reservering bij Dvor ontvangen:', 'pending' => 'We bevestigen het diner de dag ervoor per e-mail.',
       'body_moved' => 'we hebben je reservering verplaatst:', 'body_canc' => 'je reservering is geannuleerd:',
@@ -283,6 +300,7 @@ function guestMail(array $b, array $C, string $kind): array {
   $l = calLinks($b, $C);
   $care = $kind === 'canc' ? [$x['canc_more']] : ($kind === 'rem' ? [$x['tip'], $x['diet']] : [$x['tip'], $x['occasion'], $x['diet'], $x['events']]);
   $cal = $kind !== 'canc' && $kind !== 'rem';
+  $manage = $kind !== 'canc' ? manageUrl($b, $C) : '';
 
   /* plain text */
   $txt = "$hi\n\n$intro\n\n$when\n" . implode("\n", $lines) . "\n";
@@ -290,6 +308,7 @@ function guestMail(array $b, array $C, string $kind): array {
   if ($cal) $txt .= "\n{$t['add']}:\nGoogle Calendar: {$l['google']}\nOutlook: {$l['outlook']}\n{$t['ics']}\n";
   $txt .= "\n" . implode("\n", $care) . "\n";
   if ($kind === 'canc' && $bookUrl) $txt .= "{$x['book_again']}: $bookUrl\n";
+  if ($manage) $txt .= "\n{$t['manage']}: $manage\n";
   $txt .= "\n{$x['site']}: $site\n\n{$t['where']}\n{$t['change']}\n\n" . ($kind === 'canc' ? $t['bye'] : $x['thanks']) . "\nOsteria Enoteca Dvor\n";
 
   /* html: tables and inline styles, readable in Gmail, Outlook, Apple Mail */
@@ -314,6 +333,7 @@ function guestMail(array $b, array $C, string $kind): array {
     . ($cal ? '<tr><td style="padding:0 28px 6px"><div style="font-family:Helvetica,Arial,sans-serif;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:' . $muted . ';margin-bottom:6px">' . $h($t['add']) . '</div>'
       . $btn($l['google'], 'Google Calendar') . $btn($l['outlook'], 'Outlook')
       . '<p style="margin:6px 0 0;font-family:Helvetica,Arial,sans-serif;font-size:12px;color:' . $muted . '">' . $h($t['ics']) . '</p></td></tr>' : '')
+    . ($manage ? '<tr><td style="padding:10px 28px 0">' . $btn($manage, '✎ ' . $t['manage']) . '</td></tr>' : '')
     . '<tr><td style="padding:18px 28px 4px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ' . $line . '"><tr><td style="padding-top:16px">'
     . implode('', array_map(fn($p) => '<p style="margin:0 0 10px;font-size:15px;line-height:1.55">' . $h($p) . '</p>', $care))
     . '</td></tr></table></td></tr>'
@@ -487,6 +507,29 @@ function cleanBooking(array $x, bool $staff = false): array {
   return $b;
 }
 
+/* what a guest may change on their own booking: cancel or take back, move, people, menus, notes. Returns null when something is not valid */
+function guestEdit(array $d, array $old): ?array {
+  if (isset($d['status']) && !in_array($d['status'], ['active', 'cancelled'], true)) return null;
+  if (array_key_exists('date', $d) && !preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)$d['date'])) return null;
+  if (array_key_exists('time', $d) && !preg_match('/^\d{2}:\d{2}$/', (string)$d['time'])) return null;
+  if (array_key_exists('party', $d)) { $d['party'] = (int)$d['party']; if ($d['party'] < 1 || ($d['party'] > GUEST_MAX_PARTY && $d['party'] > (int)($old['party'] ?? 0))) return null; }
+  $p = (int)($d['party'] ?? $old['party'] ?? 0);
+  foreach (['menuCarta', 'menuTasting'] as $k) if (array_key_exists($k, $d)) $d[$k] = max(0, min($p, (int)$d[$k]));
+  if (array_key_exists('notes', $d)) $d['notes'] = mb_substr(trim((string)$d['notes']), 0, 1000);
+  if (array_key_exists('pending', $d)) $d['pending'] = !empty($d['pending']);
+  foreach (['cancelledAt', 'movedAt', 'editedAt'] as $k) if (array_key_exists($k, $d)) $d[$k] = date('c');
+  if (array_key_exists('retained', $d)) $d['retained'] = !empty($d['retained']);
+  return $d;
+}
+/* staff edits: free, but date, time and people must stay readable for the seat count */
+function staffEditOk(array $d): bool {
+  if (array_key_exists('date', $d) && !preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)$d['date'])) return false;
+  if (array_key_exists('time', $d) && !preg_match('/^\d{2}:\d{2}$/', (string)$d['time'])) return false;
+  if (array_key_exists('party', $d) && ((int)$d['party'] < 1 || (int)$d['party'] > 200)) return false;
+  if (!empty($d['email']) && !filter_var($d['email'], FILTER_VALIDATE_EMAIL)) return false;
+  return true;
+}
+
 if (defined('DVOR_NO_REQUEST')) return; // included by a command-line tool (strumenti/promemoria.php)
 
 /* ---------- request ---------- */
@@ -526,7 +569,7 @@ switch ($op) {
     $rows = load($coll, $where); $res = [];
     foreach ($rows as $id => $doc) {
       if (!matches($doc, $where)) continue;
-      $res[] = ['id' => (string)$id, 'data' => $coll === 'bookings' ? redact($doc, $staff, $cid) : $doc];
+      $res[] = ['id' => (string)$id, 'data' => $coll === 'bookings' ? redact($doc, $staff, $cid, (string)$id) : $doc];
     }
     $lim = (int)($in['limit'] ?? 0); if ($lim > 0) $res = array_slice($res, 0, $lim);
     out(['docs' => $res]);
@@ -537,7 +580,7 @@ switch ($op) {
     if (in_array($coll, STAFF_ONLY, true) && !$staff) fail('not_granted', 'Solo staff', 403);
     $doc = getDoc($coll, $id);
     if ($doc === null) out(['exists' => false]);
-    out(['exists' => true, 'data' => $coll === 'bookings' ? redact($doc, $staff, $cid) : $doc]);
+    out(['exists' => true, 'data' => $coll === 'bookings' ? redact($doc, $staff, $cid, $id) : $doc]);
   }
 
   case 'add': {
@@ -560,7 +603,7 @@ switch ($op) {
         patchDoc('bookings', $id, array_intersect_key($b, array_flip(['emailSentAt', 'emailKind', 'emailError'])));
       }
       if (!$manual) notifyStaff($C, $b, 'Nuova prenotazione');
-      out(['id' => $id]);
+      out(['id' => $id, 'key' => manageKey($id)]);
     }
     if (!$staff) fail('not_granted', 'Solo staff', 403);
     $id = newId(); putDoc($coll, $id, $data);
@@ -579,29 +622,40 @@ switch ($op) {
     $res = tx(function () use ($id, $data, $staff, $cid, $op) {
       $old = getDoc('bookings', $id, true); if ($old === null) return ['err' => 'not_found'];
       if (!$staff) {
-        if ($cid === '' || ($old['createdBy'] ?? '') !== $cid) return ['err' => 'not_granted'];
-        $data = array_intersect_key($data, array_flip(GUEST_UPDATABLE));
-      }
+        if (!ownsBooking($old, $id, $cid)) return ['err' => 'not_granted'];
+        if (($old['date'] ?? '') < date('Y-m-d') || !empty($old['arrival'])) return ['err' => 'too_late']; // past or already seated
+        $data = guestEdit(array_intersect_key($data, array_flip(GUEST_UPDATABLE)), $old);
+        if ($data === null) return ['err' => 'bad_request'];
+      } elseif (!staffEditOk($data)) return ['err' => 'bad_request'];
       $new = $op === 'set' && $staff ? $data : array_merge($old, $data);
-      /* a guest who moves the table, or takes back a cancelled one, needs free seats at the new time */
+      /* a guest who moves the table, adds people, or takes back a cancelled one, needs free seats at the new time */
       $moved = ($old['date'] ?? '') !== ($new['date'] ?? '') || ($old['time'] ?? '') !== ($new['time'] ?? '');
       $back = ($old['status'] ?? '') === 'cancelled' && ($new['status'] ?? '') !== 'cancelled';
-      if (!$staff && ($new['status'] ?? '') !== 'cancelled' && ($moved || $back)) {
-        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($new['date'] ?? '')) || !preg_match('/^\d{2}:\d{2}$/', (string)($new['time'] ?? ''))) return ['err' => 'bad_request'];
+      $more = (int)($new['party'] ?? 0) > (int)($old['party'] ?? 0);
+      if (!$staff && ($new['status'] ?? '') !== 'cancelled' && ($moved || $back || $more)) {
+        if ($new['date'] < date('Y-m-d') || strtotime($new['date'] . ' ' . $new['time']) < time()) return ['err' => 'bad_request'];
         if (seatsLeft($new['date'], $new['time'], $id) < (int)($new['party'] ?? 0)) return ['err' => 'slot_full'];
       }
       putDoc('bookings', $id, $new);
       return ['old' => $old, 'new' => $new];
     });
     if (isset($res['err'])) {
-      if ($res['err'] === 'slot_full') fail('slot_full', 'Questo orario si è appena riempito: scegli un altro orario', 409);
-      if ($res['err'] === 'bad_request') fail('bad_request', 'Data o ora non valida');
+      if ($res['err'] === 'slot_full') fail('slot_full', 'Non ci sono abbastanza posti a quell\'ora: scegli un altro orario', 409);
+      if ($res['err'] === 'bad_request') fail('bad_request', 'Dati non validi: controlla data, ora e persone');
+      if ($res['err'] === 'too_late') fail('too_late', 'Questa prenotazione non si può più modificare online: chiamaci al +39 0481 090740', 403);
       fail($res['err'], 'Non consentito', $res['err'] === 'not_found' ? 404 : 403);
     }
-    $old = $res['old']; $b = $res['new']; $b['id'] = $id; $kind = '';
-    if (($old['status'] ?? '') !== 'cancelled' && ($b['status'] ?? '') === 'cancelled') { $kind = 'canc'; notifyStaff($C, $b, 'Prenotazione annullata'); }
-    elseif (($old['date'] ?? '') !== ($b['date'] ?? '') || ($old['time'] ?? '') !== ($b['time'] ?? '')) { $kind = 'moved'; $b['seq'] = (int)($old['seq'] ?? 0) + 1; notifyStaff($C, $b, 'Prenotazione spostata'); }
-    if ($kind !== '') {
+    $old = $res['old']; $b = $res['new']; $b['id'] = $id; $kind = ''; $what = '';
+    $diff = fn(array $keys) => (bool)array_filter($keys, fn($k) => (string)($old[$k] ?? '') !== (string)($b[$k] ?? ''));
+    if (($old['status'] ?? '') !== 'cancelled' && ($b['status'] ?? '') === 'cancelled') { $kind = 'canc'; $what = 'Prenotazione annullata'; }
+    elseif (($old['status'] ?? '') === 'cancelled' && ($b['status'] ?? '') !== 'cancelled') { $kind = !empty($b['pending']) ? 'rec' : 'ok'; $what = 'Prenotazione riattivata'; }
+    elseif (($b['status'] ?? '') !== 'cancelled' && $diff(['date', 'time'])) { $kind = 'moved'; $what = 'Prenotazione spostata'; }
+    elseif (($b['status'] ?? '') !== 'cancelled' && $diff(['party', 'menuCarta', 'menuTasting', 'name', 'email'])) { $kind = 'mod'; $what = 'Prenotazione modificata'; }
+    elseif (!$staff && $diff(['notes'])) $what = 'Note modificate'; // nothing for the guest's email, but the staff should know
+    if ($what !== '' && !$staff) notifyStaff($C, $b, $what . ' dal cliente');
+    /* staff edits: the guest is told only when the staff asks for it (box in the edit window) */
+    if ($kind !== '' && (!$staff || !array_key_exists('mail', $in) || !empty($in['mail']))) {
+      if ($kind !== 'canc') $b['seq'] = (int)($old['seq'] ?? 0) + 1;
       mailGuest($C, $b, $kind);
       patchDoc('bookings', $id, array_intersect_key($b, array_flip(['emailSentAt', 'emailKind', 'emailError', 'seq'])));
     }
