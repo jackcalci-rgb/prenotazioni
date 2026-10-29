@@ -125,17 +125,11 @@ th{font-weight:400;color:var(--muted);font-size:.75rem;letter-spacing:.1em;text-
 .tbl.bl{border-color:var(--bad);color:var(--bad)}
 .arr{display:flex;flex-wrap:wrap;gap:.3rem;align-items:center}
 .blr{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.5rem;align-items:center;border-bottom:1px solid var(--line);padding:.5rem 0}
-.sbar{display:flex;justify-content:space-between;align-items:center;gap:.75rem}
-.sbar .seg button{padding:.5rem 1rem}
-.gear{flex:0 0 auto;width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--ink);display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
-.gear:hover{border-color:var(--wine)}
-@media (max-width:560px){.sbar .seg button{padding:.5rem .55rem;font-size:.8rem}}
 label.tick{flex-direction:row;align-items:flex-start;gap:.5rem;color:var(--ink);font-size:.85rem}
 label.tick input{width:auto;margin-top:.2rem;flex:0 0 auto}
 .mkr{cursor:pointer}.mkr:hover td,.mkr.on td{background:var(--alt)}
 .mkd>td{background:var(--bg)}
 .s-idle{background:var(--idle-bg);color:var(--idle)}
-.gear[aria-pressed="true"]{background:var(--wine);color:var(--on-wine);border-color:var(--wine)}
 .kpi.hot{border-color:var(--bad);background:var(--bad-bg)}
 .kpi.hot b{color:var(--bad)}
 .kpi.good b{color:var(--ok)}
@@ -148,18 +142,6 @@ label.tick input{width:auto;margin-top:.2rem;flex:0 0 auto}
 .flr.gone{opacity:.45}
 .flr .n{text-align:right;color:var(--muted)}
 .know{margin:0;padding-left:1.1rem;display:flex;flex-direction:column;gap:.25rem}
-.chk{display:grid;grid-template-columns:3.4rem 2.4rem minmax(0,1fr) auto;gap:.2rem .75rem;align-items:center;padding:.6rem .2rem;border-bottom:1px solid var(--line)}
-.chk .t{font-variant-numeric:tabular-nums;font-weight:600}
-.chk .p{font-family:var(--serif);font-size:1.6rem;line-height:1;text-align:center;font-variant-numeric:tabular-nums}
-.chk .who{min-width:0;overflow-wrap:anywhere}
-.chk .who a{color:inherit}
-.chk.done{background:color-mix(in srgb,var(--ok-bg) 45%,transparent)}
-.chk.done .p,.chk.done .t{color:var(--ok)}
-.chk.ns{opacity:.5}
-.chk.late .t{color:var(--bad)}
-.chk .late-l{color:var(--bad);font-size:.8rem}
-.svh{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem;padding-top:.6rem;border-bottom:1px solid var(--wine)}
-@media (max-width:600px){.chk{grid-template-columns:3rem 2.2rem minmax(0,1fr)}.chk .arr{grid-column:3/-1}}
 @media (max-width:520px){.tlr{grid-template-columns:3rem 1fr}.tlr .tbls{grid-column:1/-1}}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem}
 .copy{white-space:pre-wrap;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:.6rem;font-size:.85rem}
@@ -226,6 +208,116 @@ a.btn{display:inline-block;text-decoration:none;font:400 .8rem var(--sans);lette
 @media (max-width:480px){.cd{min-height:52px;padding:.25rem}.cd.closed .tag{letter-spacing:0;text-transform:none;font-size:.56rem}.cd.open{border-left-width:3px}.cd .tag.long{display:none}}
 @media (max-width:560px){.day{grid-template-columns:1fr}h1{font-size:1.8rem}}
 @media (prefers-reduced-motion:no-preference){.nudge{animation:in .35s ease-out}@keyframes in{from{transform:translateY(6px);opacity:.4}to{transform:none;opacity:1}}}
+/* ---------- staff: navigation (bottom bar on phones, sidebar from 900px) and today's service (cards on phones, timeline + detail panel on tablets) ---------- */
+html.staff header{padding-block:.8rem .6rem;margin-bottom:1rem}
+html.staff #h-title{font-size:1.4rem}
+html.staff header .caps{display:none}
+.staff{display:flex;flex-direction:column;gap:1rem}
+.smain{min-width:0}
+.snav{position:fixed;left:0;right:0;bottom:0;z-index:20;display:grid;grid-template-columns:repeat(5,1fr);background:var(--card);border-top:1px solid var(--line);padding:.3rem max(6px,env(safe-area-inset-right,0px)) calc(.35rem + env(safe-area-inset-bottom,0px)) max(6px,env(safe-area-inset-left,0px))}
+.snav-brand,.snav .nv-theme{display:none}
+.nv{border:0;background:transparent;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:.1rem;font:400 .72rem var(--sans);padding:.35rem 0;cursor:pointer;min-height:52px;border-radius:12px}
+.nv .ic{display:grid;place-items:center}
+.nv svg{width:23px;height:23px}
+.nv[aria-pressed="true"]{color:var(--wine);font-weight:500}
+.nv-new .ic{width:46px;height:46px;border-radius:50%;background:var(--wine);color:var(--on-wine);margin-top:-1.25rem;box-shadow:0 2px 10px rgba(0,0,0,.18)}
+.nv-new[aria-pressed="true"] .ic{outline:3px solid var(--alt)}
+html.staff body{padding-bottom:calc(90px + env(safe-area-inset-bottom,0px))}
+@media (min-width:900px){
+  html.staff .wrap{max-width:1280px}
+  html.staff body{padding-bottom:3rem}
+  .staff{display:grid;grid-template-columns:190px minmax(0,1fr);gap:1.5rem;align-items:start}
+  .snav{position:sticky;top:1rem;display:flex;flex-direction:column;gap:.2rem;border:1px solid var(--line);border-radius:16px;padding:.75rem .5rem}
+  .snav-brand{display:block;font-family:var(--serif);font-size:1.3rem;padding:.1rem .7rem .6rem}
+  .nv{flex-direction:row;justify-content:flex-start;gap:.65rem;font-size:.95rem;padding:.55rem .7rem;min-height:44px;color:var(--ink);text-align:left}
+  .nv svg{width:20px;height:20px}
+  .nv[aria-pressed="true"]{background:var(--alt);color:var(--ink)}
+  .nv-new .ic{width:auto;height:auto;border-radius:0;background:none;color:inherit;margin:0;box-shadow:none}
+  .nv-new[aria-pressed="true"] .ic{outline:0}
+  .snav .nv-theme{display:flex;margin-top:1.2rem;font-size:.82rem;color:var(--muted)}
+}
+.bigb{border:1.5px solid var(--line);background:transparent;color:var(--ink);border-radius:14px;min-height:52px;padding:0 1rem;font:500 .95rem var(--sans);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:.4rem;text-decoration:none}
+.bigb:hover{border-color:var(--wine)}
+.bigb.ok{background:var(--ok);border-color:var(--ok);color:var(--bg)}
+.bigb.wine{background:var(--wine);border-color:var(--wine);color:var(--on-wine)}
+.bigb.bad{background:var(--bad);border-color:var(--bad);color:var(--bg)}
+.bigb:disabled{opacity:.55;cursor:default}
+.td-head{display:flex;justify-content:space-between;align-items:center;gap:.75rem;flex-wrap:wrap}
+.td-head h2{font-size:1.9rem;text-transform:capitalize}
+.td-head .bigb{min-height:46px;border-radius:999px}
+.svt{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.5rem}
+.svt button{border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:14px;padding:.6rem .8rem;text-align:left;cursor:pointer;font:inherit;display:flex;flex-direction:column;gap:.1rem;min-width:0}
+.svt button[aria-pressed="true"]{border-color:var(--wine);background:var(--alt)}
+.svt b{font-size:1.45rem;font-weight:500;line-height:1.1;font-variant-numeric:tabular-nums}
+.svt span{font-size:.78rem;color:var(--muted)}
+.svt .pill{align-self:flex-start;margin-top:.2rem}
+.kbox{background:var(--warn-bg);border-radius:14px;padding:.65rem .85rem}
+.kbox summary{cursor:pointer;font-size:.92rem;list-style:none;display:flex;gap:.5rem;align-items:baseline}
+.kbox summary::-webkit-details-marker{display:none}
+.kbox summary b{color:var(--warn);font-weight:500;white-space:nowrap}
+.kbox summary .first{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.kbox[open] summary .first{display:none}
+.kbox .know{margin-top:.5rem}
+.know{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:.4rem;font-size:.9rem}
+.know li{display:flex;gap:.5rem;overflow-wrap:anywhere}
+.know li i{font-style:normal;flex:0 0 1.3rem;text-align:center}
+.tdbar{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:space-between;align-items:center}
+.seg.big button{padding:.55rem 1rem;font-size:.9rem}
+.slh{display:flex;justify-content:space-between;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);padding:.6rem .2rem 0;font-variant-numeric:tabular-nums}
+.slh.now{color:var(--wine);font-weight:500}
+.bk{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:.8rem .9rem;display:flex;flex-direction:column;gap:.55rem}
+.bk.done,.bk.ns{opacity:.62}
+.bk.late{border-color:var(--bad);box-shadow:inset 0 0 0 1px var(--bad)}
+.bk-top{display:flex;justify-content:space-between;align-items:flex-start;gap:.6rem}
+.bk-top .nm{font-size:1.15rem;font-weight:500;overflow-wrap:anywhere;min-width:0}
+.bk-p{font-size:1.75rem;line-height:1;font-weight:500;font-variant-numeric:tabular-nums}
+.bk-p small{font-size:.7rem;color:var(--muted);font-weight:400;margin-left:.15rem}
+.tags{display:flex;flex-wrap:wrap;gap:.35rem;align-items:center}
+.tg{font-size:.8rem;color:var(--muted);border:1px solid var(--line);border-radius:7px;padding:.05rem .45rem;overflow-wrap:anywhere}
+.tg.note{color:var(--ink)}
+.bk-acts{display:grid;grid-template-columns:1fr 52px;gap:.5rem}
+.tdgrid{display:flex;flex-direction:column;gap:1rem}
+.tdkpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.5rem}
+.tdkpi .kpi{background:var(--card);border-radius:12px;min-width:0}
+.tdkpi .kpi b{font-family:var(--sans);font-weight:500;font-size:1.5rem}
+.tline{display:flex;flex-direction:column}
+.tsl{display:grid;grid-template-columns:4.2rem minmax(0,1fr);gap:.75rem;padding:.45rem 0;border-top:1px dashed var(--line)}
+.tsl.now{border-top:2px solid var(--wine)}
+.tsl .t{font-weight:500;font-variant-numeric:tabular-nums;padding-top:.5rem;line-height:1.2}
+.tsl .t small{display:block;font-weight:400;font-size:.7rem;color:var(--muted)}
+.tsl.now .t{color:var(--wine)}
+.tsl.empty .t{padding-top:0;color:var(--muted);font-weight:400}
+.tsl.empty{padding:.25rem 0}
+.tchips{display:flex;flex-wrap:wrap;gap:.45rem;min-width:0}
+.tchip{border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;padding:.4rem .7rem;cursor:pointer;display:flex;gap:.55rem;align-items:center;text-align:left;min-height:48px;font:inherit;max-width:100%}
+.tchip .n{font-size:1.25rem;font-weight:500;font-variant-numeric:tabular-nums}
+.tchip .w{display:flex;flex-direction:column;line-height:1.2;min-width:0}
+.tchip .w span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tchip .w small{color:var(--muted);font-size:.72rem}
+.tchip .dot{width:8px;height:8px;border-radius:50%;background:var(--gold);flex:0 0 auto}
+.tchip.in{background:var(--ok-bg);border-color:transparent}
+.tchip.ns{opacity:.5;text-decoration:line-through}
+.tchip.late{border-color:var(--bad)}
+.tchip.bl .dot{background:var(--bad)}
+.tchip[aria-pressed="true"]{outline:2px solid var(--wine);outline-offset:1px}
+.bkd{display:flex;flex-direction:column;gap:.9rem}
+.bkd h3{font-size:1.6rem;overflow-wrap:anywhere}
+.bkd-acts{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+.bkd-acts .wide{grid-column:1/-1}
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:.3rem .9rem;font-size:.92rem;margin:0}
+.kv dt{color:var(--muted)}.kv dd{margin:0;overflow-wrap:anywhere}
+.kv a{color:inherit}
+.tdside{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:1.1rem;display:flex;flex-direction:column;gap:1rem}
+.tdside .kn{border-top:1px solid var(--line);padding-top:1rem;display:flex;flex-direction:column;gap:.5rem}
+#bkdlg .in{padding:1.1rem 1.1rem 1.3rem}
+@media (max-width:899px){
+  #bkdlg{margin:auto 0 0;max-width:none;width:100%;border-radius:20px 20px 0 0;border-bottom:0;padding-bottom:env(safe-area-inset-bottom,0px)}
+}
+@media (min-width:900px){
+  .tdgrid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:1.25rem;align-items:start}
+  .tdside{position:sticky;top:1rem}
+}
+@media (prefers-reduced-motion:no-preference){.bk,.tchip,.bigb{transition:background-color .15s,opacity .15s,border-color .15s}}
 /* Modalità incorporata (?embed=1): usata dalla pagina Prenota di osteriadvor.com. Nasconde titolo e area staff (resta il selettore della lingua), sfondo trasparente. */
 html.embed header{padding-block:0 .4rem;border-bottom:0;margin-bottom:.6rem;justify-content:flex-end}
 html.embed header>div:first-child,html.embed .tabs{display:none}
@@ -295,16 +387,20 @@ html.embed .wrap{max-width:none}
   </section>
 
   <!-- STAFF: service panels (today, calendar, new booking) up front; assistant switch, rules, blacklist and events behind the gear -->
-  <section id="v-staff" class="stack" hidden>
-    <div class="sbar">
-      <div class="seg" role="group" aria-label="Servizio">
-        <button type="button" id="sp-b-today" aria-pressed="true">Oggi</button><button type="button" id="sp-b-cal" aria-pressed="false">Calendario</button><button type="button" id="sp-b-new" aria-pressed="false">+ Nuova</button><button type="button" id="sp-b-mkt" aria-pressed="false">Marketing</button>
-      </div>
-      <button type="button" class="gear" id="sp-b-set" aria-pressed="false" aria-label="Impostazioni" title="Impostazioni, lista nera, eventi"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
-    </div>
+  <section id="v-staff" class="staff" hidden>
+    <nav class="snav" aria-label="Area staff">
+      <div class="snav-brand">Dvor · staff</div>
+      <button type="button" id="sp-b-today" class="nv" aria-pressed="true"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span><span class="lb">Oggi</span></button>
+      <button type="button" id="sp-b-cal" class="nv" aria-pressed="false"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></span><span class="lb">Calendario</span></button>
+      <button type="button" id="sp-b-new" class="nv nv-new" aria-pressed="false"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span><span class="lb">Nuova</span></button>
+      <button type="button" id="sp-b-mkt" class="nv" aria-pressed="false"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10v4l12 5V5z"/><path d="M16 9a3 3 0 0 1 0 6"/></svg></span><span class="lb">Marketing</span></button>
+      <button type="button" id="sp-b-set" class="nv" aria-pressed="false" title="Impostazioni, lista nera, eventi"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg></span><span class="lb">Altro</span></button>
+      <button type="button" class="nv nv-theme" id="st-theme-nav" title="Tema chiaro o scuro"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg></span><span class="lb" data-theme-label>Tema: automatico</span></button>
+    </nav>
+    <div class="smain stack">
     <div id="sp-today" class="stack">
-      <div class="card stack" id="td-dash"></div>
-      <div class="card stack" id="td-list"></div>
+      <div class="stack" id="td-dash"></div>
+      <div class="stack" id="td-list"></div>
     </div>
     <div id="sp-cal" class="stack" hidden>
       <div class="card stack" id="planner">
@@ -387,7 +483,7 @@ html.embed .wrap{max-width:none}
       <div class="row" style="align-items:center"><button class="btn ghost small" type="button" id="mk-rebuild">Ricalcola dalle prenotazioni</button><span class="small muted" id="mk-rb-msg" aria-live="polite"></span></div>
     </div>
     <div id="sp-set" class="stack" hidden>
-      <div class="row" style="justify-content:space-between;align-items:center"><h2>Impostazioni</h2><button class="btn ghost small" type="button" id="set-back">← Torna al servizio</button></div>
+      <div class="row" style="justify-content:space-between;align-items:center"><h2>Impostazioni</h2><div class="row" style="align-items:center;gap:.5rem"><div class="seg" role="group" aria-label="Tema" id="st-theme"><button type="button" data-th="light" aria-pressed="false">☀ Chiaro</button><button type="button" data-th="dark" aria-pressed="false">☾ Scuro</button><button type="button" data-th="auto" aria-pressed="true">Auto</button></div><button class="btn ghost small" type="button" id="set-back">← Torna al servizio</button></div></div>
       <div class="card stack" id="botbox">
         <div class="row" style="justify-content:space-between;align-items:center"><h2>Assistente</h2><span class="pill" id="bot-state"></span></div>
         <p class="small muted">Il chatbot che risponde agli ospiti sulla pagina di prenotazione e propone il tavolo giusto. Se lo spegni, gli ospiti prenotano dal calendario scegliendo giorno e orario; lo riaccendi quando vuoi. Il cambio vale subito per chi apre la pagina.</p>
@@ -446,8 +542,10 @@ html.embed .wrap{max-width:none}
       </div>
       <div class="row"><button class="btn ghost small" type="button" id="st-logout">Esci dall'area staff</button></div>
     </div>
+    </div>
 </section>
 </div>
+<dialog id="bkdlg" aria-label="Prenotazione"><div class="in" id="bk-body"></div></dialog>
 <dialog id="eddlg" aria-labelledby="ed-title">
   <form class="in stack" id="ed-form" autocomplete="off">
     <h2 id="ed-title">Modifica prenotazione</h2>
