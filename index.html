@@ -212,7 +212,7 @@ a.btn{display:inline-block;text-decoration:none;font:400 .8rem var(--sans);lette
 html.staff header{padding-block:.8rem .6rem;margin-bottom:1rem}
 html.staff #h-title{font-size:1.4rem}
 html.staff header .caps{display:none}
-.staff{display:flex;flex-direction:column;gap:1rem}
+#v-staff{display:flex;flex-direction:column;gap:1rem}
 .smain{min-width:0}
 .snav{position:fixed;left:0;right:0;bottom:0;z-index:20;display:grid;grid-template-columns:repeat(5,1fr);background:var(--card);border-top:1px solid var(--line);padding:.3rem max(6px,env(safe-area-inset-right,0px)) calc(.35rem + env(safe-area-inset-bottom,0px)) max(6px,env(safe-area-inset-left,0px))}
 .snav-brand,.snav .nv-theme{display:none}
@@ -226,7 +226,7 @@ html.staff body{padding-bottom:calc(90px + env(safe-area-inset-bottom,0px))}
 @media (min-width:900px){
   html.staff .wrap{max-width:1280px}
   html.staff body{padding-bottom:3rem}
-  .staff{display:grid;grid-template-columns:190px minmax(0,1fr);gap:1.5rem;align-items:start}
+  #v-staff{display:grid;grid-template-columns:190px minmax(0,1fr);gap:1.5rem;align-items:start}
   .snav{position:sticky;top:1rem;display:flex;flex-direction:column;gap:.2rem;border:1px solid var(--line);border-radius:16px;padding:.75rem .5rem}
   .snav-brand{display:block;font-family:var(--serif);font-size:1.3rem;padding:.1rem .7rem .6rem}
   .nv{flex-direction:row;justify-content:flex-start;gap:.65rem;font-size:.95rem;padding:.55rem .7rem;min-height:44px;color:var(--ink);text-align:left}
@@ -261,7 +261,7 @@ html.staff body{padding-bottom:calc(90px + env(safe-area-inset-bottom,0px))}
 .know{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:.4rem;font-size:.9rem}
 .know li{display:flex;gap:.5rem;overflow-wrap:anywhere}
 .know li i{font-style:normal;flex:0 0 1.3rem;text-align:center}
-.tdbar{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:space-between;align-items:center}
+.seg.big{align-self:flex-start}
 .seg.big button{padding:.55rem 1rem;font-size:.9rem}
 .slh{display:flex;justify-content:space-between;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);padding:.6rem .2rem 0;font-variant-numeric:tabular-nums}
 .slh.now{color:var(--wine);font-weight:500}
@@ -387,7 +387,7 @@ html.embed .wrap{max-width:none}
   </section>
 
   <!-- STAFF: service panels (today, calendar, new booking) up front; assistant switch, rules, blacklist and events behind the gear -->
-  <section id="v-staff" class="staff" hidden>
+  <section id="v-staff" hidden>
     <nav class="snav" aria-label="Area staff">
       <div class="snav-brand">Dvor · staff</div>
       <button type="button" id="sp-b-today" class="nv" aria-pressed="true"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span><span class="lb">Oggi</span></button>
@@ -1477,87 +1477,146 @@ function lateBy(b,nm){return b.arrival?-1:nm-mins(b.time)}
 /* seated now: guests checked in whose table is still within the hold time from their arrival */
 function seatedNow(list,nm){var H=S.settings.holdMin||120;return persons(list.filter(function(b){if(b.arrival!=="in")return false;var a=b.arrivalAt?new Date(b.arrivalAt):null,m=a&&!isNaN(a)&&ymd(a)===b.date?a.getHours()*60+a.getMinutes():mins(b.time);return nm<m+H}))}
 function walkIn(){setSp("new");var n=nowMin(),r=Math.round(n/15)*15;el("mb-src").value="walkin";el("mb-date").value=today();el("mb-time").value=hm(Math.min(r,23*60+45));el("mb-party").value=2;el("mb-msg").textContent="";mbInfo();el("mb-name").focus()}
-function renderToday(){
-  var d=today(),nm=nowMin(),dash=el("td-dash"),box=el("td-list");dash.textContent="";box.textContent="";
-  var all=S.bookings.filter(function(b){return b.date===d}).sort(function(a,b){return a.time.localeCompare(b.time)||String(a.name||"").localeCompare(String(b.name||""))});
-  var list=all.filter(active),canc=all.filter(function(b){return !active(b)});
-  var arr=list.filter(function(b){return b.arrival==="in"}),ns=list.filter(function(b){return b.arrival==="noshow"}),wait=list.filter(function(b){return !b.arrival});
-  var late=wait.filter(function(b){return lateBy(b,nm)>=LATE_MIN}),soon=wait.filter(function(b){var m=mins(b.time);return m>nm-LATE_MIN&&m<=nm+60});
-  var next=wait.filter(function(b){return mins(b.time)>=nm})[0],cap=capFor(d),ds=hasDinner(d)?dinnerState(d):"none";
-  /* dashboard */
-  dash.append(h("div",{class:"row",style:"justify-content:space-between;align-items:center"},[h("div",{},[h("div",{class:"caps",text:"Servizio di oggi"}),h("h2",{style:"text-transform:capitalize",text:fmtDay(d,true)})]),h("span",{class:"small muted",text:"Ore "+hm(nm)+" · si aggiorna da solo"})]));
-  if(!slotsFor(d).length&&!list.length){dash.append(h("p",{class:"muted",text:"Oggi è giorno di riposo e non ci sono prenotazioni."}));}
-  else{
-    var k=[
-      kpi2(persons(list),"coperti previsti",list.length+(list.length===1?" tavolo":" tavoli")),
-      kpi2(persons(arr)+"/"+persons(list),"arrivati",arr.length+" su "+list.length+" tavoli",arr.length&&!wait.length?"good":""),
-      kpi2(persons(wait),"da arrivare",wait.length+(wait.length===1?" tavolo":" tavoli")),
-      kpi2(seatedNow(list,nm)+"/"+cap,"in sala ora","posti di oggi "+cap),
-      kpi2(persons(soon),"in arrivo entro 1 ora",next?"prossimo "+next.time+" · "+(next.name||"Ospite")+" ("+next.party+")":"nessun altro arrivo")
-    ];
-    if(late.length)k.push(kpi2(late.length,late.length===1?"tavolo in ritardo":"tavoli in ritardo","oltre "+LATE_MIN+" min","hot"));
-    if(ns.length)k.push(kpi2(persons(ns),"no show",ns.length+(ns.length===1?" tavolo":" tavoli")));
-    dash.append(h("div",{class:"kpis"},k));
-    var sv=[];["lunch","dinner"].forEach(function(s){var l=list.filter(function(b){return svcOf(b.time)===s});if(!l.length&&!slotsFor(d).some(function(x){return svcOf(x)===s}))return;
-      var ts=l.reduce(function(a,b){return a+(+b.menuTasting||0)},0),txt=(s==="lunch"?"Pranzo":"Cena")+": "+tp(tabsOf(l))+(ts?" · "+ts+" menù degustazione":"");
-      sv.push(h("div",{class:"row",style:"gap:.5rem;align-items:center"},[h("span",{text:txt}),s==="dinner"&&ds!=="none"&&ds!=="past"?h("span",{class:"pill s-"+ds,text:SLBL[ds]+(ds!=="confirmed"?" "+guests(d,"dinner")+"/"+S.settings.minGuests:"")}):null]))});
-    if(sv.length)dash.append(h("div",{class:"stack",style:"gap:.3rem"},sv));
-    /* room flow by arrival slot, now highlighted */
-    var times=slotsFor(d).concat(list.map(function(b){return b.time})).filter(function(x,i,a){return a.indexOf(x)===i}).sort();
-    if(times.length){
-      var g=bySlot(list),fl=h("div",{class:"flow"}),step=S.settings.stepMin||30;
-      times.forEach(function(tm,i){
-        var m=mins(tm),nx=i+1<times.length?mins(times[i+1]):m+step,inRoom=inRoomAt(d,tm),ar=persons(g[tm]||[]);
-        fl.append(h("div",{class:"flr"+(nm>=m&&nm<nx?" now":nm>=nx?" gone":""),title:"Alle "+tm+": "+ar+" persone in arrivo, "+inRoom+" in sala su "+cap},[
-          h("span",{class:"t",text:tm}),h("span",{class:"meter"},[h("i",{style:"width:"+Math.min(100,Math.round(inRoom/cap*100))+"%"})]),h("span",{class:"n",text:(ar?"+"+ar+" · ":"")+inRoom+" in sala"})]));
-      });
-      dash.append(h("details",{},[h("summary",{class:"small",style:"cursor:pointer",text:"Flusso della sala (persone sedute per orario)"}),fl]));
-    }
-    /* things the floor should know */
-    var kn=[];
-    S.events.filter(function(e){return e.date===d}).forEach(function(e){kn.push("✦ Evento: "+e.title_it+(e.time&&!e.allDay?" alle "+e.time:""))});
-    late.forEach(function(b){kn.push("⏱ "+b.time+" "+(b.name||"Ospite")+" ("+b.party+") è in ritardo di "+lateBy(b,nm)+" min"+(b.phone?", tel. "+b.phone:""))});
-    list.forEach(function(b){var bl=blFind(b),who=b.time+" "+(b.name||"Ospite")+" ("+b.party+")";
-      if(bl)kn.push("⚠ "+who+": in lista nera, "+(bl.count||1)+" no show");
-      if(b.notes)kn.push("✎ "+who+": "+b.notes);
-      if(+b.party>=6)kn.push("👥 "+who+": tavolo grande, prepara per tempo");
-      if(b.offer||b.discount)kn.push("🎁 "+who+": "+[b.offer,b.discount?"sconto "+b.discount+"% sul conto":""].filter(Boolean).join(", "))});
-    if(ds==="building"||ds==="lastcall")kn.push("Cena non ancora confermata: "+guests(d,"dinner")+" ospiti su "+S.settings.minGuests+". Decidi dal Calendario.");
-    if(kn.length)dash.append(h("div",{class:"stack",style:"gap:.3rem"},[h("h3",{text:"Da sapere"}),h("ul",{class:"know small"},kn.map(function(x){return h("li",{text:x})}))]));
-  }
-  /* check-in list */
-  var f=S.tdFilter||"all",cnt={all:list.length,wait:wait.length,in:arr.length};
-  var seg=h("div",{class:"seg",role:"group","aria-label":"Filtra"},[["all","Tutte"],["wait","Da arrivare"],["in","Arrivati"]].map(function(x){return h("button",{type:"button","aria-pressed":String(f===x[0]),text:x[1]+" "+cnt[x[0]],onclick:function(){S.tdFilter=x[0];renderToday()}})}));
-  box.append(h("div",{class:"row",style:"justify-content:space-between;align-items:center"},[h("h2",{text:"Prenotazioni e arrivi"}),h("button",{class:"btn small",type:"button",text:"🚶 Walk-in",title:"Ospiti arrivati senza prenotazione",onclick:walkIn})]));
-  seg.style.alignSelf="flex-start";box.append(seg);
-  var shown=list.filter(function(b){return f==="all"||(f==="wait"?!b.arrival:b.arrival==="in")});
-  if(!shown.length)box.append(h("p",{class:"muted",text:!list.length?"Nessuna prenotazione per oggi.":f==="wait"?"Sono arrivati tutti.":"Nessun arrivo segnato."}));
-  ["lunch","dinner"].forEach(function(s){
-    var l=shown.filter(function(b){return svcOf(b.time)===s});if(!l.length)return;
-    box.append(h("div",{class:"svh"},[h("h3",{text:s==="lunch"?"Pranzo":"Cena"}),h("span",{class:"small muted",text:tp(tabsOf(l))})]));
-    l.forEach(function(b){box.append(chkRow(b,nm))});
-  });
-  if(canc.length)box.append(h("details",{},[h("summary",{class:"small muted",style:"cursor:pointer",text:"Annullate oggi ("+canc.length+")"}),h("ul",{class:"know small muted"},canc.map(function(b){return h("li",{text:b.time+" "+(b.name||"Ospite")+" ("+b.party+")"})}))]));
-  box.append(h("p",{class:"small muted",text:"Email, annullamenti e decisioni sulla cena sono nel Calendario. In ritardo = non ancora arrivati "+LATE_MIN+" minuti dopo l'orario."}));
+/* today: phones get one card per table with a big «Sono arrivati»; from 900px the service is a timeline of tables with the chosen one in a side panel */
+var WIDE=window.matchMedia?matchMedia("(min-width:900px)"):{matches:false};
+if(WIDE.addEventListener)WIDE.addEventListener("change",function(){if(S.view==="staff")renderToday()});
+function bkStatus(b,nm){var lb=lateBy(b,nm);
+  if(b.arrival==="in")return h("span",{class:"pill s-confirmed",text:"✓ Arrivati"+(b.arrivalAt?" "+new Date(b.arrivalAt).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}):"")});
+  if(b.arrival==="noshow")return h("span",{class:"pill s-closed",text:"No show"});
+  if(lb>=LATE_MIN)return h("span",{class:"pill s-closed",text:"In ritardo di "+lb+" min"});
+  return h("span",{class:"pill s-idle",text:"Da arrivare"});
 }
-function kpi2(v,l,sub,cls){return h("div",{class:"kpi"+(cls?" "+cls:"")},[h("b",{text:String(v)}),h("span",{text:l}),sub?h("small",{text:sub}):null])}
-function chkRow(b,nm){
-  var lb=lateBy(b,nm),bl=blFind(b),late=lb>=LATE_MIN;
-  var det=[b.phone?h("a",{href:"tel:"+String(b.phone).replace(/[^\d+]/g,""),text:b.phone}):null].concat([b.notes?"✎ "+b.notes:"",+b.menuTasting?b.menuTasting+" degustazione":"",b.offer?"🎁 "+b.offer:"",b.discount?"Sconto "+b.discount+"%":"",b.eventTitle?"✦ "+b.eventTitle:"",b.example?"prova":""].filter(Boolean)).filter(Boolean);
-  var detEl=h("div",{class:"small muted"});det.forEach(function(x,i){if(i)detEl.append(" · ");detEl.append(x)});
-  return h("div",{class:"chk"+(b.arrival==="in"?" done":b.arrival==="noshow"?" ns":late?" late":"")},[
-    h("div",{class:"t",text:b.time}),
-    h("div",{class:"p",text:String(b.party),title:b.party+" persone"}),
-    h("div",{class:"who"},[
-      h("div",{},[h("strong",{text:b.name||"Ospite"}),SRC[b.source]?h("span",{class:"small muted",text:" "+SRC[b.source].split(" ")[0],title:SRC[b.source]}):null]),
-      bl?h("span",{class:"pill s-closed",text:"⚠ Lista nera · "+(bl.count||1)+" no show"}):null,
-      late?h("div",{class:"late-l",text:"In ritardo di "+lb+" min"}):null,
-      det.length?detEl:null,
-      editBtn(b)
-    ]),
-    arrivalCell(b)
+function bkTags(b){var bl=blFind(b),t=[];
+  if(bl)t.push(h("span",{class:"pill s-lastcall",text:"⚠ Lista nera · "+(bl.count||1)+" no show"}));
+  if(b.notes)t.push(h("span",{class:"tg note",text:"✎ "+b.notes}));
+  if(+b.party>=6)t.push(h("span",{class:"tg",text:"tavolo grande"}));
+  if(+b.menuTasting)t.push(h("span",{class:"tg",text:b.menuTasting+" degustazione"}));
+  if(b.offer)t.push(h("span",{class:"tg",text:"🎁 "+b.offer}));
+  if(b.discount)t.push(h("span",{class:"tg",text:"Sconto "+b.discount+"%"}));
+  if(b.eventTitle)t.push(h("span",{class:"tg",text:"✦ "+b.eventTitle}));
+  if(SRC[b.source])t.push(h("span",{class:"tg",text:SRC[b.source]}));
+  if(b.example)t.push(h("span",{class:"tg",text:"prova"}));
+  return t;
+}
+function hasInfo(b){return !!(b.notes||blFind(b)||b.offer||b.discount||b.eventTitle||+b.menuTasting||+b.party>=6)}
+/* the arrival button: answers at once, then saves */
+function arriveBtn(b,cls){return h("button",{class:"bigb ok"+(cls?" "+cls:""),type:"button",text:"✓ Sono arrivati",onclick:function(){this.disabled=true;this.textContent="Salvo…";b.arrival="in";b.arrivalAt=new Date().toISOString();setArrival(Object.assign({},b,{arrival:""}),"in").then(renderToday)}})}
+function undoBtn(b,cls){return h("button",{class:"bigb"+(cls?" "+cls:""),type:"button",text:"Togli il segno",title:b.arrival==="noshow"?"Togli il no show":"Non sono ancora arrivati",onclick:function(){this.disabled=true;var prev=b.arrival;b.arrival="";setArrival(Object.assign({},b,{arrival:prev}),"").then(renderToday)}})}
+/* detail of one booking: in the side panel (tablet) or in the sheet (phone) */
+function bkDetail(b,nm,inSheet){
+  var tel=String(b.phone||"").replace(/[^\d+]/g,"");
+  var kv=h("dl",{class:"kv"},[]);
+  function row(k,v){if(v==null||v==="")return;kv.append(h("dt",{text:k}),h("dd",{},[v]))}
+  row("Telefono",b.phone?h("a",{href:"tel:"+tel,text:b.phone}):null);row("Email",b.email||"");
+  row("Menù",(+b.menuCarta||+b.menuTasting)?[+b.menuCarta?b.menuCarta+" alla carta":"",+b.menuTasting?b.menuTasting+" degustazione":""].filter(Boolean).join(", "):"");
+  var acts=h("div",{class:"bkd-acts"},[
+    b.arrival?undoBtn(b,"wide"):arriveBtn(b,"wide"),
+    h("button",{class:"bigb",type:"button",text:"✎ Modifica",onclick:function(){if(inSheet)el("bkdlg").close();openEdit(b)}}),
+    b.arrival?null:h("button",{class:"bigb",type:"button",text:"No show",onclick:function(){var me=this;if(me.dataset.armed){me.disabled=true;b.arrival="noshow";setArrival(Object.assign({},b,{arrival:""}),"noshow").then(renderToday);return}
+      me.dataset.armed="1";me.textContent="Tocca ancora";me.classList.add("bad");setTimeout(function(){delete me.dataset.armed;me.textContent="No show";me.classList.remove("bad")},4000)}}),
+    inSheet?h("button",{class:"bigb"+(b.arrival?"":" wide"),type:"button",text:"Chiudi",onclick:function(){el("bkdlg").close()}}):null
+  ]);
+  var tags=bkTags(b);
+  return h("div",{class:"bkd"},[
+    h("div",{class:"stack",style:"gap:.35rem"},[h("span",{class:"small muted num",text:b.time+" · "+(svcOf(b.time)==="lunch"?"Pranzo":"Cena")}),h("h3",{text:b.name||"Ospite"}),
+      h("div",{class:"tags"},[h("span",{class:"pill s-idle num",text:b.party+(+b.party===1?" persona":" persone")}),bkStatus(b,nm)])]),
+    tags.length?h("div",{class:"tags"},tags):null,
+    kv.childNodes.length?kv:null,
+    acts
   ]);
 }
+function openBk(b){S.tdOpen=b.id;var box=el("bk-body");box.textContent="";box.append(bkDetail(b,nowMin(),true));var d=el("bkdlg");if(!d.open)d.showModal()}
+el("bkdlg").addEventListener("close",function(){S.tdOpen=null});
+el("bkdlg").addEventListener("click",function(e){if(e.target===this)this.close()});
+function bkCard(b,nm){
+  var late=!b.arrival&&lateBy(b,nm)>=LATE_MIN,tags=bkTags(b);
+  return h("div",{class:"bk"+(b.arrival==="in"?" done":b.arrival==="noshow"?" ns":late?" late":"")},[
+    h("div",{class:"bk-top"},[h("div",{class:"stack",style:"gap:.3rem;min-width:0"},[h("div",{class:"nm",text:b.name||"Ospite"}),h("div",{class:"tags"},[bkStatus(b,nm)])]),
+      h("div",{class:"bk-p",title:b.party+" persone"},[String(b.party),h("small",{text:"pers."})])]),
+    tags.length?h("div",{class:"tags"},tags):null,
+    h("div",{class:"bk-acts"},[b.arrival?undoBtn(b):arriveBtn(b),h("button",{class:"bigb",type:"button","aria-label":"Dettagli, modifica e no show",text:"⋯",onclick:function(){openBk(b)}})])
+  ]);
+}
+function tChip(b,nm){
+  var late=!b.arrival&&lateBy(b,nm)>=LATE_MIN;
+  return h("button",{class:"tchip"+(b.arrival==="in"?" in":b.arrival==="noshow"?" ns":late?" late":"")+(blFind(b)?" bl":""),type:"button","aria-pressed":String(S.tdSel===b.id),onclick:function(){S.tdSel=b.id;renderToday()}},[
+    h("span",{class:"n",text:String(b.party)}),
+    h("span",{class:"w"},[h("span",{text:b.name||"Ospite"}),h("small",{text:b.arrival==="in"?"arrivati":b.arrival==="noshow"?"no show":late?"in ritardo "+lateBy(b,nm)+" min":"da arrivare"})]),
+    hasInfo(b)?h("span",{class:"dot",title:"Ha note o avvisi"}):null]);
+}
+function renderToday(){
+  var d=today(),nm=nowMin(),dash=el("td-dash"),box=el("td-list"),wide=WIDE.matches;dash.textContent="";box.textContent="";
+  var all=S.bookings.filter(function(b){return b.date===d}).sort(function(a,b){return a.time.localeCompare(b.time)||String(a.name||"").localeCompare(String(b.name||""))});
+  var list=all.filter(active),canc=all.filter(function(b){return !active(b)});
+  var cap=capFor(d),ds=hasDinner(d)?dinnerState(d):"none";
+  var svcs=["lunch","dinner"].filter(function(s){return list.some(function(b){return svcOf(b.time)===s})||slotsFor(d).some(function(x){return svcOf(x)===s})});
+  if(svcs.indexOf(S.tdSvc)<0)S.tdSvc=null;
+  if(!S.tdSvc){var cur=nm>=DINNER_FROM-90?"dinner":"lunch";S.tdSvc=svcs.indexOf(cur)>=0?cur:(svcs[0]||"dinner")}
+  var sl=list.filter(function(b){return svcOf(b.time)===S.tdSvc});
+  var arr=sl.filter(function(b){return b.arrival==="in"}),wait=sl.filter(function(b){return !b.arrival});
+  var late=wait.filter(function(b){return lateBy(b,nm)>=LATE_MIN}),soon=wait.filter(function(b){var m=mins(b.time);return m>nm-LATE_MIN&&m<=nm+60});
+  var next=wait.filter(function(b){return mins(b.time)>=nm})[0];
+  /* header */
+  dash.append(h("div",{class:"td-head"},[h("div",{},[h("div",{class:"small muted",text:"Ore "+hm(nm)+" · si aggiorna da solo"}),h("h2",{text:fmtDay(d,true)})]),
+    h("button",{class:"bigb wine",type:"button",text:"🚶 Walk-in",title:"Ospiti arrivati senza prenotazione",onclick:walkIn})]));
+  if(!svcs.length){dash.append(h("p",{class:"muted",text:"Oggi è giorno di riposo e non ci sono prenotazioni."}));}
+  /* one tile per service: tap to switch */
+  if(svcs.length)dash.append(h("div",{class:"svt"},svcs.map(function(s){
+    var l=list.filter(function(b){return svcOf(b.time)===s}),a=l.filter(function(b){return b.arrival==="in"}),ts=l.reduce(function(x,b){return x+(+b.menuTasting||0)},0);
+    return h("button",{type:"button","aria-pressed":String(S.tdSvc===s),onclick:function(){S.tdSvc=s;S.tdSel=null;renderToday()}},[
+      h("b",{text:persons(a)+" / "+persons(l)}),h("span",{text:(s==="lunch"?"Pranzo":"Cena")+" · arrivati / attesi · "+l.length+(l.length===1?" tavolo":" tavoli")+(ts?" · "+ts+" degust.":"")}),
+      s==="dinner"&&ds!=="none"&&ds!=="past"&&ds!=="confirmed"?h("span",{class:"pill s-"+ds,text:SLBL[ds]+" "+guests(d,"dinner")+"/"+S.settings.minGuests}):null]);
+  })));
+  /* things the floor should know */
+  var kn=[];
+  S.events.filter(function(e){return e.date===d}).forEach(function(e){kn.push(["✦","Evento: "+e.title_it+(e.time&&!e.allDay?" alle "+e.time:"")])});
+  late.forEach(function(b){kn.push(["⏱",b.time+" "+(b.name||"Ospite")+" ("+b.party+") in ritardo di "+lateBy(b,nm)+" min"+(b.phone?" · "+b.phone:"")])});
+  sl.filter(function(b){return !b.arrival}).forEach(function(b){var bl=blFind(b),who=b.time+" "+(b.name||"Ospite")+" ("+b.party+")";
+    if(bl)kn.push(["⚠",who+": in lista nera, "+(bl.count||1)+" no show"]);
+    if(b.notes)kn.push(["✎",who+": "+b.notes]);
+    if(+b.party>=6)kn.push(["👥",who+": tavolo grande, prepara per tempo"]);
+    if(b.offer||b.discount)kn.push(["🎁",who+": "+[b.offer,b.discount?"sconto "+b.discount+"% sul conto":""].filter(Boolean).join(", ")])});
+  if(S.tdSvc==="dinner"&&(ds==="building"||ds==="lastcall"))kn.push(["!","Cena non ancora confermata: "+guests(d,"dinner")+" ospiti su "+S.settings.minGuests+". Decidi dal Calendario."]);
+  function knowList(){return h("ul",{class:"know"},kn.map(function(x){return h("li",{},[h("i",{text:x[0]}),h("span",{text:x[1]})])}))}
+  /* filter */
+  var f=S.tdFilter||"all",cnt={all:sl.length,wait:wait.length,in:arr.length};
+  var seg=h("div",{class:"seg big",role:"group","aria-label":"Filtra"},[["all","Tutte"],["wait","Da arrivare"],["in","Arrivati"]].map(function(x){return h("button",{type:"button","aria-pressed":String(f===x[0]),text:x[1]+" "+cnt[x[0]],onclick:function(){S.tdFilter=x[0];renderToday()}})}));
+  var shown=sl.filter(function(b){return f==="all"||(f==="wait"?!b.arrival:b.arrival==="in")});
+  var empty=!sl.length?"Nessuna prenotazione per "+(S.tdSvc==="lunch"?"pranzo":"cena")+".":!shown.length?(f==="wait"?"Sono arrivati tutti.":"Nessun arrivo segnato."):"";
+  var g=bySlot(shown);
+  if(!wide){
+    if(kn.length)box.append(h("details",{class:"kbox"},[h("summary",{},[h("b",{text:"Da sapere ("+kn.length+")"}),h("span",{class:"first",text:kn[0][1]})]),knowList()]));
+    if(sl.length)box.append(seg);
+    if(empty)box.append(h("p",{class:"muted",text:empty}));
+    Object.keys(g).sort().forEach(function(tm,i,ks){var m=mins(tm),nx=i+1<ks.length?mins(ks[i+1]):m+30;
+      box.append(h("div",{class:"slh"+(nm>=m&&nm<nx?" now":"")},[h("span",{text:tm}),h("span",{text:persons(g[tm])+" pers."})]));
+      g[tm].forEach(function(b){box.append(bkCard(b,nm))})});
+  }else{
+    dash.append(h("div",{class:"tdkpi"},[
+      kpi2(persons(arr)+"/"+persons(sl),"persone arrivate",arr.length+" su "+sl.length+" tavoli",arr.length&&!wait.length?"good":""),
+      kpi2(persons(wait),"da arrivare",wait.length+(wait.length===1?" tavolo":" tavoli")),
+      kpi2(seatedNow(list,nm)+"/"+cap,"in sala ora","posti di oggi "+cap),
+      kpi2(late.length?late.length:persons(soon),late.length?(late.length===1?"tavolo in ritardo":"tavoli in ritardo"):"in arrivo entro 1 ora",late.length?"oltre "+LATE_MIN+" min":next?"prossimo "+next.time+" · "+(next.name||"Ospite"):"nessun altro arrivo",late.length?"hot":"")]));
+    var main=h("div",{class:"stack",style:"min-width:0"});
+    if(sl.length)main.append(seg);
+    if(empty)main.append(h("p",{class:"muted",text:empty}));
+    var times=slotsFor(d).filter(function(x){return svcOf(x)===S.tdSvc}).concat(shown.map(function(b){return b.time})).filter(function(x,i,a){return a.indexOf(x)===i}).sort();
+    if(shown.length){var tl=h("div",{class:"tline"});
+      times.forEach(function(tm,i){var m=mins(tm),nx=i+1<times.length?mins(times[i+1]):m+(S.settings.stepMin||30),l=g[tm]||[],now=nm>=m&&nm<nx;
+        tl.append(h("div",{class:"tsl"+(now?" now":"")+(l.length?"":" empty")},[h("div",{class:"t"},[tm,l.length?h("small",{text:inRoomAt(d,tm)+" in sala"}):null]),
+          h("div",{class:"tchips"},l.length?l.map(function(b){return tChip(b,nm)}):[h("span",{class:"small muted",text:now?"← adesso":""})])]))});
+      main.append(tl)}
+    var sel=sl.filter(function(b){return b.id===S.tdSel})[0]||shown.filter(function(b){return !b.arrival})[0]||shown[0];
+    if(sel)S.tdSel=sel.id;
+    var side=h("aside",{class:"tdside"},[sel?bkDetail(sel,nm,false):h("p",{class:"muted",text:"Tocca una prenotazione per vederla qui."})]);
+    if(kn.length)side.append(h("div",{class:"kn"},[h("h3",{text:"Da sapere"}),knowList()]));
+    box.append(h("div",{class:"tdgrid"},[main,side]));
+  }
+  if(canc.length)box.append(h("details",{},[h("summary",{class:"small muted",style:"cursor:pointer",text:"Annullate oggi ("+canc.length+")"}),h("ul",{class:"small muted"},canc.map(function(b){return h("li",{text:b.time+" "+(b.name||"Ospite")+" ("+b.party+")"})}))]));
+  /* keep an open sheet in step with fresh data */
+  if(S.tdOpen&&el("bkdlg").open){var ob=S.bookings.filter(function(b){return b.id===S.tdOpen})[0];if(ob){var bb=el("bk-body");bb.textContent="";bb.append(bkDetail(ob,nm,true))}}
+}
+function kpi2(v,l,sub,cls){return h("div",{class:"kpi"+(cls?" "+cls:"")},[h("b",{text:String(v)}),h("span",{text:l}),sub?h("small",{text:sub}):null])}
 /* ---------- staff ---------- */
 var SLBL={confirmed:"Confermata",building:"In raccolta",lastcall:"Ultima chiamata",closed:"Chiusa",past:"Passata"};
 function renderBoard(){
@@ -2043,7 +2102,17 @@ el("mk-rebuild").addEventListener("click",async function(){var b=this,m=el("mk-r
   try{var j=await mkCall({op:"leads_rebuild"});m.textContent="✓ Ripassate "+j.bookings+" prenotazioni.";mkLoad(true)}catch(e){m.textContent="Non riuscito: "+((e&&e.message)||e)}b.disabled=false});
 
 /* ---------- tabs ---------- */
-function setView(v){S.view=v;el("tab-guest").setAttribute("aria-selected",String(v==="guest"));el("tab-staff").setAttribute("aria-selected",String(v==="staff"));el("v-guest").hidden=v!=="guest";el("v-staff").hidden=v!=="staff";el("lang").hidden=v!=="guest";if(v==="staff"&&!S.selDay)S.selDay=today();applyLang();if(v==="staff"){var sp=null;try{sp=sessionStorage.getItem("dvor-sp")}catch(e){}setSp(sp||"today")}else render()}
+/* theme: light, dark or automatic (follows the device); remembered on this device. The embedded page takes the theme from the host site */
+var TH_KEY="dvor-theme",EMBED=/[?&]embed=1(&|$)/.test(location.search),TH_LBL={auto:"automatico",light:"chiaro",dark:"scuro"};
+function getTheme(){try{var t=localStorage.getItem(TH_KEY);return t==="light"||t==="dark"?t:"auto"}catch(e){return "auto"}}
+function applyTheme(t){var r=document.documentElement;if(t==="light"||t==="dark")r.setAttribute("data-theme",t);else r.removeAttribute("data-theme");
+  Array.prototype.forEach.call(document.querySelectorAll("#st-theme [data-th]"),function(b){b.setAttribute("aria-pressed",String(b.dataset.th===t))});
+  Array.prototype.forEach.call(document.querySelectorAll("[data-theme-label]"),function(x){x.textContent="Tema: "+TH_LBL[t]})}
+function setTheme(t){try{if(t==="auto")localStorage.removeItem(TH_KEY);else localStorage.setItem(TH_KEY,t)}catch(e){}applyTheme(t)}
+if(!EMBED)applyTheme(getTheme());
+Array.prototype.forEach.call(document.querySelectorAll("#st-theme [data-th]"),function(b){b.addEventListener("click",function(){setTheme(b.dataset.th)})});
+el("st-theme-nav").addEventListener("click",function(){var o=["auto","light","dark"];setTheme(o[(o.indexOf(getTheme())+1)%3])});
+function setView(v){S.view=v;document.documentElement.classList.toggle("staff",v==="staff");el("tab-guest").setAttribute("aria-selected",String(v==="guest"));el("tab-staff").setAttribute("aria-selected",String(v==="staff"));el("v-guest").hidden=v!=="guest";el("v-staff").hidden=v!=="staff";el("lang").hidden=v!=="guest";if(v==="staff"&&!S.selDay)S.selDay=today();applyLang();if(v==="staff"){var sp=null;try{sp=sessionStorage.getItem("dvor-sp")}catch(e){}setSp(sp||"today")}else render()}
 el("tab-guest").addEventListener("click",function(){setView("guest")});
 el("tab-staff").addEventListener("click",function(){setView("staff")});
 if(location.hash==="#staff")setTimeout(function(){setView("staff")},0);
