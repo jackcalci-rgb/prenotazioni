@@ -113,13 +113,37 @@ function splitPath(string $p): array {
 }
 function checkColl(string $c): void { if (!in_array($c, COLLS, true)) fail('bad_path', 'Raccolta non valida'); }
 
-/* ---------- who is calling ---------- */
-function isStaff(array $C): bool {
-  $t = $_SERVER['HTTP_X_STAFF_TOKEN'] ?? '';
-  if (!preg_match('/^([a-f0-9]{64})\.(\d+)$/', $t, $m)) return false;
-  if ((int)$m[2] < time()) return false;
-  return hash_equals(hash_hmac('sha256', 'staff|' . $m[2], $C['secret']), $m[1]);
+/* ---------- who is calling ----------
+   Staff accounts: the owner logs in as «admin» with staff_password from config.php; the other accounts live in the
+   database (docs, coll «staffusers», never readable from the page) with their own password, created by an admin.
+   Token: u.<user>.<ver>.<exp>.<signature>, valid STAFF_DAYS and renewed on every page load, so a phone or tablet in daily
+   use stays logged in. Changing a password or deleting an account raises ver and logs out that account everywhere. */
+const STAFF_DAYS = 90;
+function staffSign(string $u, int $ver, int $exp): string { global $C; return hash_hmac('sha256', "staff2|$u|$ver|$exp", $C['secret']); }
+function staffToken(array $u): string { $exp = time() + STAFF_DAYS * 86400; return 'u.' . $u['username'] . '.' . (int)$u['ver'] . '.' . $exp . '.' . staffSign($u['username'], (int)$u['ver'], $exp); }
+function staffUser(string $username): ?array {
+  global $C;
+  if ($username === 'admin') {
+    if (($C['staff_password'] ?? 'CAMBIAMI') === 'CAMBIAMI') return null;
+    /* the owner's ver follows staff_password: changing it in config.php logs out the old admin sessions */
+    return ['username' => 'admin', 'name' => (string)($C['staff_owner_name'] ?? 'Titolare'), 'role' => 'admin', 'ver' => hexdec(substr(hash_hmac('sha256', $C['staff_password'], $C['secret']), 0, 7)), 'owner' => true];
+  }
+  $u = getDoc('staffusers', $username);
+  return $u === null || !empty($u['disabled']) ? null : $u + ['username' => $username, 'ver' => 1, 'role' => 'staff'];
 }
+function staffMe(array $C): ?array {
+  $t = $_SERVER['HTTP_X_STAFF_TOKEN'] ?? '';
+  if (preg_match('/^u\.([a-z0-9._-]{2,32})\.(\d+)\.(\d+)\.([a-f0-9]{64})$/', $t, $m)) {
+    if ((int)$m[3] < time() || !hash_equals(staffSign($m[1], (int)$m[2], (int)$m[3]), $m[4])) return null;
+    $u = staffUser($m[1]);
+    return $u && (int)$u['ver'] === (int)$m[2] ? $u : null;
+  }
+  /* tokens from before the staff accounts (one shared password): still valid as admin until they expire */
+  if (preg_match('/^([a-f0-9]{64})\.(\d+)$/', $t, $m) && (int)$m[2] >= time() && hash_equals(hash_hmac('sha256', 'staff|' . $m[2], $C['secret']), $m[1])) return staffUser('admin');
+  return null;
+}
+function staffPublic(array $u): array { return ['username' => $u['username'], 'name' => (string)($u['name'] ?? $u['username']), 'role' => $u['role'] === 'admin' ? 'admin' : 'staff', 'owner' => !empty($u['owner']), 'createdAt' => (string)($u['createdAt'] ?? ''), 'lastLogin' => (string)($u['lastLogin'] ?? '')]; }
+function staffCleanName(string $u): string { return strtolower(trim($u)); }
 function clientId(): string { $c = $_SERVER['HTTP_X_CLIENT_ID'] ?? ''; return preg_match('/^[A-Za-z0-9_-]{8,64}$/', $c) ? $c : ''; }
 /* manage link in the guest emails (?gestisci=id.key): opens the booking from any phone or computer, not only the one used to book */
 function manageKey(string $id): string { global $C; return substr(hash_hmac('sha256', 'manage|' . $id, $C['secret']), 0, 32); }
@@ -533,7 +557,7 @@ function staffEditOk(array $d): bool {
 if (defined('DVOR_NO_REQUEST')) return; // included by a command-line tool (strumenti/promemoria.php)
 
 /* ---------- request ---------- */
-$staff = isStaff($C); $cid = clientId();
+$me = staffMe($C); $staff = $me !== null; $cid = clientId();
 
 if (($_GET['op'] ?? '') === 'upload') {
   if (!$staff) fail('not_granted', 'Solo staff', 403);
@@ -554,13 +578,76 @@ $op = $in['op'] ?? ($_GET['op'] ?? '');
 switch ($op) {
   case 'info':
     $key = !empty($C['anthropic_api_key']);
-    out(['ai' => $key && empty(settingsMain()['botOff']), 'aiKey' => $key, 'staff' => $staff]);
+    $res = ['ai' => $key && empty(settingsMain()['botOff']), 'aiKey' => $key, 'staff' => $staff];
+    if ($staff) { $res['me'] = staffPublic($me); $res['token'] = staffToken($me); } // renewed at every visit: in daily use the session never runs out
+    out($res);
 
-  case 'login':
+  case 'login': {
     usleep(400000);
-    if (!is_string($in['password'] ?? null) || $C['staff_password'] === 'CAMBIAMI' || !hash_equals($C['staff_password'], $in['password'])) fail('denied', 'Password errata', 403);
-    $exp = time() + 12 * 3600;
-    out(['token' => hash_hmac('sha256', 'staff|' . $exp, $C['secret']) . '.' . $exp]);
+    rateLimit('login', 20, 600); // the whole staff may share one Wi-Fi address
+    $name = staffCleanName((string)($in['username'] ?? '')); $pw = $in['password'] ?? null;
+    if ($name === '') $name = 'admin'; // the old login had only the password
+    $u = is_string($pw) && preg_match('/^[a-z0-9._-]{2,32}$/', $name) ? staffUser($name) : null;
+    $ok = $u && (!empty($u['owner']) ? hash_equals((string)$C['staff_password'], $pw) : password_verify($pw, (string)($u['hash'] ?? '')));
+    if (!$ok) fail('denied', 'Nome utente o password errati', 403);
+    if (empty($u['owner'])) patchDoc('staffusers', $name, ['lastLogin' => date('c')]);
+    out(['token' => staffToken($u), 'me' => staffPublic($u)]);
+  }
+
+  /* staff accounts: everyone can change their own password, only an admin manages the accounts */
+  case 'staff_password': {
+    if (!$staff) fail('not_granted', 'Solo staff', 403);
+    if (!empty($me['owner'])) fail('bad_request', "La password del titolare si cambia in config.php (staff_password)");
+    $old = $in['old'] ?? null; $new = $in['new'] ?? null;
+    if (!is_string($old) || !password_verify($old, (string)($me['hash'] ?? ''))) fail('denied', 'La password attuale non è corretta', 403);
+    if (!is_string($new) || mb_strlen($new) < 6) fail('bad_request', 'La nuova password deve avere almeno 6 caratteri');
+    $u = tx(function () use ($me, $new) {
+      $u = getDoc('staffusers', $me['username'], true); if ($u === null) return null;
+      $u['hash'] = password_hash($new, PASSWORD_DEFAULT); $u['ver'] = (int)($u['ver'] ?? 1) + 1;
+      putDoc('staffusers', $me['username'], $u); return $u + ['username' => $me['username'], 'role' => 'staff'];
+    });
+    if ($u === null) fail('not_found', 'Account non trovato', 404);
+    out(['ok' => true, 'token' => staffToken($u)]); // this device stays in, the others log in again
+  }
+  case 'staff_list': {
+    if (!$staff || $me['role'] !== 'admin') fail('not_granted', 'Solo un amministratore', 403);
+    $list = [staffPublic(staffUser('admin'))];
+    foreach (load('staffusers') as $id => $u) if (empty($u['disabled'])) $list[] = staffPublic($u + ['username' => (string)$id, 'role' => 'staff']);
+    out(['users' => $list]);
+  }
+  case 'staff_save': {
+    if (!$staff || $me['role'] !== 'admin') fail('not_granted', 'Solo un amministratore', 403);
+    $name = staffCleanName((string)($in['username'] ?? ''));
+    if (!preg_match('/^[a-z0-9._-]{2,32}$/', $name)) fail('bad_request', 'Nome utente: da 2 a 32 lettere minuscole, numeri, punto, trattino');
+    if ($name === 'admin') fail('bad_request', "«admin» è il titolare: la sua password si cambia in config.php");
+    $label = mb_substr(trim((string)($in['name'] ?? '')), 0, 60);
+    $role = ($in['role'] ?? '') === 'admin' ? 'admin' : 'staff';
+    $pw = $in['password'] ?? '';
+    if (!is_string($pw) || ($pw !== '' && mb_strlen($pw) < 6)) fail('bad_request', 'La password deve avere almeno 6 caratteri');
+    $isNew = !empty($in['create']);
+    $res = tx(function () use ($name, $label, $role, $pw, $isNew) {
+      $u = getDoc('staffusers', $name, true);
+      if ($isNew && $u !== null && empty($u['disabled'])) return 'exists';
+      if (!$isNew && ($u === null || !empty($u['disabled']))) return 'missing';
+      if ($isNew) { if ($pw === '') return 'nopw'; $u = ['createdAt' => date('c'), 'ver' => (int)($u['ver'] ?? 0) + 1]; }
+      $u['name'] = $label !== '' ? $label : $name; $u['role'] = $role;
+      if ($pw !== '') { $u['hash'] = password_hash($pw, PASSWORD_DEFAULT); if (!$isNew) $u['ver'] = (int)($u['ver'] ?? 1) + 1; }
+      putDoc('staffusers', $name, $u); return 'ok';
+    });
+    if ($res === 'exists') fail('exists', 'Esiste già un account con questo nome utente', 409);
+    if ($res === 'missing') fail('not_found', 'Account non trovato', 404);
+    if ($res === 'nopw') fail('bad_request', 'Scegli una password per il nuovo account');
+    out(['ok' => true]);
+  }
+  case 'staff_delete': {
+    if (!$staff || $me['role'] !== 'admin') fail('not_granted', 'Solo un amministratore', 403);
+    $name = staffCleanName((string)($in['username'] ?? ''));
+    if ($name === 'admin' || !preg_match('/^[a-z0-9._-]{2,32}$/', $name)) fail('bad_request', 'Questo account non si può eliminare');
+    if ($name === $me['username']) fail('bad_request', 'Non puoi eliminare il tuo stesso account');
+    /* the row stays, disabled and with a higher ver, so an old token cannot come back if the name is reused */
+    tx(function () use ($name) { $u = getDoc('staffusers', $name, true); if ($u === null) return; putDoc('staffusers', $name, ['disabled' => true, 'ver' => (int)($u['ver'] ?? 1) + 1]); });
+    out(['ok' => true]);
+  }
 
   case 'get': {
     $coll = (string)($in['coll'] ?? ''); checkColl($coll);

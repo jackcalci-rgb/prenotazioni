@@ -540,11 +540,48 @@ html.embed .wrap{max-width:none}
           <div class="row"><button class="btn" type="submit" id="e-save">Salva evento</button><button class="btn ghost" type="button" id="e-cancel" hidden>Annulla modifica</button><span class="small muted" id="e-msg"></span></div>
         </form>
       </div>
-      <div class="row"><button class="btn ghost small" type="button" id="st-logout">Esci dall'area staff</button></div>
+      <div class="card stack" id="usersbox" hidden>
+        <h2>Account staff</h2>
+        <p class="small muted">Ogni persona entra con il suo nome utente e la sua password. Gli amministratori vedono questa scheda e possono aggiungere, cambiare ed eliminare gli account. Cambiando la password o eliminando un account, quella persona esce da tutti i suoi dispositivi.</p>
+        <div id="us-list" class="stack"></div>
+        <form id="us-form" class="stack" autocomplete="off">
+          <h3 id="us-form-title">Nuovo account</h3>
+          <div class="row">
+            <label>Nome utente<input id="us-user" autocapitalize="none" spellcheck="false" placeholder="marco" pattern="[a-zA-Z0-9._\-]{2,32}" required></label>
+            <label>Nome da mostrare<input id="us-name" placeholder="Marco"></label>
+          </div>
+          <div class="row">
+            <label>Password<input id="us-pw" type="password" autocomplete="new-password" minlength="6" placeholder="almeno 6 caratteri"></label>
+            <label>Ruolo<select id="us-role"><option value="staff">Staff</option><option value="admin">Amministratore (gestisce gli account)</option></select></label>
+          </div>
+          <div class="row" style="align-items:center"><button class="btn" type="submit" id="us-save">Crea account</button><button class="btn ghost" type="button" id="us-cancel" hidden>Annulla modifica</button><span class="small muted" id="us-msg" aria-live="polite"></span></div>
+        </form>
+      </div>
+      <div class="card stack" id="mebox" hidden>
+        <h2>Il tuo account</h2>
+        <p class="small" id="me-who"></p>
+        <form id="me-form" class="stack" autocomplete="off">
+          <div class="row">
+            <label>Password attuale<input id="me-old" type="password" autocomplete="current-password" required></label>
+            <label>Nuova password<input id="me-new" type="password" autocomplete="new-password" minlength="6" required></label>
+          </div>
+          <div class="row" style="align-items:center"><button class="btn" type="submit">Cambia password</button><span class="small muted" id="me-msg" aria-live="polite"></span></div>
+        </form>
+      </div>
+      <div class="row" style="align-items:center"><span class="small muted" id="st-who"></span><button class="btn ghost small" type="button" id="st-logout">Esci dall'area staff</button></div>
     </div>
     </div>
 </section>
 </div>
+<dialog id="logindlg" aria-labelledby="lg-title">
+  <form class="in stack" id="lg-form">
+    <h2 id="lg-title">Area staff</h2>
+    <label>Nome utente<input id="lg-user" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="admin"></label>
+    <label>Password<input id="lg-pw" name="password" type="password" autocomplete="current-password" required></label>
+    <p class="small muted">Resti dentro su questo dispositivo finché non premi «Esci dall'area staff».</p>
+    <div class="row" style="align-items:center"><button class="btn" type="submit" id="lg-go">Entra</button><button class="btn ghost" type="button" id="lg-close">Annulla</button><span class="small muted" id="lg-msg" aria-live="polite"></span></div>
+  </form>
+</dialog>
 <dialog id="bkdlg" aria-label="Prenotazione"><div class="in" id="bk-body"></div></dialog>
 <dialog id="eddlg" aria-labelledby="ed-title">
   <form class="in stack" id="ed-form" autocomplete="off">
@@ -593,7 +630,12 @@ html.embed .wrap{max-width:none}
   function sstore(k, v) { try { if (v === undefined) return sessionStorage.getItem(k); if (v === null) sessionStorage.removeItem(k); else sessionStorage.setItem(k, v) } catch (e) { return null } }
   var cid = store("dvor-cid");
   if (!cid) { cid = "c" + Math.random().toString(36).slice(2) + Date.now().toString(36); store("dvor-cid", cid) }
-  function token() { var t = sstore("dvor-staff"); if (!t) return ""; var exp = +t.split(".")[1] || 0; if (exp * 1000 < Date.now()) { sstore("dvor-staff", null); return "" } return t }
+  /* staff login: kept in localStorage (not sessionStorage), so closing the tab, the browser or the home screen app does not log out.
+     The server renews it at every visit; it ends after 90 days without opening the page, or with «Esci». */
+  (function () { var old = sstore("dvor-staff"); if (old) { if (!store("dvor-staff")) store("dvor-staff", old); sstore("dvor-staff", null) } })();
+  function tokenExp(t) { var a = t.split("."); return +(a[0] === "u" ? a[a.length - 2] : a[1]) || 0 }
+  function token() { var t = store("dvor-staff"); if (!t) return ""; if (tokenExp(t) * 1000 < Date.now()) { store("dvor-staff", null); return "" } return t }
+  function setToken(t) { store("dvor-staff", t || null) }
   /* manage keys: one per booking made here or opened from the email link (?gestisci=id.key), so the guest can change it from any device */
   function keys() { try { return JSON.parse(store("dvor-keys") || "{}") || {} } catch (e) { return {} } }
   function addKey(id, key) { if (!/^[A-Za-z0-9_-]{1,64}$/.test(id) || !/^[a-f0-9]{32}$/.test(key)) return; var k = keys(); k[id] = key; store("dvor-keys", JSON.stringify(k)) }
@@ -663,8 +705,15 @@ html.embed .wrap{max-width:none}
     }
   };
 
-  var info = call({ op: "info" }).catch(function () { return { ai: false, staff: false } });
+  var hadToken = !!token();
+  var info = call({ op: "info" }).then(function (i) {
+    if (i.token) setToken(i.token);
+    else if (hadToken && i.staff === false) { setToken(null); if (document.documentElement.classList.contains("staff") || location.hash === "#staff") { alert("Sessione staff scaduta o account cambiato: entra di nuovo."); location.reload() } }
+    return i;
+  }, function () { return { ai: false, staff: false } });
   window.DVOR_INFO = info;
+  window.DVOR_ME = info.then(function (i) { return i.me || null });
+  window.DVOR_SET_TOKEN = setToken;
 
   var user = {
     id: function () { return Promise.resolve(cid) },
@@ -740,13 +789,74 @@ html.embed .wrap{max-width:none}
     tab.addEventListener("click", function (ev) {
       if (token()) return;
       ev.stopImmediatePropagation(); ev.preventDefault();
-      var pw = prompt("Password area staff");
-      if (!pw) return;
-      call({ op: "login", password: pw }).then(function (j) { sstore("dvor-staff", j.token); sstore("dvor-open-staff", "1"); location.reload() }, function () { alert("Password errata") });
+      openLogin();
     }, true);
+    function openLogin() {
+      var d = document.getElementById("logindlg"), f = document.getElementById("lg-form"), msg = document.getElementById("lg-msg");
+      msg.textContent = ""; d.showModal(); document.getElementById("lg-user").focus();
+      document.getElementById("lg-close").onclick = function () { d.close() };
+      f.onsubmit = function (ev) {
+        ev.preventDefault();
+        var btn = document.getElementById("lg-go"); btn.disabled = true; msg.textContent = "Accesso…";
+        call({ op: "login", username: document.getElementById("lg-user").value, password: document.getElementById("lg-pw").value })
+          .then(function (j) { setToken(j.token); sstore("dvor-open-staff", "1"); location.reload() },
+            function (e) { btn.disabled = false; msg.textContent = e.code === "rate_limited" ? "Troppi tentativi: riprova tra qualche minuto" : "Nome utente o password errati" });
+      };
+    }
     if (token() && sstore("dvor-open-staff")) { sstore("dvor-open-staff", null); setTimeout(function () { tab.click() }, 300) }
   });
-  window.DVOR_LOGOUT = function () { sstore("dvor-staff", null); location.hash = ""; location.reload() };
+  window.DVOR_LOGOUT = function () { setToken(null); sstore("dvor-staff", null); location.hash = ""; location.reload() };
+
+  /* staff accounts: who is logged in, own password, and (admins) the list of accounts */
+  document.addEventListener("DOMContentLoaded", function () {
+    var $ = function (id) { return document.getElementById(id) };
+    if (!$("usersbox")) return;
+    window.DVOR_ME.then(function (me) {
+      if (!me) return;
+      $("st-who").textContent = "Sei entrato come " + me.name + " (" + me.username + ")";
+      if (!me.owner) { $("mebox").hidden = false; $("me-who").textContent = me.name + " · nome utente «" + me.username + "»" + (me.role === "admin" ? " · amministratore" : "") }
+      $("me-form").addEventListener("submit", function (ev) {
+        ev.preventDefault(); $("me-msg").textContent = "Salvo…";
+        call({ op: "staff_password", old: $("me-old").value, new: $("me-new").value }).then(function (j) { setToken(j.token); $("me-old").value = $("me-new").value = ""; $("me-msg").textContent = "Password cambiata. Sugli altri dispositivi entra di nuovo." }, function (e) { $("me-msg").textContent = e.message || "Errore" });
+      });
+      if (me.role !== "admin") return;
+      $("usersbox").hidden = false;
+      var editing = null;
+      function esc(x) { return String(x == null ? "" : x).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] }) }
+      function day(iso) { return iso ? new Date(iso).toLocaleDateString("it-IT", { day: "numeric", month: "short", year: "numeric" }) : "" }
+      function reset() { editing = null; $("us-form").reset(); $("us-user").disabled = false; $("us-form-title").textContent = "Nuovo account"; $("us-save").textContent = "Crea account"; $("us-cancel").hidden = true; $("us-pw").placeholder = "almeno 6 caratteri" }
+      function load() {
+        call({ op: "staff_list" }).then(function (j) {
+          var box = $("us-list"); box.innerHTML = "";
+          j.users.forEach(function (u) {
+            var row = document.createElement("div"); row.className = "row"; row.style.cssText = "align-items:center;justify-content:space-between;border-bottom:1px solid var(--line,#ddd);padding:.4rem 0";
+            row.innerHTML = '<div><b>' + esc(u.name) + '</b> <span class="small muted">' + esc(u.username) + (u.role === "admin" ? " · amministratore" : " · staff") + (u.owner ? " · titolare, password in config.php" : "") + (u.lastLogin ? " · ultimo accesso " + esc(day(u.lastLogin)) : "") + '</span></div>';
+            if (!u.owner) {
+              var act = document.createElement("div"); act.className = "row"; act.style.flex = "0 0 auto";
+              var ed = document.createElement("button"); ed.type = "button"; ed.className = "btn ghost small"; ed.textContent = "✎ Modifica";
+              ed.onclick = function () { editing = u.username; $("us-user").value = u.username; $("us-user").disabled = true; $("us-name").value = u.name; $("us-role").value = u.role; $("us-pw").value = ""; $("us-pw").placeholder = "vuoto = non cambiarla"; $("us-form-title").textContent = "Modifica " + u.name; $("us-save").textContent = "Salva"; $("us-cancel").hidden = false; $("us-msg").textContent = ""; $("us-form").scrollIntoView({ block: "center", behavior: "smooth" }) };
+              act.appendChild(ed);
+              if (u.username !== me.username) {
+                var del = document.createElement("button"); del.type = "button"; del.className = "btn ghost small"; del.textContent = "Elimina";
+                del.onclick = function () { if (!confirm("Eliminare l'account di " + u.name + "? Uscirà da tutti i dispositivi.")) return; call({ op: "staff_delete", username: u.username }).then(load, function (e) { alert(e.message || "Errore") }) };
+                act.appendChild(del);
+              }
+              row.appendChild(act);
+            }
+            box.appendChild(row);
+          });
+        }, function (e) { $("us-list").textContent = e.message || "Errore" });
+      }
+      $("us-cancel").onclick = function () { reset(); $("us-msg").textContent = "" };
+      $("us-form").addEventListener("submit", function (ev) {
+        ev.preventDefault(); $("us-msg").textContent = "Salvo…";
+        var body = { op: "staff_save", username: $("us-user").value, name: $("us-name").value, role: $("us-role").value, password: $("us-pw").value };
+        if (!editing) body.create = true;
+        call(body).then(function () { var was = editing; reset(); $("us-msg").textContent = was ? "Account aggiornato" : "Account creato"; load() }, function (e) { $("us-msg").textContent = e.message || "Errore" });
+      });
+      load();
+    });
+  });
 })();
 
 </script>

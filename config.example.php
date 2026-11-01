@@ -2,8 +2,10 @@
 /* Osteria Dvor · prenotazioni · configurazione
    Compila questi valori sul server. Questo file non è leggibile dal browser. */
 return [
-  // Password per entrare nell'area staff (pagina index.html#staff)
+  // Password del titolare: entra nell'area staff (pagina index.html#staff) con nome utente «admin» (o lasciandolo vuoto).
+  // Gli altri account staff si creano dall'area staff, ⚙ Altro → Account staff.
   'staff_password' => 'CAMBIAMI',
+  'staff_owner_name' => 'Titolare', // nome mostrato per l'account admin
 
   // Una frase segreta lunga a caso (serve per firmare l'accesso staff)
   'secret' => 'CAMBIAMI-con-una-frase-lunga-e-casuale',
