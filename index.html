@@ -1226,6 +1226,8 @@ async function book(c){
     pb.append(h("div",{class:"proposal stack"},[h("div",{class:"caps",text:"✓ "+t("doneT")}),h("div",{class:"big",text:fmtDay(c.date,true)+" · "+c.time+" · "+c.party+" "+t("people")})]),
       h("p",{class:"small",text:t("mailTo",{e:email})}),h("div",{class:"small caps",text:t("addCal")}),calButtons(bk));
     bubble("bot",t("booked")+": "+fmtDay(c.date,true)+" · "+c.time+" · "+c.party+" "+t("people"));
+    /* conversione per Google Ads / Meta (analytics.js): solo prenotazioni dei clienti, non dello staff */
+    if(S.view==="guest")try{if(window.dvorConversione)dvorConversione({persone:c.party,evento:bk.eventTitle})}catch(_){}
   }catch(e){
     /* someone else took the last seats a moment ago: reload and offer the alternatives */
     if(e&&e.code==="slot_full"){if(window.reloadData)await reloadData();showProposal(check(c.date,c.time,c.party));return}
@@ -2268,5 +2270,6 @@ boot();
   window.addEventListener("load",send);setInterval(send,800);
 })();
 </script>
+<script src="analytics.js" defer></script>
 </body>
 </html>
