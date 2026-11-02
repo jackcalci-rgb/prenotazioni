@@ -99,6 +99,10 @@ A ogni aggiornamento `aggiorna.sh` lancia anche `vai-live.php`, che cancella le 
 
 Dall'area staff, ⚙ → **Assistente**: un pulsante lo spegne e lo riaccende. Spento, gli ospiti prenotano dal calendario scegliendo giorno e orario, e il server rifiuta le richieste al chatbot. Serve la chiave `anthropic_api_key` in `config.php`; senza chiave l'assistente resta spento e il pulsante lo segnala.
 
+## Orari settimanali
+
+Dall'area staff, ⚙ → **Regole e offerte → Orari settimanali**: una riga per giorno con gli orari di arrivo prenotabili, per esempio `12:00-15:00, 19:00-21:30` (vuoto = chiuso, ogni 30 minuti). Si salvano con «Salva regole e orari» in `settings/main.windows` e valgono subito per la pagina, per l'assistente e per il bot WhatsApp, che legge le stesse impostazioni. Finché non si salvano restano gli orari di sempre.
+
 ## Modificare una prenotazione
 
 - **Staff:** ogni prenotazione, nel Calendario e in «Oggi», ha il tasto **✎ Modifica**. Si cambiano giorno, ora, persone, nome, telefono, email, lingua, menù, note e stato (anche per riattivare un'annullata). La finestra avvisa se si supera la capienza o se l'orario è fuori dagli arrivi online, ma lascia salvare. La casella «Avvisa l'ospite via email» manda la mail «Spostata» o «Modificata» con il calendario aggiornato; tolta la spunta, l'ospite non riceve nulla.
