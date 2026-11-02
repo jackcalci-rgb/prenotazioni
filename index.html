@@ -36,15 +36,16 @@
   --wine:#7A2E22; --on-wine:#FBF3E6; --gold:#9C5A10;
   --heat-1:#3E9B4F; --heat-2:#E3B22B; --heat-3:#C8372A;
   --ok:#2F6B3A; --ok-bg:#DCEBD8; --warn:#8A5A00; --warn-bg:#F3E2BC; --bad:#9B2C22; --bad-bg:#F2D5CF; --idle:#6A5645; --idle-bg:#E6DCCD;
+  --c-lunch:#B87A1E; --c-dinner:#9A3B2C;
   --serif:"Cormorant Garamond","Iowan Old Style",Georgia,serif;
   --sans:"Jost","Helvetica Neue",Arial,sans-serif;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){--bg:#1B120C;--alt:#25190F;--card:#21160E;--ink:#F0E4D2;--muted:#BCA78E;--line:#3D2C1E;--wine:#E2A24B;--on-wine:#26170F;--gold:#E2A24B;
-  --ok:#8FD19B;--ok-bg:#1F3322;--warn:#F0C26A;--warn-bg:#3A2C12;--bad:#F09A8E;--bad-bg:#3D1C17;--idle:#BCA78E;--idle-bg:#2E2218;color-scheme:dark}
+  --ok:#8FD19B;--ok-bg:#1F3322;--warn:#F0C26A;--warn-bg:#3A2C12;--bad:#F09A8E;--bad-bg:#3D1C17;--idle:#BCA78E;--idle-bg:#2E2218;--c-lunch:#B88A2E;--c-dinner:#B04436;color-scheme:dark}
 }
 :root[data-theme="dark"]{--bg:#1B120C;--alt:#25190F;--card:#21160E;--ink:#F0E4D2;--muted:#BCA78E;--line:#3D2C1E;--wine:#E2A24B;--on-wine:#26170F;--gold:#E2A24B;
-  --ok:#8FD19B;--ok-bg:#1F3322;--warn:#F0C26A;--warn-bg:#3A2C12;--bad:#F09A8E;--bad-bg:#3D1C17;--idle:#BCA78E;--idle-bg:#2E2218;color-scheme:dark}
+  --ok:#8FD19B;--ok-bg:#1F3322;--warn:#F0C26A;--warn-bg:#3A2C12;--bad:#F09A8E;--bad-bg:#3D1C17;--idle:#BCA78E;--idle-bg:#2E2218;--c-lunch:#B88A2E;--c-dinner:#B04436;color-scheme:dark}
 *,*::before,*::after{box-sizing:border-box}
 [hidden]{display:none!important}
 body{background:var(--bg);color:var(--ink);font:300 1rem/1.6 var(--sans);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 3rem}
@@ -336,6 +337,38 @@ html.staff body{padding-bottom:calc(90px + env(safe-area-inset-bottom,0px))}
 @media (max-width:899px){
   #bkdlg{margin:auto 0 0;max-width:none;width:100%;border-radius:20px 20px 0 0;border-bottom:0;padding-bottom:env(safe-area-inset-bottom,0px)}
 }
+/* the week at a glance (Oggi panel): stacked bars, lunch below and dinner above */
+.wch{position:relative;padding-left:2rem;margin-top:.4rem}
+.wch-grid{position:absolute;left:2rem;right:0;top:1.3rem;height:160px;pointer-events:none}
+.wch-grid div{position:absolute;left:0;right:0;border-top:1px solid var(--line)}
+.wch-grid div.base{border-top-color:var(--muted)}
+.wch-grid span{position:absolute;left:-2rem;width:1.7rem;text-align:right;transform:translateY(-50%);font-size:.7rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.wch-cols{position:relative;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:.25rem}
+.wch-col{all:unset;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;cursor:pointer;border-radius:10px;padding-bottom:.3rem;min-width:0}
+.wch-col:hover,.wch-col:focus-visible{background:var(--alt)}
+.wch-col:focus-visible{outline:2px solid var(--wine);outline-offset:1px}
+.wch-bar{height:calc(160px + 1.3rem);width:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center}
+.wch-v{font-size:.8rem;font-weight:500;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.3rem}
+.wch-stk{width:min(68%,46px);display:flex;flex-direction:column;gap:2px}
+.wch-stk i{display:block;min-height:3px}
+.wch-stk i.l{background:var(--c-lunch)}.wch-stk i.d{background:var(--c-dinner)}
+.wch-stk i.top{border-radius:4px 4px 0 0}
+.wch-d{margin-top:.35rem;display:flex;flex-direction:column;align-items:center;line-height:1.15;font-size:.75rem;color:var(--muted)}
+.wch-d b{font-size:.95rem;font-weight:500;color:var(--ink);font-variant-numeric:tabular-nums}
+.wch-col.now .wch-d b{color:var(--on-wine);background:var(--wine);border-radius:999px;padding:0 .4rem}
+.wch-col.off .wch-d{opacity:.6}
+.wch-col.past .wch-stk{opacity:.55}
+.wch-tip{position:absolute;top:0;z-index:2;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:.5rem .7rem;font-size:.8rem;box-shadow:0 6px 18px rgba(0,0,0,.18);pointer-events:none;min-width:11rem;transform:translateX(-50%)}
+.wch-tip b{display:block;margin-bottom:.2rem}
+.wch-tip div{display:flex;align-items:center;gap:.4rem;font-variant-numeric:tabular-nums}
+.sw{display:inline-block;width:10px;height:10px;border-radius:3px;flex:0 0 auto}
+.sw.l{background:var(--c-lunch)}.sw.d{background:var(--c-dinner)}
+.wch-leg{display:flex;flex-wrap:wrap;gap:.4rem 1rem;align-items:center;font-size:.8rem;color:var(--muted)}
+.wch-leg span{display:inline-flex;align-items:center;gap:.35rem}
+.wch-tb{width:100%;border-collapse:collapse;font-size:.85rem}
+.wch-tb th,.wch-tb td{padding:.3rem .4rem;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums}
+.wch-tb th:first-child,.wch-tb td:first-child{text-align:left}
+@media (max-width:420px){.wch{padding-left:1.6rem}.wch-grid{left:1.6rem}.wch-grid span{left:-1.6rem;width:1.4rem}.wch-v{font-size:.72rem}}
 @media (min-width:900px){
   .tdgrid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:1.25rem;align-items:start}
   .tdside{position:sticky;top:1rem}
@@ -424,6 +457,7 @@ html.embed .wrap{max-width:none}
     <div id="sp-today" class="stack">
       <div class="stack" id="td-dash"></div>
       <div class="stack" id="td-list"></div>
+      <div class="card stack" id="td-week"></div>
     </div>
     <div id="sp-cal" class="stack" hidden>
       <div class="card stack" id="planner">
@@ -1205,7 +1239,7 @@ async function boot(){
   dbStatus("Collegamento al database…");
   claude.use("db").then(function(d){
     db=d;if(!db){dbStatus("Database non disponibile.");return}
-    var bq=function(){return db.collection("bookings").where("date",">=",addDays(today(),-1)).limit(1000)};
+    var bq=function(){return db.collection("bookings").where("date",">=",addDays(mondayOf(today()),-7)).limit(1000)};
     var eq=function(){return db.collection("events").limit(500)};
     var oq=function(){return db.collection("overrides").limit(500)};
     try{bq().onSnapshot(function(q){applyBookings(q,"live")},function(e){S.bkErr=(e&&e.code)||"errore"})}catch(e){S.bkErr="sub "+e.message}
@@ -1906,6 +1940,70 @@ function renderToday(){
   /* keep an open sheet in step with fresh data */
   if(S.tdOpen&&el("bkdlg").open){var ob=S.bookings.filter(function(b){return b.id===S.tdOpen})[0];if(ob){var bb=el("bk-body");bb.textContent="";bb.append(bkDetail(ob,nm,true))}}
 }
+/* ---------- staff: the week at a glance, under today's service ---------- */
+/* bookings are loaded from last week's Monday, so the chart can go back one week and compare with it */
+function wkDay(d){var l=dayBookings(d),lu=l.filter(function(b){return svcOf(b.time)==="lunch"}),di=l.filter(function(b){return svcOf(b.time)==="dinner"});
+  return {d:d,open:slotsFor(d).length>0||l.length>0,L:persons(lu),Lt:lu.length,D:persons(di),Dt:di.length,T:persons(l),t:l.length,
+    ns:l.filter(function(b){return b.arrival==="noshow"}).length,ts:l.reduce(function(x,b){return x+(+b.menuTasting||0)},0)}}
+function renderWeek(){
+  var box=el("td-week");if(!box)return;box.textContent="";
+  var td=today(),cur=mondayOf(td),min=addDays(cur,-7);
+  if(!S.wkMon||S.wkMon<min)S.wkMon=cur;
+  var mon=S.wkMon,days=[];for(var i=0;i<7;i++)days.push(wkDay(addDays(mon,i)));
+  var tot=days.reduce(function(a,x){return a+x.T},0),tabs=days.reduce(function(a,x){return a+x.t},0);
+  var lun=days.reduce(function(a,x){return a+x.L},0),din=days.reduce(function(a,x){return a+x.D},0);
+  var prev=mon>min?(function(){var p=0;for(var i=0;i<7;i++)p+=persons(dayBookings(addDays(mon,i-7)));return p})():null;
+  var top=days.slice().sort(function(a,b){return b.T-a.T})[0];
+  function short(d,o){return parseD(d).toLocaleDateString("it-IT",o||{day:"numeric",month:"short"})}
+  var title=mon===cur?"Questa settimana":mon<cur?"Settimana scorsa":addDays(cur,7)===mon?"Prossima settimana":"Settimana";
+  function nav(lbl,txt,dis,fn){var x=h("button",{class:"btn ghost small",type:"button","aria-label":lbl,text:txt,onclick:fn});x.disabled=!!dis;return x}
+  var navs=h("div",{class:"row",style:"align-items:center;gap:.4rem"},[
+    nav("Settimana precedente","‹",mon<=min,function(){S.wkMon=addDays(mon,-7);renderWeek()}),
+    h("span",{class:"small muted num",text:short(mon)+" – "+short(addDays(mon,6))}),
+    nav("Settimana successiva","›",false,function(){S.wkMon=addDays(mon,7);renderWeek()}),
+    mon!==cur?nav("Torna a questa settimana","Oggi",false,function(){S.wkMon=cur;renderWeek()}):null]);
+  box.append(h("div",{class:"row",style:"justify-content:space-between;align-items:center"},[h("h2",{text:title}),navs]));
+  /* headline numbers */
+  var diff=prev!=null&&prev>0?Math.round((tot-prev)/prev*100):null;
+  box.append(h("div",{class:"tdkpi"},[
+    kpi2(tot,tot===1?"persona prenotata":"persone prenotate",tabs+(tabs===1?" tavolo":" tavoli")),
+    kpi2(lun+" · "+din,"pranzo · cena","persone per servizio"),
+    prev==null?null:kpi2(diff==null?(tot?"nuova":"—"):(diff>0?"+":"")+diff+"%","rispetto alla settimana prima",prev+" persone la settimana prima",diff!=null&&diff>0?"good":""),
+    top&&top.T?kpi2(short(top.d,{weekday:"short",day:"numeric"}),"giorno più pieno",top.T+" persone"):null]));
+  /* the chart */
+  var H=160,mx=Math.max.apply(null,days.map(function(x){return x.T}).concat([8]));
+  var step=[2,5,10,20,25,50,100,200].filter(function(s){return mx/s<=4})[0]||Math.ceil(mx/4),scale=Math.ceil(mx/step)*step;
+  var grid=h("div",{class:"wch-grid","aria-hidden":"true"});
+  for(var v=0;v<=scale;v+=step)grid.append(h("div",{class:v?"":"base",style:"top:"+(H-v/scale*H)+"px"},[h("span",{text:String(v)})]));
+  var tip=h("div",{class:"wch-tip",hidden:""}),wrap=h("div",{class:"wch"},[grid]);
+  var cols=h("div",{class:"wch-cols"});
+  function line(cls,txt){return h("div",{},[cls?h("i",{class:"sw "+cls}):null,h("span",{text:txt})])}
+  function show(x,col){tip.textContent="";
+    tip.append(h("b",{text:fmtDay(x.d,true)}));
+    if(!x.open&&!x.t)tip.append(line("","Giorno di riposo"));
+    else{tip.append(line("l","Pranzo: "+x.L+" pers. · "+x.Lt+(x.Lt===1?" tavolo":" tavoli")),line("d","Cena: "+x.D+" pers. · "+x.Dt+(x.Dt===1?" tavolo":" tavoli")));
+      if(x.ts)tip.append(line("",x.ts+" menù degustazione"));if(x.ns)tip.append(line("",x.ns+" no show"))}
+    tip.hidden=false;var w=wrap.clientWidth,c=col.offsetLeft+wrap.querySelector(".wch-cols").offsetLeft+col.offsetWidth/2,tw=tip.offsetWidth;
+    tip.style.left=Math.max(tw/2,Math.min(w-tw/2,c))+"px"}
+  days.forEach(function(x){
+    var lh=x.L/scale*H,dh=x.D/scale*H,stk=h("div",{class:"wch-stk"});
+    if(x.D)stk.append(h("i",{class:"d top",style:"height:"+dh+"px"}));
+    if(x.L)stk.append(h("i",{class:"l"+(x.D?"":" top"),style:"height:"+lh+"px"}));
+    var lbl=fmtDay(x.d,true)+": "+(x.open||x.t?x.T+" persone, pranzo "+x.L+", cena "+x.D:"riposo")+". Apri nel calendario.";
+    var col=h("button",{type:"button",class:"wch-col"+(x.d===td?" now":"")+(x.d<td?" past":"")+(!x.open&&!x.t?" off":""),"aria-label":lbl,
+      onclick:function(){S.selDay=x.d;S.plRef=x.d;setSp("cal");var dv=el("dayview");if(dv&&dv.scrollIntoView)dv.scrollIntoView({block:"start"})},
+      onmouseenter:function(){show(x,this)},onfocus:function(){show(x,this)},onmouseleave:function(){tip.hidden=true},onblur:function(){tip.hidden=true}},[
+      h("div",{class:"wch-bar"},[h("span",{class:"wch-v",text:x.T?String(x.T):""}),stk]),
+      h("div",{class:"wch-d"},[h("span",{text:short(x.d,{weekday:"short"}).replace(".","")}),h("b",{text:String(parseD(x.d).getDate())}),!x.open&&!x.t?h("span",{text:"riposo"}):null])]);
+    cols.append(col)});
+  wrap.append(cols,tip);box.append(wrap);
+  box.append(h("div",{class:"wch-leg"},[h("span",{},[h("i",{class:"sw l"}),"Pranzo"]),h("span",{},[h("i",{class:"sw d"}),"Cena"]),h("span",{text:"Persone prenotate (annullate escluse). Tocca un giorno per aprirlo nel calendario."})]));
+  /* the same numbers as a table */
+  var tb=h("tbody");days.forEach(function(x){tb.append(h("tr",{},[h("td",{text:fmtDay(x.d)}),h("td",{text:x.open||x.t?String(x.L):"—"}),h("td",{text:x.open||x.t?String(x.D):"—"}),h("td",{text:x.open||x.t?String(x.T):"riposo"}),h("td",{text:String(x.t)})]))});
+  tb.append(h("tr",{},[h("th",{text:"Totale"}),h("th",{text:String(lun)}),h("th",{text:String(din)}),h("th",{text:String(tot)}),h("th",{text:String(tabs)})]));
+  box.append(h("details",{},[h("summary",{class:"small muted",style:"cursor:pointer",text:"Vedi i numeri in tabella"}),
+    h("table",{class:"wch-tb"},[h("thead",{},[h("tr",{},["Giorno","Pranzo","Cena","Persone","Tavoli"].map(function(t){return h("th",{text:t})}))]),tb])]));
+}
 function kpi2(v,l,sub,cls){return h("div",{class:"kpi"+(cls?" "+cls:"")},[h("b",{text:String(v)}),h("span",{text:l}),sub?h("small",{text:sub}):null])}
 /* ---------- staff ---------- */
 var SLBL={confirmed:"Confermata",building:"In raccolta",lastcall:"Ultima chiamata",closed:"Chiusa",past:"Passata"};
@@ -2408,7 +2506,7 @@ el("tab-guest").addEventListener("click",function(){setView("guest")});
 el("tab-staff").addEventListener("click",function(){setView("staff")});
 if(location.hash==="#staff")setTimeout(function(){setView("staff")},0);
 
-function render(){try{if(S.view==="staff"){renderToday();renderPlanner();mbInfo();renderBlacklist();renderBoard();renderDay();renderEvAdmin();if(S.sp==="mkt")mkLoad(false)}else{renderMine();renderEvents();renderCal();renderSlots()}}catch(e){dbStatus("Errore di visualizzazione: "+(e&&e.message))}}
+function render(){try{if(S.view==="staff"){renderToday();renderWeek();renderPlanner();mbInfo();renderBlacklist();renderBoard();renderDay();renderEvAdmin();if(S.sp==="mkt")mkLoad(false)}else{renderMine();renderEvents();renderCal();renderSlots()}}catch(e){dbStatus("Errore di visualizzazione: "+(e&&e.message))}}
 setInterval(render,60000);
 window.DVOR_LOGIC={check:check,dinnerState:dinnerState,slotsFor:slotsFor,S:S};
 boot();
