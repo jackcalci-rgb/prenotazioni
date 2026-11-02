@@ -21,6 +21,13 @@ Sistema di prenotazione tavoli di **prenota.osteriadvor.com**. Contiene la pagin
 
 **Mai su GitHub:** `config.php` (password, dati email e database) e le prenotazioni restano solo sul server, nel database MySQL `prenota_dvor`.
 
+## Accesso staff e account
+
+- **Titolare:** entra con nome utente `admin` (o lasciandolo vuoto) e la password `staff_password` di `config.php`. Cambiando quella password in `config.php`, tutti gli accessi admin già aperti escono.
+- **Altri account:** dall'area staff, ⚙ **Altro → Account staff**, un amministratore crea un account per persona (nome utente, nome da mostrare, password, ruolo Staff o Amministratore). Gli amministratori possono modificarli ed eliminarli; ognuno può cambiare la propria password in «Il tuo account».
+- **Resta dentro:** l'accesso è salvato nel browser del dispositivo e si rinnova a ogni apertura della pagina. Chiudere la scheda, il browser o l'app dalla schermata Home non fa uscire. Si esce con «Esci dall'area staff», dopo 90 giorni senza aprire la pagina, oppure quando la password di quell'account cambia o l'account viene eliminato.
+- Gli account stanno nel database (tabella `docs`, raccolta `staffusers`), con la password cifrata. La pagina non può leggerli.
+
 ## Database
 
 Prenotazioni, eventi, impostazioni e lista nera stanno in MySQL/MariaDB, quello che Virtualmin ha già sul VPS. Quando due clienti prenotano gli ultimi posti nello stesso momento, il server blocca la giornata per un istante. Così solo il primo passa, e il secondo vede subito le alternative. Lo staff può sempre aggiungere tavoli a mano anche oltre i posti.
