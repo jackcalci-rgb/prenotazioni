@@ -26,6 +26,7 @@ function fail(string $code, string $msg, int $http = 400): void { out(['error' =
    bookings: one row per booking, with date, time, party and status as columns for the seat check; the whole document stays in `data`.
    docs: events, overrides, settings, blacklist as documents. Tables are created on first start. */
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/push.php';
 function dataDir(): string { global $C; $d = $C['data_dir'] ?? (__DIR__ . '/data'); if (!is_dir($d)) mkdir($d, 0750, true); return $d; } // only for mail.log
 function db(): PDO {
   static $pdo = null; global $C;
@@ -649,6 +650,37 @@ switch ($op) {
     out(['ok' => true]);
   }
 
+  /* push notifications to this staff device (the page sends the browser's subscription; see push.php) */
+  case 'push_key': {
+    if (!$staff) fail('not_granted', 'Solo staff', 403);
+    out(['key' => pushKeys()['pub']]);
+  }
+  case 'push_sub': {
+    if (!$staff) fail('not_granted', 'Solo staff', 403);
+    $s = pushValidSub($in['sub'] ?? null); if ($s === null) fail('bad_request', 'Iscrizione alle notifiche non valida');
+    $id = pushId($s['endpoint']); $old = getDoc('pushsubs', $id) ?? [];
+    $s += ['user' => $me['username'], 'device' => mb_substr(trim((string)($in['device'] ?? '')), 0, 60), 'createdAt' => (string)($old['createdAt'] ?? date('c')), 'seenAt' => date('c'),
+      'news' => array_key_exists('news', $in) ? !empty($in['news']) : ($old['news'] ?? true),
+      'changes' => array_key_exists('changes', $in) ? !empty($in['changes']) : ($old['changes'] ?? false)];
+    putDoc('pushsubs', $id, $s);
+    out(['ok' => true, 'news' => $s['news'], 'changes' => $s['changes']]);
+  }
+  case 'push_unsub': {
+    $ep = (string)($in['endpoint'] ?? ''); // also without login: «Esci» forgets this device
+    if ($ep !== '') delDoc('pushsubs', pushId($ep));
+    out(['ok' => true]);
+  }
+  case 'push_test': {
+    if (!$staff) fail('not_granted', 'Solo staff', 403);
+    rateLimit('pushtest', 10, 600);
+    $id = pushId((string)($in['endpoint'] ?? '')); $s = getDoc('pushsubs', $id);
+    if ($s === null) fail('not_found', 'Questo dispositivo non è iscritto alle notifiche', 404);
+    $code = pushSendMany([$id => $s], ['title' => 'Prova riuscita', 'body' => 'Le notifiche delle nuove prenotazioni arrivano su questo dispositivo.', 'tag' => 'prova', 'url' => './#staff'], $C)[$id] ?? 0;
+    pushCleanup([$id => $code]);
+    if ($code < 200 || $code >= 300) fail('push_failed', ($code ? 'Il servizio di notifiche ha risposto ' . $code : 'Il servizio di notifiche non risponde') . ': disattiva e riattiva le notifiche', 502);
+    out(['ok' => true]);
+  }
+
   case 'get': {
     $coll = (string)($in['coll'] ?? ''); checkColl($coll);
     if (in_array($coll, STAFF_ONLY, true) && !$staff) fail('not_granted', 'Solo staff', 403);
@@ -689,7 +721,7 @@ switch ($op) {
         mailGuest($C, $b, $b['pending'] ? 'rec' : 'ok');
         patchDoc('bookings', $id, array_intersect_key($b, array_flip(['emailSentAt', 'emailKind', 'emailError'])));
       }
-      if (!$manual) notifyStaff($C, $b, 'Nuova prenotazione');
+      if (!$manual) { notifyStaff($C, $b, 'Nuova prenotazione'); pushStaff($C, $b, 'Nuova prenotazione', 'new'); }
       out(['id' => $id, 'key' => manageKey($id)]);
     }
     if (!$staff) fail('not_granted', 'Solo staff', 403);
@@ -739,7 +771,7 @@ switch ($op) {
     elseif (($b['status'] ?? '') !== 'cancelled' && $diff(['date', 'time'])) { $kind = 'moved'; $what = 'Prenotazione spostata'; }
     elseif (($b['status'] ?? '') !== 'cancelled' && $diff(['party', 'menuCarta', 'menuTasting', 'name', 'email'])) { $kind = 'mod'; $what = 'Prenotazione modificata'; }
     elseif (!$staff && $diff(['notes'])) $what = 'Note modificate'; // nothing for the guest's email, but the staff should know
-    if ($what !== '' && !$staff) notifyStaff($C, $b, $what . ' dal cliente');
+    if ($what !== '' && !$staff) { notifyStaff($C, $b, $what . ' dal cliente'); pushStaff($C, $b, ucfirst(str_replace('Prenotazione ', '', $what)), 'change'); }
     /* staff edits: the guest is told only when the staff asks for it (box in the edit window) */
     if ($kind !== '' && (!$staff || !array_key_exists('mail', $in) || !empty($in['mail']))) {
       if ($kind !== 'canc') $b['seq'] = (int)($old['seq'] ?? 0) + 1;

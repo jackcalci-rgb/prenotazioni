@@ -1,0 +1,18 @@
+{
+  "id": "./?app=staff",
+  "name": "Dvor · staff",
+  "short_name": "Dvor Staff",
+  "description": "Area staff delle prenotazioni dell'Osteria Enoteca Dvor",
+  "lang": "it",
+  "start_url": "./?app=staff#staff",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F6EFE4",
+  "theme_color": "#F6EFE4",
+  "icons": [
+    { "src": "icone/icona-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icone/icona-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icone/icona-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
