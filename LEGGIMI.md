@@ -10,6 +10,8 @@ Sistema di prenotazione tavoli di **prenota.osteriadvor.com**. Contiene la pagin
 | `api.php` | Server: prenotazioni, eventi, impostazioni, email |
 | `db.php` | Collegamento al database MySQL/MariaDB (le tabelle si creano da sole) |
 | `email-logo.png` | Logo nelle email |
+| `push.php` | Notifiche push all'area staff (chiavi VAPID e cifratura, senza librerie esterne) |
+| `sw.js`, `staff.webmanifest`, `icone/` | Area staff installabile come app (iPhone, Android, computer) |
 | `config.example.php` | Modello della configurazione |
 | `seed/` | Eventi e impostazioni iniziali, usati solo al primo avvio |
 | `strumenti/installa.sh` | Prima installazione sul VPS |
@@ -27,6 +29,17 @@ Sistema di prenotazione tavoli di **prenota.osteriadvor.com**. Contiene la pagin
 - **Altri account:** dall'area staff, ⚙ **Altro → Account staff**, un amministratore crea un account per persona (nome utente, nome da mostrare, password, ruolo Staff o Amministratore). Gli amministratori possono modificarli ed eliminarli; ognuno può cambiare la propria password in «Il tuo account».
 - **Resta dentro:** l'accesso è salvato nel browser del dispositivo e si rinnova a ogni apertura della pagina. Chiudere la scheda, il browser o l'app dalla schermata Home non fa uscire. Si esce con «Esci dall'area staff», dopo 90 giorni senza aprire la pagina, oppure quando la password di quell'account cambia o l'account viene eliminato.
 - Gli account stanno nel database (tabella `docs`, raccolta `staffusers`), con la password cifrata. La pagina non può leggerli.
+
+## App staff e notifiche
+
+L'area staff si installa come app e manda una notifica a ogni nuova prenotazione dal sito o dall'assistente (le prenotazioni prese a mano dallo staff non avvisano).
+
+- **iPhone e iPad (iOS 16.4 o più recente):** apri `https://prenota.osteriadvor.com/#staff` in **Safari**, tocca **Condividi → «Aggiungi alla schermata Home»**. Apri l'app **Dvor Staff** dalla schermata Home ed entra con il tuo nome utente (l'app ha un accesso suo, separato da Safari). Poi **Altro → Notifiche e app → Attiva le notifiche** e consenti. Su iPhone le notifiche arrivano solo all'app sulla schermata Home, non a Safari.
+- **Android e computer:** dall'area staff, **Altro → Notifiche e app → Attiva le notifiche**. Chrome propone anche «Installa come app».
+- **Manda una prova** controlla che le notifiche arrivino su quel dispositivo. Si può scegliere di ricevere anche spostamenti, modifiche e disdette fatte dai clienti.
+- Ogni dispositivo si iscrive per conto suo. «Esci dall'area staff» o «Disattiva su questo dispositivo» lo tolgono; un account eliminato non riceve più nulla.
+- Iscrizioni nel database (tabella `docs`, raccolta `pushsubs`); le chiavi VAPID si creano da sole al primo uso (raccolta `pushkeys`). Serve l'estensione `openssl` di PHP (c'è già) e che il server possa uscire su HTTPS verso i servizi di notifica (Apple, Google, Mozilla).
+- **Se non arrivano:** su iPhone, Impostazioni → Notifiche → Dvor Staff → Consenti notifiche; in modalità «Full immersion»/Non disturbare restano in silenzio. Gli errori del servizio di notifiche finiscono nel log PHP con `dvor push:`.
 
 ## Database
 

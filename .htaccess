@@ -7,3 +7,13 @@ DirectoryIndex index.html
     Deny from all
   </IfModule>
 </FilesMatch>
+
+# app staff: manifest e service worker
+<IfModule mod_mime.c>
+  AddType application/manifest+json .webmanifest
+</IfModule>
+<Files "sw.js">
+  <IfModule mod_headers.c>
+    Header set Cache-Control "no-cache"
+  </IfModule>
+</Files>
