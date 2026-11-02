@@ -3,6 +3,25 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#F6EFE4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1B120C" media="(prefers-color-scheme: dark)">
+<script>
+/* Area staff come app (iPhone: Condividi → «Aggiungi alla schermata Home»; Android e computer: «Installa app»).
+   Il manifest si aggiunge solo per lo staff (#staff o già entrato), così agli ospiti il browser non propone di installare l'app staff. */
+(function () {
+  var t = ""; try { t = localStorage.getItem("dvor-staff") || "" } catch (e) { }
+  if (location.hash !== "#staff" && !t && !/[?&]app=staff/.test(location.search)) return;
+  if (/[?&]embed=1(&|$)/.test(location.search)) return;
+  var h = document.head;
+  function add(tag, attrs) { var x = document.createElement(tag); for (var k in attrs) x.setAttribute(k, attrs[k]); h.appendChild(x) }
+  add("link", { rel: "manifest", href: "staff.webmanifest" });
+  add("link", { rel: "apple-touch-icon", href: "icone/apple-touch-icon.png" });
+  add("meta", { name: "apple-mobile-web-app-capable", content: "yes" });
+  add("meta", { name: "mobile-web-app-capable", content: "yes" });
+  add("meta", { name: "apple-mobile-web-app-title", content: "Dvor Staff" });
+  add("meta", { name: "apple-mobile-web-app-status-bar-style", content: "default" });
+})();
+</script>
 </head>
 <body>
 <title>Prenotazioni Dvor</title>
@@ -74,6 +93,10 @@ button.btn:disabled{opacity:.5;cursor:default}
 .s-lastcall{background:var(--warn-bg);color:var(--warn)}
 .s-closed{background:var(--bad-bg);color:var(--bad)}
 .s-past{background:var(--idle-bg);color:var(--idle)}
+.pu-steps{margin:0;padding-left:1.2rem}
+.pu-banner{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem .75rem;border:1px solid var(--gold);background:var(--warn-bg);color:var(--ink);border-radius:10px;padding:.7rem 1rem;font-size:.9rem}
+.pu-banner span{flex:1 1 220px}
+.pu-banner .x{border:0;background:transparent;color:var(--muted);font-size:1.2rem;line-height:1;cursor:pointer;padding:.2rem .4rem}
 .nudge{border:1px solid var(--gold);background:var(--warn-bg);color:var(--ink);border-radius:10px;padding:1rem}
 .nudge strong{color:var(--warn)}
 .proposal{border-left:3px solid var(--wine);padding-left:.9rem}
@@ -484,6 +507,18 @@ html.embed .wrap{max-width:none}
     </div>
     <div id="sp-set" class="stack" hidden>
       <div class="row" style="justify-content:space-between;align-items:center"><h2>Impostazioni</h2><div class="row" style="align-items:center;gap:.5rem"><div class="seg" role="group" aria-label="Tema" id="st-theme"><button type="button" data-th="light" aria-pressed="false">☀ Chiaro</button><button type="button" data-th="dark" aria-pressed="false">☾ Scuro</button><button type="button" data-th="auto" aria-pressed="true">Auto</button></div><button class="btn ghost small" type="button" id="set-back">← Torna al servizio</button></div></div>
+      <div class="card stack" id="pushbox">
+        <div class="row" style="justify-content:space-between;align-items:center"><h2>Notifiche e app</h2><span class="pill" id="pu-state"></span></div>
+        <p class="small muted" id="pu-text">Una notifica su questo telefono, tablet o computer a ogni nuova prenotazione dal sito o dall'assistente.</p>
+        <ol class="small pu-steps" id="pu-ios" hidden>
+          <li>Apri questa pagina in <b>Safari</b> (non da Instagram, WhatsApp o un'altra app).</li>
+          <li>Tocca il tasto <b>Condividi</b> <span aria-hidden="true">⬆︎</span> e poi <b>«Aggiungi alla schermata Home»</b>.</li>
+          <li>Apri l'app <b>Dvor Staff</b> dalla schermata Home, entra con il tuo nome utente e torna qui: Altro → Notifiche e app.</li>
+        </ol>
+        <label class="tick" id="pu-news-l" hidden><input type="checkbox" id="pu-news" checked><span>Nuove prenotazioni dal sito e dall'assistente</span></label>
+        <label class="tick" id="pu-changes-l" hidden><input type="checkbox" id="pu-changes"><span>Anche spostamenti, modifiche e disdette fatte dai clienti</span></label>
+        <div class="row" style="align-items:center"><button class="btn" type="button" id="pu-on" hidden>Attiva le notifiche</button><button class="btn ghost" type="button" id="pu-test" hidden>Manda una prova</button><button class="btn ghost" type="button" id="pu-off" hidden>Disattiva su questo dispositivo</button><button class="btn ghost" type="button" id="pu-install" hidden>Installa come app</button><span class="small muted" id="pu-msg" aria-live="polite"></span></div>
+      </div>
       <div class="card stack" id="botbox">
         <div class="row" style="justify-content:space-between;align-items:center"><h2>Assistente</h2><span class="pill" id="bot-state"></span></div>
         <p class="small muted">Il chatbot che risponde agli ospiti sulla pagina di prenotazione e propone il tavolo giusto. Se lo spegni, gli ospiti prenotano dal calendario scegliendo giorno e orario; lo riaccendi quando vuoi. Il cambio vale subito per chi apre la pagina.</p>
@@ -810,7 +845,17 @@ html.embed .wrap{max-width:none}
     }
     if (token() && sstore("dvor-open-staff")) { sstore("dvor-open-staff", null); setTimeout(function () { tab.click() }, 300) }
   });
-  window.DVOR_LOGOUT = function () { setToken(null); sstore("dvor-staff", null); location.hash = ""; location.reload() };
+  window.DVOR_LOGOUT = function () {
+    /* this device stops receiving the staff notifications */
+    var done = function () { setToken(null); sstore("dvor-staff", null); location.hash = ""; location.reload() };
+    var sw = navigator.serviceWorker;
+    if (!sw || !window.PushManager) return done();
+    var t = setTimeout(done, 3000);
+    sw.getRegistration().then(function (r) { return r && r.pushManager.getSubscription() }).then(function (sub) {
+      if (!sub) return;
+      return call({ op: "push_unsub", endpoint: sub.endpoint }).catch(function () { }).then(function () { return sub.unsubscribe() });
+    }).catch(function () { }).then(function () { clearTimeout(t); done() });
+  };
 
   /* staff accounts: who is logged in, own password, and (admins) the list of accounts */
   document.addEventListener("DOMContentLoaded", function () {
@@ -861,6 +906,125 @@ html.embed .wrap{max-width:none}
       });
       load();
     });
+  });
+
+  /* ---------- app staff e notifiche push ----------
+     iPhone/iPad: le notifiche arrivano solo all'app aggiunta alla schermata Home (iOS 16.4+), che ha un suo accesso:
+     la prima volta si entra di nuovo dall'app. Android e computer: si attivano anche dal browser. Il server è in push.php. */
+  document.addEventListener("DOMContentLoaded", function () {
+    var $ = function (id) { return document.getElementById(id) };
+    if (!$("pushbox") || /[?&]embed=1(&|$)/.test(location.search)) return;
+    var ua = navigator.userAgent, ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    var standalone = (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
+    var canPush = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+    var iosVer = (/OS (\d+)_(\d+)/.exec(ua) || []).slice(1).map(Number);
+    var oldIos = ios && iosVer.length && (iosVer[0] < 16 || (iosVer[0] === 16 && iosVer[1] < 4));
+    var reg = null, sub = null, key = "", installEv = null, busy = false;
+    var device = /iPad/.test(ua) || (ios && !/iPhone|iPod/.test(ua)) ? "iPad" : /iPhone/.test(ua) ? "iPhone" : /Android/.test(ua) ? "Android" : /Macintosh/.test(ua) ? "Mac" : /Windows/.test(ua) ? "Windows" : "Browser";
+    function msg(t) { $("pu-msg").textContent = t || "" }
+    function b64(s) { s = s.replace(/-/g, "+").replace(/_/g, "/"); s += "===".slice((s.length + 3) % 4); var r = atob(s), a = new Uint8Array(r.length); for (var i = 0; i < r.length; i++) a[i] = r.charCodeAt(i); return a }
+    function sameKey(sb) { try { var k = sb.options && sb.options.applicationServerKey; if (!k || !key) return true; var a = new Uint8Array(k), b = b64(key); if (a.length !== b.length) return false; for (var i = 0; i < a.length; i++) if (a[i] !== b[i]) return false; return true } catch (e) { return true } }
+    function save(extra) { return call(Object.assign({ op: "push_sub", sub: sub.toJSON(), device: device }, extra || {})) }
+
+    /* new booking while the page is open: reload at once; tap on a notification: open that day */
+    if (navigator.serviceWorker) navigator.serviceWorker.addEventListener("message", function (e) {
+      var d = e.data || {}; if (d.type !== "dvor-push" && d.type !== "dvor-push-open") return;
+      if (window.reloadData) window.reloadData(); refreshAll();
+      if (d.type === "dvor-push-open" && location.hash !== "#staff") { location.hash = "#staff" }
+    });
+    function clearBadge() { if (document.visibilityState === "visible" && navigator.clearAppBadge) navigator.clearAppBadge().catch(function () { }) }
+    document.addEventListener("visibilitychange", clearBadge);
+
+    window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); installEv = e; render() });
+    window.addEventListener("appinstalled", function () { installEv = null; render() });
+    $("pu-install").onclick = function () { if (!installEv) return; installEv.prompt(); installEv.userChoice.then(function () { installEv = null; render() }) };
+
+    function render() {
+      var st = $("pu-state"), perm = canPush && !(ios && !standalone) ? Notification.permission : "default", on = !!sub && perm === "granted";
+      var needInstall = ios && !standalone && !oldIos;
+      $("pu-ios").hidden = !needInstall;
+      $("pu-on").hidden = on || !canPush || perm === "denied" || (ios && !standalone);
+      $("pu-test").hidden = $("pu-off").hidden = !on;
+      $("pu-news-l").hidden = $("pu-changes-l").hidden = !on;
+      $("pu-install").hidden = !installEv;
+      st.className = "pill " + (on ? "s-confirmed" : perm === "denied" ? "s-closed" : "s-building");
+      st.textContent = on ? "Attive qui" : perm === "denied" ? "Bloccate" : "Spente qui";
+      var t = "Una notifica su questo telefono, tablet o computer a ogni nuova prenotazione dal sito o dall'assistente.";
+      if (oldIos) t = "Su iPhone le notifiche funzionano da iOS 16.4 in poi: aggiorna il telefono (Impostazioni → Generali → Aggiornamento software) e torna qui.";
+      else if (needInstall) t = "Su iPhone e iPad le notifiche arrivano all'app sulla schermata Home. Si installa in tre passi:";
+      else if (!canPush) t = "Questo browser non riceve notifiche. Usa Safari su iPhone (dall'app sulla schermata Home), Chrome su Android o un browser recente sul computer.";
+      else if (perm === "denied") t = ios ? "Le notifiche sono bloccate per Dvor Staff: Impostazioni dell'iPhone → Notifiche → Dvor Staff → Consenti notifiche. Poi riapri l'app." : "Le notifiche sono bloccate per questo sito: riattivale dalle impostazioni del browser (lucchetto accanto all'indirizzo) e ricarica la pagina.";
+      else if (on) t = "Questo dispositivo riceve una notifica a ogni nuova prenotazione. Toccandola si apre l'area staff.";
+      $("pu-text").textContent = t;
+      banner(on, perm, needInstall);
+    }
+
+    /* reminder at the top of the staff area until notifications are on (or the reminder is closed) */
+    function banner(on, perm, needInstall) {
+      var b = $("pu-banner"), main = document.querySelector("#v-staff .smain");
+      var show = main && token() && !on && !oldIos && perm !== "denied" && (needInstall || (canPush && !(ios && !standalone))) && !store("dvor-push-nag-off");
+      if (!show) { if (b) b.remove(); return }
+      if (!b) {
+        b = document.createElement("div"); b.id = "pu-banner"; b.className = "pu-banner"; b.setAttribute("role", "status");
+        b.innerHTML = '<span></span><button class="btn small" type="button"></button><button class="x" type="button" aria-label="Chiudi">×</button>';
+        main.insertBefore(b, main.firstChild);
+        b.querySelector(".x").onclick = function () { store("dvor-push-nag-off", "1"); b.remove() };
+        b.querySelector(".btn").onclick = function () { if (needInstall) { var g = $("sp-b-set"); if (g) g.click(); setTimeout(function () { $("pushbox").scrollIntoView({ behavior: "smooth", block: "start" }) }, 60) } else enable() };
+      }
+      b.querySelector("span").textContent = needInstall ? "Metti l'area staff sulla schermata Home dell'iPhone: così ricevi una notifica a ogni nuova prenotazione." : "Vuoi una notifica a ogni nuova prenotazione su questo dispositivo?";
+      b.querySelector(".btn").textContent = needInstall ? "Come si fa" : "Attiva le notifiche";
+    }
+
+    function enable() {
+      if (busy) return; busy = true; msg("Attivo…");
+      /* the permission question must start right from the tap (iPhone) */
+      var p = Notification.requestPermission();
+      Promise.resolve(p).then(function (perm) {
+        if (perm !== "granted") throw { message: perm === "denied" ? "Permesso negato" : "Permesso non dato" };
+        return Promise.all([navigator.serviceWorker.ready, key ? key : call({ op: "push_key" }).then(function (j) { key = j.key; return key })]);
+      }).then(function (r) {
+        reg = r[0];
+        return reg.pushManager.getSubscription().then(function (old) {
+          if (old && sameKey(old)) return old;
+          return (old ? old.unsubscribe() : Promise.resolve()).then(function () { return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(key) }) });
+        });
+      }).then(function (s) { sub = s; return save({ news: $("pu-news").checked, changes: $("pu-changes").checked }) })
+        .then(function (j) { $("pu-news").checked = j.news !== false; $("pu-changes").checked = !!j.changes; msg("Notifiche attive. Premi «Manda una prova» per controllare.") },
+          function (e) { msg("Non attivate: " + ((e && e.message) || e)) })
+        .then(function () { busy = false; render() });
+    }
+    $("pu-on").onclick = enable;
+    $("pu-off").onclick = function () {
+      if (!sub) return; msg("Disattivo…");
+      var ep = sub.endpoint;
+      call({ op: "push_unsub", endpoint: ep }).catch(function () { }).then(function () { return sub.unsubscribe() }).catch(function () { })
+        .then(function () { sub = null; msg("Notifiche disattivate su questo dispositivo."); render() });
+    };
+    $("pu-test").onclick = function () {
+      if (!sub) return; var btn = this; btn.disabled = true; msg("Invio la prova…");
+      call({ op: "push_test", endpoint: sub.endpoint }).then(function () { msg("Prova inviata: la notifica arriva tra qualche secondo.") }, function (e) { msg(e.message || "Prova non riuscita") }).then(function () { btn.disabled = false });
+    };
+    function prefs() { if (sub) save({ news: $("pu-news").checked, changes: $("pu-changes").checked }).then(function () { msg("Salvato.") }, function (e) { msg(e.message || "Errore") }) }
+    $("pu-news").onchange = prefs; $("pu-changes").onchange = prefs;
+
+    render();
+    if (!token()) {
+      /* the home screen app opens on #staff: the first time it asks to log in (it does not share the login with Safari) */
+      if (location.hash === "#staff" || /[?&]app=staff/.test(location.search)) setTimeout(function () { var t = $("tab-staff"); if (t && !token()) t.click() }, 400);
+      return;
+    }
+    if (!canPush) return;
+    navigator.serviceWorker.register("sw.js", { scope: "./" }).then(function (r) {
+      reg = r;
+      return Promise.all([r.pushManager.getSubscription(), call({ op: "push_key" }).then(function (j) { key = j.key })]);
+    }).then(function (r) {
+      var s = r[0];
+      if (!s || Notification.permission !== "granted") { sub = null; return }
+      sub = s;
+      /* keys changed on the server: subscribe again (no question, the permission is already there) */
+      var fresh = sameKey(s) ? Promise.resolve(s) : s.unsubscribe().then(function () { return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(key) }) });
+      return fresh.then(function (s2) { sub = s2; return save() }).then(function (j) { $("pu-news").checked = j.news !== false; $("pu-changes").checked = !!j.changes });
+    }).catch(function (e) { if (window.console) console.warn("push", e) }).then(function () { render(); clearBadge() });
   });
 })();
 
