@@ -92,15 +92,38 @@ PHP deve avere l'estensione `pdo_mysql` (in Virtualmin c'è già; altrimenti `dn
 
 ## Aggiornare
 
-Quando su GitHub c'è una nuova versione:
+**La prima volta** (anche se la cartella era stata copiata a mano), come root sul VPS:
 
 ```bash
-bash /home/*/domains/prenota.osteriadvor.com/public_html/strumenti/aggiorna.sh
+curl -fsSL https://raw.githubusercontent.com/jackcalci-rgb/prenotazioni/main/strumenti/aggiorna.sh -o /tmp/dvor-aggiorna.sh && bash /tmp/dvor-aggiorna.sh
 ```
 
-`config.php` e le prenotazioni non vengono toccati. Al primo aggiornamento alla versione con MySQL, se `config.php` non ha ancora il database, lo script lancia da solo `database.sh`. Se non succede, lancialo tu una volta.
+**Dalla seconda volta in poi** basta:
 
-A ogni aggiornamento `aggiorna.sh` lancia anche `vai-live.php`, che cancella le eventuali prenotazioni di prova (quelle create dal vecchio pulsante «Genera prenotazioni di prova») e mai quelle vere.
+```bash
+dvor-aggiorna
+```
+
+Cosa fa, in ordine:
+
+1. Copia il database in `../backup-prenota/` (fuori dalla parte pubblica, tiene le ultime 15). Se la copia non riesce, si ferma e non cambia nulla.
+2. Scarica l'ultima versione da GitHub e mostra le novità.
+3. Controlla che i file PHP siano a posto e che la pagina risponda. Se qualcosa non va, rimette da sola la versione di prima.
+4. Lancia i passi che si possono ripetere: `database.sh` se `config.php` non ha ancora il database, `vai-live.php` (cancella solo le prenotazioni di prova, mai quelle vere) e il cron dei promemoria.
+
+Non tocca mai `config.php`, le immagini caricate in `uploads/` e il registro email. Se la cartella non era ancora collegata a GitHub, la collega e salva prima una copia dei file in `../backup-prenota/file-prima-di-git.tar.gz`.
+
+**Tornare indietro** alla versione di prima dell'ultimo aggiornamento (il database resta com'è):
+
+```bash
+dvor-aggiorna indietro
+```
+
+**Rimettere una copia del database** (solo se serve davvero, sovrascrive le prenotazioni attuali):
+
+```bash
+zcat /home/*/domains/prenota.osteriadvor.com/backup-prenota/database-AAAAMMGG-HHMMSS.sql.gz | mysql prenota_dvor
+```
 
 ## Assistente (chatbot)
 
