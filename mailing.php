@@ -564,3 +564,56 @@ function campSignupConfirm(string $email, string $key): bool {
   });
   return true;
 }
+
+/* ---------- Claude writes the campaign (Marketing → Campagne email → «Scrivi con Claude») ----------
+   The staff describes what to say; Claude returns subject ideas, preheader and blocks in the editor's own format.
+   Model: campaign_model in config.php, otherwise anthropic_model. */
+function campAi(array $C, array $in, array $events): array {
+  if (empty($C['anthropic_api_key'])) throw new RuntimeException('Manca la chiave anthropic_api_key in config.php');
+  $s = fn($k, $n) => mb_substr(trim((string)($in[$k] ?? '')), 0, $n);
+  $lang = preg_match('/^(it|en|de|sl|nl)$/', (string)($in['lang'] ?? '')) ? $in['lang'] : 'it';
+  $LN = ['it' => 'italiano', 'en' => 'inglese', 'de' => 'tedesco', 'sl' => 'sloveno', 'nl' => 'olandese'][$lang];
+  $cur = campClean(is_array($in['data'] ?? null) ? $in['data'] : []);
+  $ev = [];
+  foreach ($events as $id => $e) {
+    if ((string)($e['date'] ?? '') < date('Y-m-d')) continue;
+    $ev[] = ['id' => (string)$id, 'data' => $e['date'] ?? '', 'ora' => !empty($e['allDay']) ? 'tutto il giorno' : ($e['time'] ?? ''), 'titolo' => $e['title_it'] ?? '', 'descrizione' => mb_substr((string)($e['desc_it'] ?? ''), 0, 600), 'prezzo' => $e['price'] ?? ''];
+  }
+  $ev = array_slice($ev, 0, 12);
+  $system = "Sei il copywriter di Osteria Enoteca Dvor, a San Floriano del Collio (Gorizia): cucina di confine e friulana, vini del Collio, una terrazza e un parco sulle colline, eventi e serate a tema. "
+    . "Scrivi email promozionali per gli ospiti che hanno dato il consenso. Voce: calda, ospitale, concreta, come il titolare che scrive a un cliente che conosce. Frasi brevi, niente toni da televendita, niente maiuscole urlate, niente punti esclamativi a raffica, niente parole da spam (gratis!!!, urgente, offerta imperdibile). "
+    . "Non inventare prezzi, date, piatti, sconti o regali che non ti vengono dati: se servono e mancano, usa un segnaposto tra parentesi quadre, per esempio [piatto del giorno]. Niente urgenza finta. "
+    . "Formato del testo: **grassetto**, *corsivo*, [parola](https://…) per i link, una riga vuota tra i paragrafi. {{nome}} è il nome dell'ospite; usa {{nome|alternativa}} nell'oggetto e nei saluti, così l'email funziona anche senza nome. "
+    . "Blocchi disponibili: heading (titolo, size big o small), text, button (label e href, solo link veri come https://www.osteriadvor.com), book (pulsante per prenotare il tavolo), event (id di uno degli eventi dati), image (una foto: mettila solo se lo staff ne ha già messa una o se chiede una foto; la foto la sceglie lui), divider. "
+    . "Di solito: un titolo, uno o due testi brevi (in tutto 60-150 parole), eventualmente l'evento, e un pulsante book alla fine. Oggetto sotto i 55 caratteri, anteprima sotto i 90 che completa l'oggetto senza ripeterlo. Scrivi tutto in $LN.";
+  $ctx = ['richiesta dello staff' => $s('brief', 3000) ?: 'Migliora la campagna attuale.', 'tono' => $s('tone', 60) ?: 'caldo e ospitale',
+    'destinatari' => $s('audience', 300) ?: 'tutti gli ospiti iscritti', 'offerta del momento nelle impostazioni' => (string)(settingsMain()['offer'] ?? ''),
+    'oggi' => date('Y-m-d'), 'eventi in programma' => $ev, 'campagna attuale' => ['oggetto' => $cur['subject'], 'anteprima' => $cur['preheader'], 'blocchi' => $cur['blocks']]];
+  $tool = ['name' => 'scrivi_campagna', 'description' => 'Restituisce la campagna email scritta.',
+    'input_schema' => ['type' => 'object', 'required' => ['subjects', 'preheader', 'blocks'], 'properties' => [
+      'subjects' => ['type' => 'array', 'description' => '5 oggetti diversi tra loro, il migliore per primo', 'items' => ['type' => 'string']],
+      'preheader' => ['type' => 'string'],
+      'name' => ['type' => 'string', 'description' => 'nome interno breve della campagna'],
+      'blocks' => ['type' => 'array', 'items' => ['type' => 'object', 'required' => ['t'], 'properties' => [
+        't' => ['type' => 'string', 'enum' => ['heading', 'text', 'button', 'book', 'event', 'image', 'divider']],
+        'text' => ['type' => 'string'], 'size' => ['type' => 'string', 'enum' => ['big', 'small']], 'label' => ['type' => 'string'], 'href' => ['type' => 'string'],
+        'id' => ['type' => 'string', 'description' => 'id dell\'evento'], 'align' => ['type' => 'string', 'enum' => ['left', 'center']]]]],
+      'note' => ['type' => 'string', 'description' => 'una frase allo staff: cosa completare (segnaposto) o un consiglio, facoltativa']]]];
+  $body = ['model' => $C['campaign_model'] ?? ($C['anthropic_model'] ?: 'claude-haiku-5-5'), 'max_tokens' => 3000, 'system' => $system,
+    'tools' => [$tool], 'tool_choice' => ['type' => 'tool', 'name' => 'scrivi_campagna'],
+    'messages' => [['role' => 'user', 'content' => json_encode($ctx, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)]]];
+  $ch = curl_init((string)($C['anthropic_url'] ?? 'https://api.anthropic.com/v1/messages'));
+  curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 90,
+    CURLOPT_HTTPHEADER => ['content-type: application/json', 'x-api-key: ' . $C['anthropic_api_key'], 'anthropic-version: 2023-06-01'], CURLOPT_POSTFIELDS => json_encode($body)]);
+  $res = curl_exec($ch); $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE); curl_close($ch);
+  $j = is_string($res) ? json_decode($res, true) : null;
+  if ($code !== 200 || !is_array($j)) { error_log('dvor camp ai: ' . $code . ' ' . substr((string)$res, 0, 300)); throw new RuntimeException('Claude non risponde, riprova tra poco'); }
+  foreach ((array)($j['content'] ?? []) as $c) if (($c['type'] ?? '') === 'tool_use') {
+    $x = (array)$c['input']; $ids = array_column($ev, 'id');
+    $blocks = array_values(array_filter(campCleanBlocks($x['blocks'] ?? []), fn($b) => $b['t'] !== 'event' || in_array($b['id'], $ids, true)));
+    return ['subjects' => array_slice(array_values(array_filter(array_map(fn($v) => mb_substr(trim((string)$v), 0, 200), (array)($x['subjects'] ?? [])))), 0, 6),
+      'preheader' => mb_substr(trim((string)($x['preheader'] ?? '')), 0, 200), 'name' => mb_substr(trim((string)($x['name'] ?? '')), 0, 120),
+      'blocks' => $blocks, 'note' => mb_substr(trim((string)($x['note'] ?? '')), 0, 400)];
+  }
+  throw new RuntimeException('Claude non ha scritto la campagna, riprova');
+}

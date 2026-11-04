@@ -862,7 +862,7 @@ switch ($op) {
     $tpl = []; foreach (load('mtemplates') as $id => $t) $tpl[] = ['id' => (string)$id, 'data' => $t];
     $pend = db()->query("SELECT COUNT(*) FROM mail_sends WHERE status = 'queued'")->fetchColumn();
     out(['campaigns' => $res, 'templates' => $tpl, 'queued' => (int)$pend, 'admin' => ($me['role'] ?? '') === 'admin', 'rate' => (int)($C['campaign_per_minute'] ?? 40),
-      'from' => (string)($C['mail_from_name'] ?? ''), 'fromEmail' => (string)($C['mail_from'] ?? ''), 'replyTo' => (string)($C['reply_to'] ?? ''), 'base' => campBase($C)]);
+      'from' => (string)($C['mail_from_name'] ?? ''), 'fromEmail' => (string)($C['mail_from'] ?? ''), 'replyTo' => (string)($C['reply_to'] ?? ''), 'base' => campBase($C), 'ai' => !empty($C['anthropic_api_key'])]);
   }
 
   case 'camp_get': {
@@ -986,6 +986,12 @@ switch ($op) {
   case 'camp_run': { // the page keeps the queue moving while it is open; cron does the same every minute
     if (!$staff) fail('not_granted', 'Solo staff', 403);
     out(campRun($C, 15));
+  }
+
+  case 'camp_ai': {
+    if (!$staff) fail('not_granted', 'Solo staff', 403);
+    rateLimit('camp_ai', 30, 600);
+    try { out(campAi($C, $in, load('events'))); } catch (RuntimeException $e) { fail('upstream', $e->getMessage(), 502); }
   }
 
   case 'tpl_save': {

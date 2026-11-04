@@ -2674,7 +2674,7 @@ function cmStart(data,seg){
 /* ---- editor (campaign or template) ---- */
 function cmOpen(kind,id,data){
   CM.kind=kind;CM.curId=id||"";CM.cur=cmJ(data);CM.cur.blocks=CM.cur.blocks||[];if(kind==="camp")CM.cur.audience=CM.cur.audience||{seg:"all"};
-  CM.dirty=false;CM.sel=-1;CM.aud=null;cmRender();cmPreview(0);if(kind==="camp")cmAudience(0);
+  CM.dirty=false;CM.sel=-1;CM.aud=null;CM.aiUndo=null;CM.aiLast=null;cmRender();cmPreview(0);if(kind==="camp")cmAudience(0);
 }
 function cmState(){if(!CM.stEl)return;CM.stEl.textContent=CM.saving?"Salvo…":CM.dirty?"Modifiche non salvate":CM.curId?"✓ Salvato":""}
 function cmChange(){CM.dirty=true;cmState();cmPreview(700);if(CM.kind==="camp"){clearTimeout(CM.saveT);CM.saveT=setTimeout(cmSave,2500)}}
@@ -2716,6 +2716,50 @@ function cmField(label,obj,key,opt){opt=opt||{};
   return [h("label",{style:opt.style||""},[label,i]),i];
 }
 function cmSelect(label,opts,val,fn){var s=h("select",{},opts.map(function(o){var e=h("option",{value:o[0],text:o[1]});if(o[0]===val)e.selected=true;return e}));s.addEventListener("change",function(){fn(s.value)});return h("label",{},[label,s])}
+/* Claude writes or rewrites the campaign from a few words of the staff (camp_ai in api.php → campAi in mailing.php) */
+function cmAiCard(){
+  var c=CM.cur,isT=CM.kind==="tpl";
+  var card=h("div",{class:"card stack",style:"border-color:var(--gold)"},[h("h3",{text:"✨ Scrivi con Claude"})]);
+  if(!CM.info.ai){card.append(h("p",{class:"small muted",text:"Serve la chiave anthropic_api_key in config.php (la stessa dell'assistente delle prenotazioni)."}));return card}
+  var brief=h("textarea",{rows:"3",placeholder:"Es.: invito per San Martino, menù a 60 € con i vini a 80 €, posti limitati. Oppure: email ai clienti che non tornano da tempo, offriamo un calice di benvenuto."});
+  try{brief.value=sessionStorage.getItem("dvor-cm-brief-"+(CM.curId||"new"))||""}catch(e){}
+  brief.addEventListener("input",function(){try{sessionStorage.setItem("dvor-cm-brief-"+(CM.curId||"new"),brief.value)}catch(e){}});
+  var a=c.audience||{},al=/^(it|en|de|sl|nl)$/.test(a.lang||"")?a.lang:a.lang==="xit"?"en":"it";
+  var tone=h("select",{},["Caldo e ospitale","Elegante","Allegro e festoso","Breve e diretto","Familiare, come a un amico"].map(function(x){return h("option",{value:x,text:x})}));
+  var lang=h("select",{},[["it","Italiano"],["en","Inglese"],["de","Tedesco"],["sl","Sloveno"],["nl","Olandese"]].map(function(o){var e=h("option",{value:o[0],text:o[1]});if(o[0]===al)e.selected=true;return e}));
+  var msg=h("div",{class:"small","aria-live":"polite"}),chips=h("div",{class:"cm-tb"});
+  var hasText=c.blocks.some(function(b){return (b.text||"").trim()});
+  var audTxt=a.ids?"ospiti scelti a mano nei Contatti":((MK_SEG[a.seg||"all"]||MK_SEG.all)[0]+(a.tag?", tag "+a.tag:"")+(a.lang?", lingua "+a.lang:""));
+  var run=async function(only){
+    var b=this;b.disabled=true;msg.textContent="Claude sta scrivendo…";chips.textContent="";
+    try{var j=await mkCall({op:"camp_ai",brief:brief.value,tone:tone.value,lang:lang.value,audience:audTxt,data:c});
+      if(!only){
+        var prev=cmJ({subject:c.subject,preheader:c.preheader,blocks:c.blocks,name:c.name});
+        var imgs=c.blocks.filter(function(x){return x.t==="image"&&x.src});
+        c.blocks=j.blocks.map(function(x){if(x.t==="image"){var k=imgs.shift();if(k){x.src=k.src;x.alt=x.alt||k.alt||""}}return x}).filter(function(x){return x.t!=="image"||x.src||true});
+        imgs.forEach(function(k){c.blocks.unshift(k)});
+        if(j.subjects[0])c.subject=j.subjects[0];c.preheader=j.preheader||c.preheader;if(!c.name&&j.name)c.name=j.name;
+        CM.aiUndo=prev;CM.aiLast={subjects:j.subjects,note:j.note};
+        cmChange();cmRender();
+        return;
+      }
+      CM.aiLast={subjects:j.subjects,note:j.note};cmAiShow(chips,msg);b.disabled=false;
+    }catch(e){msg.textContent="Non riuscito: "+cmMsg(e);b.disabled=false}
+  };
+  card.append(h("label",{},["Cosa vuoi dire in questa email?",brief]),
+    h("div",{class:"row",style:"align-items:flex-end"},[h("label",{},["Tono",tone]),h("label",{},["Scrivi in",lang]),
+      h("button",{class:"btn",type:"button",text:hasText?"Riscrivi la campagna":"Scrivi la campagna",onclick:function(){run.call(this,false)}}),
+      h("button",{class:"btn ghost",type:"button",text:"Solo idee per l'oggetto",onclick:function(){run.call(this,true)}})]),
+    msg,chips,
+    h("p",{class:"small muted",text:"Claude conosce Dvor, gli eventi in programma e quello che c'è già nell'email: lo riscrive tutto, le foto restano. Controlla sempre prezzi e date; dove manca un dato mette un segnaposto tra [parentesi]."}));
+  if(CM.aiLast)cmAiShow(chips,msg);
+  return card;
+}
+function cmAiShow(chips,msg){var c=CM.cur,j=CM.aiLast;chips.textContent="";msg.textContent=j.note?"Claude: "+j.note:"";
+  if(j.subjects&&j.subjects.length){chips.append(h("span",{class:"small muted",style:"align-self:center",text:"Oggetti: "}));
+    j.subjects.forEach(function(sj){chips.append(h("button",{class:"cm-ib",type:"button","aria-pressed":String(sj===c.subject),text:sj,style:sj===c.subject?"border-color:var(--wine)":"",onclick:function(){c.subject=sj;cmChange();cmRender()}}))})}
+  if(CM.aiUndo)chips.append(h("button",{class:"btn ghost small",type:"button",text:"↶ Torna a prima",onclick:function(){var p=CM.aiUndo;CM.aiUndo=null;c.subject=p.subject;c.preheader=p.preheader;c.blocks=p.blocks;c.name=p.name;cmChange();cmRender()}}));
+}
 function cmEditor(box){
   box.textContent="";CM.frame=null;var c=CM.cur,isT=CM.kind==="tpl";
   CM.stEl=h("span",{class:"small muted","aria-live":"polite"});
@@ -2733,6 +2777,7 @@ function cmEditor(box){
       h("button",{class:"btn ghost small",type:"button",text:"Annulla la programmazione",onclick:async function(){this.disabled=true;try{await mkCall({op:"camp_unschedule",id:CM.curId});c.status="draft";delete c.scheduledAt;cmRender()}catch(e){alert(cmMsg(e));this.disabled=false}}})]));
   }
   var left=h("div",{class:"stack"}),right=h("div",{class:"stack cm-pv"});
+  left.append(cmAiCard());
   /* audience */
   if(!isT){
     var a=c.audience;CM.audEl=h("div",{"aria-live":"polite"});

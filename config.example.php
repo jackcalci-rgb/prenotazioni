@@ -44,6 +44,7 @@ return [
   // Facoltativo: chat dello chef. Senza chiave la chat non compare.
   'anthropic_api_key' => '',
   'anthropic_model'   => 'claude-haiku-5-5',
+  'campaign_model'    => 'claude-sonnet-5-5', // chi scrive le campagne email (Marketing → «Scrivi con Claude»): un modello che scrive meglio
 
   // Cartella del registro email (mail.log) e dei vecchi file JSON da importare. Meglio fuori dalla cartella pubblica.
   'data_dir' => __DIR__ . '/data',
