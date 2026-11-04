@@ -17,15 +17,15 @@ function mPage(string $lang, string $title, string $body, bool $embed = false): 
   if (!$embed) header('X-Frame-Options: DENY');
   $h = fn($s) => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
   echo '<!doctype html><html lang="' . $h($lang) . '"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">'
-    . '<title>' . $h($title) . ' · Osteria Dvor</title><style>'
-    . ':root{--bg:#F6EFE4;--card:#FBF6EE;--ink:#2B1D14;--muted:#6A5645;--line:#D8C6AA;--wine:#7A2E22;--on:#FBF3E6}'
-    . '@media (prefers-color-scheme:dark){:root{--bg:#1B120C;--card:#21160E;--ink:#F0E4D2;--muted:#BCA78E;--line:#3D2C1E;--wine:#E2A24B;--on:#26170F}}'
-    . '*{box-sizing:border-box}body{margin:0;background:' . ($embed ? 'transparent' : 'var(--bg)') . ';color:var(--ink);font:300 1rem/1.6 "Jost","Helvetica Neue",Arial,sans-serif;padding:' . ($embed ? '0' : '2.5rem 16px') . '}'
-    . '.c{max-width:30rem;margin:0 auto;background:var(--card);border:1px solid var(--line);border-top:4px solid var(--wine);border-radius:10px;padding:1.6rem}'
-    . 'h1{font:500 1.7rem/1.2 "Cormorant Garamond",Georgia,serif;margin:0 0 .8rem;color:var(--wine)}p{margin:0 0 1rem}.m{color:var(--muted);font-size:.85rem}'
-    . 'button,.b{font:400 .85rem "Jost",Arial,sans-serif;letter-spacing:.12em;text-transform:uppercase;border:1px solid var(--wine);background:var(--wine);color:var(--on);padding:.75rem 1.2rem;border-radius:6px;cursor:pointer;text-decoration:none;display:inline-block}'
-    . '.g{background:transparent;color:var(--wine)}label{display:flex;flex-direction:column;gap:.25rem;font-size:.8rem;color:var(--muted);margin-bottom:.8rem}'
-    . 'input{font:400 1rem Arial,sans-serif;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:.6rem .7rem;width:100%}.hp{position:absolute;left:-9999px}'
+    . '<title>' . $h($title) . ' · Osteria Dvor</title><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&family=Inter:wght@400;600&display=swap" rel="stylesheet"><style>'
+    . ':root{--bg:#f6f2ec;--card:#fff;--ink:#1b1918;--muted:#7c736c;--line:#e8e1d8;--wine:#cf4731;--on:#fff}'
+    . '@media (prefers-color-scheme:dark){:root{--bg:#151210;--card:#1e1a17;--ink:#f2ede7;--muted:#a99e94;--line:#332d28;--wine:#e2614b;--on:#fff}}'
+    . '*{box-sizing:border-box}body{margin:0;background:' . ($embed ? 'transparent' : 'var(--bg)') . ';color:var(--ink);font:400 15px/1.55 Inter,system-ui,-apple-system,"Segoe UI",Arial,sans-serif;padding:' . ($embed ? '0' : '2.5rem 16px') . '}'
+    . '.c{max-width:30rem;margin:0 auto;background:var(--card);border:1px solid var(--line);border-top:4px solid var(--wine);border-radius:16px;padding:1.6rem;box-shadow:0 1px 2px rgba(27,25,24,.04),0 4px 16px rgba(27,25,24,.06)}'
+    . 'h1{font:600 1.9rem/1.15 "Cormorant Garamond",Georgia,serif;margin:0 0 .8rem;color:var(--ink)}p{margin:0 0 1rem}.m{color:var(--muted);font-size:.85rem}'
+    . 'button,.b{font:600 15px Inter,system-ui,Arial,sans-serif;border:1px solid var(--wine);background:var(--wine);color:var(--on);padding:.7rem 1.2rem;border-radius:12px;cursor:pointer;text-decoration:none;display:inline-block}'
+    . '.g{background:var(--card);color:var(--ink);border-color:var(--line)}label{display:flex;flex-direction:column;gap:.25rem;font-size:.8rem;color:var(--muted);margin-bottom:.8rem}'
+    . 'input{font:400 1rem Arial,sans-serif;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:.65rem .75rem;width:100%}.hp{position:absolute;left:-9999px}'
     . '</style></head><body><div class="c">' . (!$embed ? '<div class="m" style="letter-spacing:.2em;text-transform:uppercase;margin-bottom:.6rem">Osteria Enoteca Dvor</div>' : '') . $body . '</div></body></html>';
   exit;
 }
