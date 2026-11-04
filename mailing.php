@@ -194,9 +194,9 @@ function campRender(array $camp, array $r, array $C, string $tok, bool $preview 
     return $base . '/m.php?c=' . $tok . '&s=' . campSig($tok, $url) . '&u=' . rawurlencode($url);
   };
   $unsub = $base . '/m.php?u=' . ($track ? $tok : CAMP_TEST);
-  $wine = '#7a1f2b'; $ink = '#2b211a'; $muted = '#6a5645'; $cream = '#f6efe4'; $paper = '#fffaf2'; $line = '#e5d8c4';
-  $btn = fn($url, $label, $align) => '<table role="presentation" cellpadding="0" cellspacing="0" ' . ($align === 'center' ? 'align="center" ' : '') . 'style="margin:4px 0"><tr><td style="border-radius:6px;background:' . $wine . '">'
-    . '<a href="' . $h($href($url)) . '" style="display:inline-block;padding:13px 22px;border:1px solid ' . $wine . ';border-radius:6px;color:#ffffff;text-decoration:none;font-family:Helvetica,Arial,sans-serif;font-size:15px">' . $h($label) . '</a></td></tr></table>';
+  $wine = '#cf4731'; $ink = '#1b1918'; $muted = '#7c736c'; $cream = '#f6f2ec'; $paper = '#ffffff'; $line = '#e8e1d8'; // the colours of the Mescita app and the DVOR logo
+  $btn = fn($url, $label, $align) => '<table role="presentation" cellpadding="0" cellspacing="0" ' . ($align === 'center' ? 'align="center" ' : '') . 'style="margin:4px 0"><tr><td style="border-radius:12px;background:' . $wine . '">'
+    . '<a href="' . $h($href($url)) . '" style="display:inline-block;padding:13px 22px;border:1px solid ' . $wine . ';border-radius:12px;color:#ffffff;text-decoration:none;font-family:Helvetica,Arial,sans-serif;font-size:15px;font-weight:bold">' . $h($label) . '</a></td></tr></table>';
   $m = fn($s) => campMerge((string)$s, $r);
   $rows = ''; $txt = '';
   foreach ((array)($camp['blocks'] ?? []) as $b) {
@@ -204,7 +204,7 @@ function campRender(array $camp, array $r, array $C, string $tok, bool $preview 
     switch ($b['t'] ?? '') {
       case 'heading':
         $big = ($b['size'] ?? 'big') !== 'small';
-        $rows .= '<tr><td style="padding:14px 28px 4px;text-align:' . $al . '"><h' . ($big ? 1 : 2) . ' style="margin:0;font-weight:normal;font-size:' . ($big ? 27 : 21) . 'px;line-height:1.25;color:' . $wine . '">' . $h($m($b['text'] ?? '')) . '</h' . ($big ? 1 : 2) . '></td></tr>';
+        $rows .= '<tr><td style="padding:14px 28px 4px;text-align:' . $al . '"><h' . ($big ? 1 : 2) . ' style="margin:0;font-weight:normal;font-size:' . ($big ? 27 : 21) . 'px;line-height:1.2;font-weight:600;color:' . $ink . '">' . $h($m($b['text'] ?? '')) . '</h' . ($big ? 1 : 2) . '></td></tr>';
         $txt .= mb_strtoupper($m($b['text'] ?? '')) . "\n\n"; break;
       case 'text':
         $paras = preg_split('/\n\s*\n/', trim($m($b['text'] ?? '')));
@@ -229,12 +229,12 @@ function campRender(array $camp, array $r, array $C, string $tok, bool $preview 
         $title = $pick('title'); $desc = $pick('desc'); $day = campEventDay($ev, $lang);
         $short = mb_strlen($desc) > 420 ? rtrim(mb_substr($desc, 0, 400)) . '…' : $desc;
         $link = (string)($ev['link'] ?? '') ?: (string)($C['booking_url'] ?? $site);
-        $img = !empty($ev['imageId']) ? '<img src="' . $h($base . '/uploads/' . $ev['imageId']) . '" width="522" alt="' . $h($title) . '" style="display:block;width:100%;max-width:522px;height:auto;border:0;border-radius:6px 6px 0 0">' : '';
-        $rows .= '<tr><td style="padding:10px 28px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;border:1px solid ' . $line . ';border-radius:6px">'
+        $img = !empty($ev['imageId']) ? '<img src="' . $h($base . '/uploads/' . $ev['imageId']) . '" width="522" alt="' . $h($title) . '" style="display:block;width:100%;max-width:522px;height:auto;border:0;border-radius:12px 12px 0 0">' : '';
+        $rows .= '<tr><td style="padding:10px 28px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:' . $cream . ';border:1px solid ' . $line . ';border-radius:12px">'
           . ($img ? '<tr><td>' . $img . '</td></tr>' : '')
           . '<tr><td style="padding:16px 18px 18px">'
           . ($day ? '<div style="font-family:Helvetica,Arial,sans-serif;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:' . $muted . '">' . $h($day) . '</div>' : '')
-          . '<div style="margin:6px 0 8px;font-size:22px;line-height:1.3;color:' . $wine . '">' . $h($title) . '</div>'
+          . '<div style="margin:6px 0 8px;font-size:22px;line-height:1.3;font-weight:600;color:' . $ink . '">' . $h($title) . '</div>'
           . ($short !== '' ? '<p style="margin:0 0 10px;font-size:15px;line-height:1.55">' . nl2br($h($short), false) . '</p>' : '')
           . (!empty($ev['price']) ? '<p style="margin:0 0 12px;font-family:Helvetica,Arial,sans-serif;font-size:14px;color:' . $muted . '">' . $h($ev['price']) . '</p>' : '')
           . $btn($link, $T['event'], 'left') . '</td></tr></table></td></tr>';
@@ -254,7 +254,7 @@ function campRender(array $camp, array $r, array $C, string $tok, bool $preview 
     . '<body style="margin:0;padding:0;background:' . $cream . '">'
     . ($pre !== '' ? '<div style="display:none;max-height:0;overflow:hidden;opacity:0">' . $h($pre) . str_repeat('&#8199;&#847; ', 40) . '</div>' : '')
     . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:' . $cream . '"><tr><td align="center" style="padding:28px 12px">'
-    . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:580px;background:' . $paper . ';border:1px solid ' . $line . ';border-top:4px solid ' . $wine . ';border-radius:8px;font-family:Georgia,\'Times New Roman\',serif;color:' . $ink . '">'
+    . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:580px;background:' . $paper . ';border:1px solid ' . $line . ';border-top:4px solid ' . $wine . ';border-radius:16px;font-family:Georgia,\'Times New Roman\',serif;color:' . $ink . '">'
     . '<tr><td style="padding:28px 28px 10px">' . $logo
     . '<div style="text-align:center;font-family:Helvetica,Arial,sans-serif;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:' . $muted . ';margin-top:10px">Osteria Enoteca · San Floriano del Collio</div></td></tr>'
     . $rows
@@ -542,11 +542,11 @@ function campSignup(array $C, string $email, string $name, string $lang): bool {
   if (!$ask) return false;
   $T = campT($lang); $url = campBase($C) . '/m.php?k=' . campSignupKey($email) . '&e=' . rawurlencode($email) . '&l=' . $lang;
   $h = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
-  $html = '<!doctype html><html lang="' . $lang . '"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;background:#f6efe4">'
-    . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:28px 12px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#fffaf2;border:1px solid #e5d8c4;border-top:4px solid #7a1f2b;border-radius:8px;font-family:Georgia,serif;color:#2b211a">'
+  $html = '<!doctype html><html lang="' . $lang . '"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;background:#f6f2ec">'
+    . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:28px 12px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border:1px solid #e8e1d8;border-top:4px solid #cf4731;border-radius:8px;font-family:Georgia,serif;color:#1b1918">'
     . '<tr><td style="padding:28px">' . (!empty($C['_logo_cid']) ? '<img src="cid:' . $C['_logo_cid'] . '" width="180" alt="DVOR" style="display:block;margin:0 auto 18px;width:180px;height:auto;border:0">' : '')
-    . '<h1 style="margin:0 0 12px;font-weight:normal;font-size:24px;color:#7a1f2b">' . $h($T['c_h']) . '</h1><p style="margin:0 0 18px;font-size:16px;line-height:1.55">' . $h($T['c_body']) . '</p>'
-    . '<a href="' . $h($url) . '" style="display:inline-block;padding:13px 22px;border-radius:6px;background:#7a1f2b;color:#ffffff;text-decoration:none;font-family:Helvetica,Arial,sans-serif;font-size:15px">' . $h($T['c_btn']) . '</a>'
+    . '<h1 style="margin:0 0 12px;font-weight:normal;font-size:24px;color:#cf4731">' . $h($T['c_h']) . '</h1><p style="margin:0 0 18px;font-size:16px;line-height:1.55">' . $h($T['c_body']) . '</p>'
+    . '<a href="' . $h($url) . '" style="display:inline-block;padding:13px 22px;border-radius:6px;background:#cf4731;color:#ffffff;text-decoration:none;font-family:Helvetica,Arial,sans-serif;font-size:15px">' . $h($T['c_btn']) . '</a>'
     . '</td></tr></table></td></tr></table></body></html>';
   sendMail($C, $email, ['subject' => $T['c_subj'], 'text' => $T['c_body'] . "\n\n" . $T['c_btn'] . ": $url\n\nOsteria Enoteca Dvor", 'html' => $html, 'logo' => !empty($C['_logo_cid'])]);
   logMail("signup ask $email");

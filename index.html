@@ -28,7 +28,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 /* Layout: one column, header with two tabs (Ospite / Staff); the guest side is a booking card, the staff side a 14-day board. Palette and faces follow the Osteria Dvor website. */
 :root{
@@ -407,6 +407,76 @@ html.embed header{padding-block:0 .4rem;border-bottom:0;margin-bottom:.6rem;just
 html.embed header>div:first-child,html.embed .tabs{display:none}
 html.embed body{background:transparent;padding-block:0 .5rem;padding-left:0;padding-right:0}
 html.embed .wrap{max-width:none}
+
+/* ---------- staff area in the style of the Mescita app (mescita.profumidistria.com): warm white, Inter, Cormorant headings, DVOR red ---------- */
+html.staff{--bg:#f6f2ec;--alt:#f1ebe3;--card:#fff;--ink:#1b1918;--muted:#7c736c;--line:#e8e1d8;--wine:#cf4731;--on-wine:#fff;--gold:#cf4731;
+  --ok:#2f7d4f;--ok-bg:#e5f2ea;--warn:#b97300;--warn-bg:#fdf1dc;--bad:#c0392b;--bad-bg:#fbe4e1;--idle:#7c736c;--idle-bg:#f1ebe3;--accent-soft:#fbe9e5;
+  --c-lunch:#1b1918;--c-dinner:#cf4731;--heat-1:#2f7d4f;--heat-2:#e0a526;--heat-3:#cf4731;
+  --sans:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;--serif:"Cormorant Garamond",Georgia,serif;
+  --shadow:0 1px 2px rgba(27,25,24,.04),0 4px 16px rgba(27,25,24,.06);color-scheme:light}
+@media (prefers-color-scheme: dark){html.staff:not([data-theme="light"]){--bg:#151210;--alt:#26211d;--card:#1e1a17;--ink:#f2ede7;--muted:#a99e94;--line:#332d28;--wine:#e2614b;--on-wine:#fff;--gold:#e2614b;
+  --ok:#7fcf9c;--ok-bg:#1b3325;--warn:#f0c26a;--warn-bg:#3a2c12;--bad:#f09a8e;--bad-bg:#3d1c17;--idle:#a99e94;--idle-bg:#26211d;--accent-soft:#3a1f19;--c-lunch:#d9d1c8;--c-dinner:#e2614b;
+  --shadow:0 1px 2px rgba(0,0,0,.25),0 4px 16px rgba(0,0,0,.25);color-scheme:dark}}
+html.staff[data-theme="dark"]{--bg:#151210;--alt:#26211d;--card:#1e1a17;--ink:#f2ede7;--muted:#a99e94;--line:#332d28;--wine:#e2614b;--on-wine:#fff;--gold:#e2614b;
+  --ok:#7fcf9c;--ok-bg:#1b3325;--warn:#f0c26a;--warn-bg:#3a2c12;--bad:#f09a8e;--bad-bg:#3d1c17;--idle:#a99e94;--idle-bg:#26211d;--accent-soft:#3a1f19;--c-lunch:#d9d1c8;--c-dinner:#e2614b;
+  --shadow:0 1px 2px rgba(0,0,0,.25),0 4px 16px rgba(0,0,0,.25);color-scheme:dark}
+html.staff body{font:400 15px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
+html.staff h1,html.staff h2{font-family:var(--serif);font-weight:600;letter-spacing:.2px}
+html.staff h2{font-size:28px}
+html.staff h3{font-family:var(--sans);font-size:13px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--muted)}
+html.staff .caps{font-size:12px;letter-spacing:.8px;font-weight:600}
+html.staff header{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line);margin-inline:calc(-1 * max(16px,env(safe-area-inset-left,0px)));padding-inline:max(16px,env(safe-area-inset-left,0px))}
+html.staff #h-title{display:flex;align-items:center;gap:12px;font-size:20px;font-weight:600;color:var(--muted)}
+html.staff #h-title::before{content:"";width:118px;height:30px;background:url(icone/logo-dvor.png) left center/contain no-repeat;border-right:1px solid var(--line);padding-right:12px;flex:none}
+@media (prefers-color-scheme: dark){html.staff:not([data-theme="light"]) #h-title::before{filter:invert(1) hue-rotate(180deg)}}
+html.staff[data-theme="dark"] #h-title::before{filter:invert(1) hue-rotate(180deg)}
+html.staff .tabs{background:var(--alt);border-radius:12px;padding:4px}
+html.staff .tabs button{border-radius:9px;letter-spacing:0;text-transform:none;font:600 14px var(--sans);color:var(--muted);padding:7px 14px}
+html.staff .tabs button[aria-selected="true"]{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+html.staff .card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:18px}
+html.staff label{font-size:13px;color:var(--muted)}
+html.staff input,html.staff select,html.staff textarea{font:400 15px var(--sans);background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+html.staff input:focus,html.staff select:focus,html.staff textarea:focus{outline:2px solid var(--wine);outline-offset:-1px;border-color:transparent}
+html.staff input[type=checkbox]{accent-color:var(--wine)}
+html.staff button.btn,html.staff a.btn{font:600 14px var(--sans);letter-spacing:0;text-transform:none;border-radius:12px;padding:10px 16px;border:1px solid var(--ink);background:var(--ink);color:#fff;transition:transform .08s,background .15s}
+html.staff button.btn:active{transform:scale(.97)}
+html.staff button.btn.ghost,html.staff a.btn.ghost{background:var(--card);color:var(--ink);border-color:var(--line)}
+html.staff button.btn.ghost:hover{background:var(--alt)}
+html.staff button.btn.small,html.staff a.btn.small{padding:7px 12px;font-size:13px;border-radius:10px}
+html.staff button.btn:disabled{opacity:.4}
+@media (prefers-color-scheme: dark){html.staff:not([data-theme="light"]) button.btn:not(.ghost){background:var(--ink);color:#151210;border-color:var(--ink)}}
+html.staff[data-theme="dark"] button.btn:not(.ghost){background:var(--ink);color:#151210;border-color:var(--ink)}
+html.staff .pill{font:600 12px var(--sans);letter-spacing:0;text-transform:none;padding:3px 9px}
+html.staff .tg{border-radius:99px;background:var(--alt);border-color:transparent;font-size:12px;padding:2px 9px}
+html.staff .seg{background:var(--alt);border:0;border-radius:12px;padding:4px;gap:4px}
+html.staff .seg button{background:transparent;color:var(--muted);border-radius:9px;font:600 14px var(--sans);padding:7px 14px}
+html.staff .seg button[aria-pressed="true"]{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+html.staff .kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+html.staff .kpi b,html.staff .tdkpi .kpi b{font:700 22px/1.15 var(--sans)}
+html.staff .kpi span{font-size:12px}
+html.staff .kpi.good b{color:var(--ok)}html.staff .kpi.hot{background:var(--bad-bg)}
+html.staff table th{font:600 12px var(--sans);letter-spacing:.6px;color:var(--muted)}
+html.staff .snav{background:color-mix(in srgb,var(--card) 94%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+html.staff .nv{font-family:var(--sans);font-weight:500;color:var(--muted)}
+html.staff .nv[aria-pressed="true"]{color:var(--wine);font-weight:600}
+@media (max-width:899px){html.staff .nv-new .ic{background:var(--wine);color:#fff}}
+html.staff .snav-brand{font-weight:600;color:var(--muted)}
+@media (min-width:900px){
+  html.staff .snav{background:var(--card);border-radius:16px;box-shadow:var(--shadow)}
+  html.staff .nv{color:var(--ink)}
+  html.staff .nv[aria-pressed="true"]{background:var(--accent-soft);color:var(--wine)}
+}
+html.staff details>summary{font-weight:500}
+html.staff .cm-bl{background:var(--bg);border-radius:12px}
+html.staff .cm-ib{border-radius:9px;background:var(--card)}
+html.staff .cm-st button{background:var(--card);border-radius:14px;box-shadow:var(--shadow)}
+html.staff .cm-st b{font-size:20px;font-weight:600}
+html.staff .cm-st button:hover{border-color:var(--wine)}
+html.staff .cm-bars div{background:var(--ink);border-radius:6px 6px 2px 2px}
+html.staff .cm-bars div:hover{background:var(--wine);opacity:1}
+html.staff .cm-prog div{background:var(--wine)}
+html.staff .cm-frame{border-radius:12px}
+html.staff .cm-inbox{background:var(--card);border-radius:12px}
 </style>
 
 <div class="wrap">
@@ -1315,7 +1385,7 @@ function aiUI(){var on=aiOn(),box=el("assistant"),was=!box.hidden;box.hidden=!on
 /* ---------- guest: language ---------- */
 function applyLang(){
   document.documentElement.lang=S.lang;
-  el("h-title").textContent=S.view==="staff"?"Prenotazioni · staff":t("title");
+  el("h-title").textContent=S.view==="staff"?"Prenotazioni":t("title");
   el("t-ask").textContent=t("ask");el("t-ask-sub").textContent=t("askSub");el("t-msg").textContent=t("msg");el("chat-send").textContent=t("send");
   aiUI();el("t-date").textContent=t("date");el("t-party").textContent=t("party");el("t-time").textContent=t("time");el("f-check").textContent=t("check");
   el("t-events").textContent=t("events");el("evd-link").textContent=t("evLink");el("evd-close").textContent=t("close");
