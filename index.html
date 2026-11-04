@@ -337,6 +337,34 @@ html.staff body{padding-bottom:calc(90px + env(safe-area-inset-bottom,0px))}
 @media (max-width:899px){
   #bkdlg{margin:auto 0 0;max-width:none;width:100%;border-radius:20px 20px 0 0;border-bottom:0;padding-bottom:env(safe-area-inset-bottom,0px)}
 }
+/* email campaigns (Marketing → Campagne email) */
+.cm-ed{display:grid;grid-template-columns:minmax(0,1fr);gap:1rem;align-items:start}
+@media (min-width:1150px){.cm-ed{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.cm-pv{position:sticky;top:1rem}}
+.cm-bl{border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:.7rem .8rem;display:flex;flex-direction:column;gap:.5rem}
+.cm-bl.on{border-color:var(--wine)}
+.cm-bh{display:flex;align-items:center;gap:.35rem;justify-content:space-between}
+.cm-bh .caps{flex:1}
+.cm-ib{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;min-width:2rem;height:2rem;font:400 .9rem var(--sans);cursor:pointer;padding:0 .45rem}
+.cm-ib:hover{border-color:var(--wine)}
+.cm-ib:disabled{opacity:.35;cursor:default}
+.cm-tb{display:flex;flex-wrap:wrap;gap:.3rem}
+.cm-add{display:flex;flex-wrap:wrap;gap:.4rem}
+.cm-frame{width:100%;height:720px;border:1px solid var(--line);border-radius:8px;background:#f6efe4;display:block;margin:0 auto}
+.cm-frame.phone{width:390px;max-width:100%}
+.cm-inbox{border:1px solid var(--line);border-radius:8px;padding:.55rem .8rem;background:var(--bg);font-size:.9rem}
+.cm-inbox b{font-weight:500}
+.cm-thumb{max-width:160px;max-height:90px;border-radius:6px;border:1px solid var(--line);display:block}
+.cm-prog{height:10px;border-radius:999px;background:var(--alt);overflow:hidden}
+.cm-prog div{height:100%;background:var(--wine);border-radius:999px;transition:width .4s}
+.cm-bars{display:flex;align-items:flex-end;gap:2px;height:120px;border-bottom:1px solid var(--muted);padding-top:.5rem}
+.cm-bars div{flex:1;background:var(--wine);border-radius:3px 3px 0 0;min-height:1px}
+.cm-bars div:hover{opacity:.75}
+.cm-axis{display:flex;justify-content:space-between;font-size:.7rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.cm-st{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:.6rem}
+.cm-st button{border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);text-align:left;padding:.8rem .9rem;cursor:pointer;font:inherit;display:flex;flex-direction:column;gap:.25rem}
+.cm-st button:hover{border-color:var(--wine)}
+.cm-st b{font-family:var(--serif);font-size:1.15rem;font-weight:500}
+.cm-row{cursor:pointer}.cm-row:hover td{background:var(--alt)}
 /* the week at a glance (Oggi panel): stacked bars, lunch below and dinner above */
 .wch{position:relative;padding-left:2rem;margin-top:.4rem}
 .wch-grid{position:absolute;left:2rem;right:0;top:1.3rem;height:160px;pointer-events:none}
@@ -508,6 +536,10 @@ html.embed .wrap{max-width:none}
       </form>
     </div>
     <div id="sp-mkt" class="stack" hidden>
+      <div class="seg big" role="group" aria-label="Marketing" id="mk-nav"><button type="button" data-mk="leads" aria-pressed="true">Contatti</button><button type="button" data-mk="camp" aria-pressed="false">Campagne email</button><button type="button" data-mk="tpl" aria-pressed="false">Template</button></div>
+      <div id="mk-p-camp" class="stack" hidden></div>
+      <div id="mk-p-tpl" class="stack" hidden></div>
+      <div id="mk-p-leads" class="stack">
       <div class="card stack">
         <div class="row" style="justify-content:space-between;align-items:center"><h2>Marketing · lead</h2><span class="small muted" id="mk-count" aria-live="polite"></span></div>
         <p class="small muted">Ogni ospite che prenota entra qui da solo: giorno e ora della prenotazione, persone, com'è andata (venuto, no show, annullata), canale, consenso marketing e campagna da cui è arrivato. Le liste dei clienti passati si aggiungono dal riquadro «Importa» qui sotto. Stesso telefono o stessa email: resta un solo lead.</p>
@@ -516,12 +548,13 @@ html.embed .wrap{max-width:none}
           <label style="flex:2 1 200px">Cerca<input id="mk-q" type="search" placeholder="Nome, telefono, email, tag"></label>
           <label>Gruppo<select id="mk-seg"></select></label>
           <label>Consenso<select id="mk-consent"><option value="all">Tutti</option><option value="yes">Sì</option><option value="unknown">Non indicato</option><option value="no">No</option></select></label>
-          <label>Origine<select id="mk-origin"><option value="all">Tutte</option><option value="site">Dal sito</option><option value="staff">Telefono, WhatsApp, di persona</option><option value="import">Liste importate</option></select></label>
+          <label>Origine<select id="mk-origin"><option value="all">Tutte</option><option value="site">Dal sito</option><option value="staff">Telefono, WhatsApp, di persona</option><option value="import">Liste importate</option><option value="signup">Iscritti dal sito</option></select></label>
           <label>Tag<select id="mk-tag"></select></label>
           <label>Visita dal<input type="date" id="mk-from"></label>
           <label>al<input type="date" id="mk-to"></label>
         </div>
         <div id="mk-list" class="stack"></div>
+        <div class="row" style="align-items:center"><button class="btn small" type="button" id="mk-mail">✉ Email a questi lead</button><span class="small muted" id="mk-mail-msg" aria-live="polite">Prepara una campagna per i lead che vedi qui sopra, con i filtri scelti. Partirà solo a chi ha dato il consenso.</span></div>
       </div>
       <div class="card stack">
         <h2>Esporta per il retargeting</h2>
@@ -538,6 +571,7 @@ html.embed .wrap{max-width:none}
         <p class="small" id="mk-imp-res" aria-live="polite"></p>
       </div>
       <div class="row" style="align-items:center"><button class="btn ghost small" type="button" id="mk-rebuild">Ricalcola dalle prenotazioni</button><span class="small muted" id="mk-rb-msg" aria-live="polite"></span></div>
+      </div>
     </div>
     <div id="sp-set" class="stack" hidden>
       <div class="row" style="justify-content:space-between;align-items:center"><h2>Impostazioni</h2><div class="row" style="align-items:center;gap:.5rem"><div class="seg" role="group" aria-label="Tema" id="st-theme"><button type="button" data-th="light" aria-pressed="false">☀ Chiaro</button><button type="button" data-th="dark" aria-pressed="false">☾ Scuro</button><button type="button" data-th="auto" aria-pressed="true">Auto</button></div><button class="btn ghost small" type="button" id="set-back">← Torna al servizio</button></div></div>
@@ -2243,7 +2277,7 @@ el("ev-form").addEventListener("submit",async function(ev){
 
 /* ---------- staff: marketing, one lead per guest for retargeting (saved by the server with every booking, plus imported lists) ---------- */
 var MK={leads:[],view:[],at:0,busy:false,shown:200,open:"",imp:null,err:""};
-var MK_SRC={form:"Sito",assistant:"Assistente",phone:"Telefono",whatsapp:"WhatsApp",walkin:"Di persona",import:"Lista importata"};
+var MK_SRC={form:"Sito",assistant:"Assistente",phone:"Telefono",whatsapp:"WhatsApp",walkin:"Di persona",import:"Lista importata",signup:"Iscritto dal sito"};
 function mkCall(body){return window.DVOR_CALL?DVOR_CALL(body):Promise.reject({message:"disponibile solo sul sito"})}
 function mkD(d){d=String(d||"");return d.length>=10?d.slice(8,10)+"/"+d.slice(5,7)+"/"+d.slice(0,4):"—"}
 function mkAddDays(n){var d=new Date();d.setDate(d.getDate()+n);return ymd(d)}
@@ -2252,12 +2286,12 @@ function mkNorm(s){return String(s==null?"":s).toLowerCase().normalize("NFD").re
 async function mkLoad(force){
   if(MK.busy||(!force&&(MK.open||MK.imp||(MK.at&&Date.now()-MK.at<120000))))return;
   MK.busy=true;if(!MK.at)renderMk();
-  try{var j=await mkCall({op:"leads_list"});MK.leads=(j.leads||[]).map(function(x){var L=Object.assign({},x.data);L.id=x.id;L.sum=L.sum||{};return L});MK.err=""}
+  try{var j=await mkCall({op:"leads_list"});MK.leads=(j.leads||[]).map(function(x){var L=Object.assign({},x.data);L.id=x.id;L.sum=L.sum||{};L.mail=x.mail||null;return L});MK.err=""}
   catch(e){MK.err=(e&&e.message)||"errore"}
   MK.busy=false;MK.at=Date.now();renderMk();
 }
 function mkVisits(L){var v=L.visits||{};return Object.keys(v).map(function(k){return Object.assign({id:k},v[k])}).sort(function(a,b){return String(b.d+b.t).localeCompare(String(a.d+a.t))})}
-function mkOrigins(L){var o={};if(L.source==="import")o.import=1;mkVisits(L).forEach(function(v){if(v.src)o[v.src]=1});return Object.keys(o)}
+function mkOrigins(L){var o={};if(L.source==="import")o.import=1;if(L.source==="signup")o.signup=1;mkVisits(L).forEach(function(v){if(v.src)o[v.src]=1});return Object.keys(o)}
 function mkBday(L,days){if(!/^\d{4}-\d\d-\d\d$/.test(L.birthday||""))return false;var y=new Date().getFullYear(),b=parseD(y+L.birthday.slice(4));if(ymd(b)<today())b=parseD((y+1)+L.birthday.slice(4));return (b-parseD(today()))/864e5<=days}
 var MK_SEG={
   all:["Tutti",function(){return true}],
@@ -2327,7 +2361,10 @@ function mkDetail(x){
   })}});
   var camp=u?(u.source||u.medium||u.campaign?"Campagna: "+[u.source,u.medium,u.campaign].filter(Boolean).join(" / "):u.ref?"Arrivato da "+u.ref:"")+(u.gclid?" (clic da Google Ads)":u.fbclid?" (clic da Facebook/Instagram)":""):"";
   var info=[x.consent?"Consenso "+(x.consent==="yes"?"sì":"no")+(x.consentSource?" ("+x.consentSource+(x.consentAt?", "+mkD(x.consentAt):"")+")":""):"Consenso non indicato",
-    x.importFile?"Importato da «"+x.importFile+"»":"",camp,x.lang?"Lingua "+x.lang.toUpperCase():"",x.createdAt?"In elenco dal "+mkD(x.createdAt):""].filter(Boolean).join(" · ");
+    x.importFile?"Importato da «"+x.importFile+"»":"",camp,
+    x.mail&&x.mail.r?"Campagne email: "+x.mail.r+" ricevute, "+x.mail.o+" aperte, "+x.mail.c+" con clic":"",
+    x.unsubAt?"Disiscritto dalle email il "+mkD(x.unsubAt):"",
+    x.emailBad&&x.emailBad===String(x.email||"").toLowerCase().trim()?"⚠ Email rimbalzata il "+mkD(x.emailBadAt)+": non riceve campagne finché non la correggi":"",x.lang?"Lingua "+x.lang.toUpperCase():"",x.createdAt?"In elenco dal "+mkD(x.createdAt):""].filter(Boolean).join(" · ");
   var hist=vs.map(function(v){return h("div",{class:"num",text:mkD(v.d)+" "+(v.t||"")+" · "+(v.p||"?")+" pers. · "+(ST[v.s]||v.s||"")+(v.src?" · "+(MK_SRC[v.src]||v.src):"")+(v.deg?" · "+v.deg+" degustazione":"")+(v.ev?" · ✦ "+v.ev:"")})});
   if(p&&p.count)hist.push(h("div",{class:"muted",text:"Dalla lista importata: "+p.count+(p.count===1?" visita":" visite")+(p.first&&p.first!==p.last?", dal "+mkD(p.first):"")+(p.last?", l'ultima il "+mkD(p.last):"")}));
   return h("div",{class:"stack",style:"gap:.75rem;padding:.25rem 0"},[
@@ -2506,7 +2543,470 @@ el("tab-guest").addEventListener("click",function(){setView("guest")});
 el("tab-staff").addEventListener("click",function(){setView("staff")});
 if(location.hash==="#staff")setTimeout(function(){setView("staff")},0);
 
-function render(){try{if(S.view==="staff"){renderToday();renderWeek();renderPlanner();mbInfo();renderBlacklist();renderBoard();renderDay();renderEvAdmin();if(S.sp==="mkt")mkLoad(false)}else{renderMine();renderEvents();renderCal();renderSlots()}}catch(e){dbStatus("Errore di visualizzazione: "+(e&&e.message))}}
+/* ---------- marketing: email campaigns like Mailchimp (server in mailing.php, links in m.php) ----------
+   Campagne email: list → «Nuova» (starter or saved template) → editor (audience, subject, blocks, live preview, test, send or schedule) → report.
+   Template: saved designs and the ready-made ones. Drafts save by themselves a few seconds after each change. */
+var CM={tab:"leads",view:"list",tview:"list",list:null,tpls:[],info:{},at:0,busy:false,err:"",cur:null,curId:"",kind:"camp",dirty:false,saving:false,saveT:0,prevT:0,audT:0,aud:null,prevLang:"it",phone:false,rep:null,repId:"",repF:"all",repQ:"",repShown:300,runT:0,sel:-1,newAud:null,frame:null,inbox:null,stEl:null,audEl:null,sendBtn:null};
+var CM_ST={draft:["Bozza","s-idle"],scheduled:["Programmata","s-lastcall"],sending:["In invio","s-confirmed"],paused:["In pausa","s-closed"],sent:["Inviata","s-confirmed"]};
+var CM_BL={heading:"Titolo",text:"Testo",image:"Immagine",button:"Pulsante",book:"Pulsante «Prenota»",event:"Evento",divider:"Linea",spacer:"Spazio"};
+var CM_LANGS=[["","Tutte le lingue"],["it","Italiano"],["en","Inglese"],["de","Tedesco"],["sl","Sloveno"],["nl","Olandese"],["xit","Tutte tranne l'italiano"]];
+var CM_ORIG=[["all","Tutte"],["site","Dal sito"],["staff","Telefono, WhatsApp, di persona"],["import","Liste importate"],["signup","Iscritti dal sito"]];
+var CM_STARTERS=[
+  {key:"event",name:"Invito a un evento",desc:"Il prossimo evento con foto, data, descrizione e pulsante per prenotare.",
+    data:{name:"Invito evento",subject:"{{nome|Ciao}}, ti aspettiamo da Dvor",preheader:"Posti limitati: prenota il tuo tavolo",blocks:[{t:"heading",text:"Ciao {{nome}}, ti aspettiamo!"},{t:"text",text:"Abbiamo preparato una giornata speciale e ci piacerebbe averti con noi.\n\nI posti sono limitati: prenota il tuo tavolo in un minuto."},{t:"event",id:""},{t:"book",align:"center"}]}},
+  {key:"season",name:"Novità di stagione",desc:"Il menù nuovo con una foto, due righe e i pulsanti per il menù e la prenotazione.",
+    data:{name:"Menù di stagione",subject:"Il nuovo menù è in tavola",preheader:"I sapori della stagione e il vino nuovo del Collio",blocks:[{t:"image",src:"",alt:"Il nuovo menù"},{t:"heading",text:"La stagione cambia, la cucina anche"},{t:"text",text:"Ciao {{nome}},\n\nin cucina sono arrivati i sapori nuovi: racconta qui due o tre piatti che non vedi l'ora di far assaggiare.\n\n**Ti aspettiamo** a pranzo e a cena."},{t:"button",label:"Guarda il menù",href:"https://www.osteriadvor.com"},{t:"book"}]}},
+  {key:"winback",name:"Ci manchi",desc:"Per chi non torna da sei mesi, con un piccolo pensiero di benvenuto.",seg:"lapsed",
+    data:{name:"Ci manchi",subject:"{{nome|Ciao}}, è passato un po' di tempo",preheader:"Un calice di benvenuto ti aspetta",blocks:[{t:"heading",text:"Ci manchi, {{nome|caro ospite}}"},{t:"text",text:"È passato un po' di tempo dalla tua ultima visita da Dvor.\n\nTorna a trovarci: alla prossima prenotazione ti offriamo **un calice di Collio di benvenuto**. Scrivi «calice» nelle note."},{t:"book",align:"center"}]}},
+  {key:"bday",name:"Buon compleanno",desc:"Per chi compie gli anni nei prossimi 30 giorni, con il dolce offerto.",seg:"bday",
+    data:{name:"Compleanno",subject:"Buon compleanno, {{nome|caro ospite}}!",preheader:"Festeggia da Dvor: il dolce lo offriamo noi",blocks:[{t:"heading",text:"Tanti auguri, {{nome}}!",align:"center"},{t:"text",text:"Il tuo compleanno è vicino e ci piacerebbe festeggiarlo con te.\n\nSe prenoti per il tuo compleanno, **il dolce lo offriamo noi**. Scrivi «compleanno» nelle note della prenotazione.",align:"center"},{t:"book",align:"center"}]}},
+  {key:"news",name:"Newsletter",desc:"Più notizie in una sola email: titoli, testi, foto e pulsanti.",
+    data:{name:"Newsletter",subject:"Novità da Dvor",preheader:"",blocks:[{t:"heading",text:"Novità da Dvor"},{t:"text",text:"Ciao {{nome}},\n\necco cosa succede in osteria questo mese."},{t:"divider"},{t:"heading",text:"Prima notizia",size:"small"},{t:"text",text:"Scrivi qui."},{t:"image",src:"",alt:""},{t:"divider"},{t:"heading",text:"Seconda notizia",size:"small"},{t:"text",text:"Scrivi qui."},{t:"book"}]}},
+  {key:"blank",name:"Pagina bianca",desc:"Solo il logo e il piè di pagina con la disiscrizione: i blocchi li scegli tu.",data:{name:"",subject:"",preheader:"",blocks:[{t:"text",text:""}]}}
+];
+MK_SEG.engaged=["Hanno aperto un'email negli ultimi 90 giorni",function(L){return !!(L.mail&&L.mail.lo>Date.now()/1000-90*86400)}];
+MK_SEG.unengaged=["Ricevono ma non aprono (3 email o più)",function(L){return !!(L.mail&&L.mail.r>=3&&!L.mail.o)}];
+MK_SEG.never=["Non hanno ancora ricevuto campagne",function(L){return !(L.mail&&L.mail.r)}];
+function cmJ(x){return JSON.parse(JSON.stringify(x))}
+function cmPct(a,b){return b?String(Math.round(a/b*1000)/10).replace(".",",")+"%":"—"}
+function cmTs(s){return s?new Date(s*1000).toLocaleString("it-IT",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):""}
+function cmIso(s){if(!s)return "";var d=new Date(s);return isNaN(d)?"":d.toLocaleString("it-IT",{weekday:"short",day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"})}
+function cmPill(st){var x=CM_ST[st]||CM_ST.draft;return h("span",{class:"pill "+x[1],text:x[0]})}
+function cmMsg(e){return (e&&(e.message||e.code))||String(e)}
+function cmGoodLead(L){return L.consent==="yes"&&/@/.test(L.email||"")&&!(L.emailBad&&L.emailBad===String(L.email).toLowerCase().trim())}
+
+/* ---- tabs of the Marketing page ---- */
+function cmTab(t){CM.tab=t;
+  Array.prototype.forEach.call(el("mk-nav").querySelectorAll("button"),function(b){b.setAttribute("aria-pressed",String(b.dataset.mk===t))});
+  el("mk-p-leads").hidden=t!=="leads";el("mk-p-camp").hidden=t!=="camp";el("mk-p-tpl").hidden=t!=="tpl";
+  try{sessionStorage.setItem("dvor-mk",t)}catch(e){}
+  if(t==="leads")renderMk();else{cmLoad(!CM.list);cmRender()}
+}
+Array.prototype.forEach.call(el("mk-nav").querySelectorAll("button"),function(b){b.addEventListener("click",function(){cmTab(b.dataset.mk)})});
+try{var _t=sessionStorage.getItem("dvor-mk");if(_t==="camp"||_t==="tpl")setTimeout(function(){cmTab(_t)},0)}catch(e){}
+/* called by render(): only the list refreshes by itself, never an open editor */
+function cmTick(){if(CM.tab!=="leads"&&((CM.tab==="camp"&&CM.view==="list")||(CM.tab==="tpl"&&CM.tview==="list")))cmLoad(false)}
+async function cmLoad(force){
+  if(CM.busy||(!force&&CM.at&&Date.now()-CM.at<60000))return;
+  CM.busy=true;
+  try{var j=await mkCall({op:"camp_list"});CM.list=j.campaigns||[];CM.tpls=j.templates||[];CM.info=j;CM.err=""}catch(e){CM.err=cmMsg(e)}
+  CM.busy=false;CM.at=Date.now();
+  if(!MK.at)mkLoad(false);
+  if((CM.tab==="camp"&&CM.view==="list")||(CM.tab==="tpl"&&CM.tview==="list"))cmRender();
+}
+function cmBox(){return CM.tab==="tpl"?el("mk-p-tpl"):el("mk-p-camp")}
+function cmRender(){
+  if(CM.tab==="camp"){var b=el("mk-p-camp");if(CM.view==="edit"&&CM.kind==="camp")return cmEditor(b);if(CM.view==="report")return cmReportView(b);if(CM.view==="new")return cmNewView(b);return cmListView(b)}
+  if(CM.tab==="tpl"){var t=el("mk-p-tpl");if(CM.tview==="edit"&&CM.kind==="tpl")return cmEditor(t);return cmTplView(t)}
+}
+function cmBack(){if(CM.dirty)cmSave();clearTimeout(CM.runT);CM.cur=null;CM.rep=null;if(CM.tab==="tpl")CM.tview="list";else CM.view="list";cmLoad(true);cmRender()}
+
+/* ---- list of campaigns ---- */
+function cmListView(box){
+  box.textContent="";
+  var A=CM.list||[],sent=A.filter(function(c){return c.data.status==="sent"&&c.stats&&c.stats.delivered});
+  var avg=function(k){var n=0,d=0;sent.forEach(function(c){n+=c.stats[k];d+=c.stats.delivered});return cmPct(n,d)};
+  var subs=MK.at?MK.leads.filter(cmGoodLead).length:"…";
+  var top=h("div",{class:"card stack"},[
+    h("div",{class:"row",style:"justify-content:space-between;align-items:center"},[h("h2",{text:"Campagne email"}),h("button",{class:"btn",type:"button",text:"+ Nuova campagna",onclick:function(){CM.newAud=null;CM.view="new";cmRender()}})]),
+    h("p",{class:"small muted",text:"Email con novità, eventi e offerte agli ospiti che hanno dato il consenso. In fondo a ogni email c'è il link per disiscriversi; aperture, clic e prenotazioni arrivate dopo l'invio si vedono nel report di ogni campagna."}),
+    h("div",{class:"tdkpi"},[kpi2(subs,"contatti iscritti","con consenso e email valida"),kpi2(sent.length,sent.length===1?"campagna inviata":"campagne inviate"),kpi2(avg("opened"),"aperture in media","sulle email consegnate"),kpi2(avg("clicked"),"clic in media","sulle email consegnate")]),
+    CM.info.queued?h("p",{class:"small",text:"In coda: "+CM.info.queued+" email, ne partono "+(CM.info.rate||40)+" al minuto."}):null
+  ]);
+  box.append(top);
+  var card=h("div",{class:"card stack"});box.append(card);
+  if(CM.err&&!CM.list){card.append(h("p",{class:"small",text:"Non caricate: "+CM.err}));return}
+  if(!CM.list){card.append(h("p",{class:"small muted",text:"Caricamento…"}));return}
+  if(!A.length){card.append(h("p",{class:"small muted",text:"Ancora nessuna campagna. Tocca «+ Nuova campagna» e parti da un modello pronto."}))}
+  else{
+    var rows=A.slice().sort(function(a,b){return String(b.data.sentAt||b.data.startedAt||b.data.scheduledAt||b.data.updatedAt||"").localeCompare(String(a.data.sentAt||a.data.startedAt||a.data.scheduledAt||a.data.updatedAt||""))});
+    var tb=h("tbody");
+    rows.forEach(function(c){var d=c.data,s=c.stats||{},st=d.status||"draft",open=function(){cmOpenCamp(c.id)};
+      var when=st==="scheduled"?"Parte "+cmIso(d.scheduledAt):st==="draft"?"Modificata "+cmIso(d.updatedAt):cmIso(d.startedAt);
+      tb.append(h("tr",{class:"cm-row",tabindex:"0",onclick:open,onkeydown:function(e){if(e.key==="Enter"){e.preventDefault();open()}}},[
+        h("td",{},[h("div",{text:d.name||"Senza nome"}),h("div",{class:"small muted",text:d.subject||""})]),
+        h("td",{},[cmPill(st)]),
+        h("td",{class:"small num",text:when}),
+        h("td",{class:"small num",text:s.total!=null?String(s.total):"—"}),
+        h("td",{class:"small num",text:s.delivered?cmPct(s.opened,s.delivered):"—"}),
+        h("td",{class:"small num",text:s.delivered?cmPct(s.clicked,s.delivered):"—"})]));
+    });
+    card.append(h("div",{class:"tablewrap"},[h("table",{},[h("thead",{},[h("tr",{},["Campagna","Stato","Quando","Destinatari","Aperture","Clic"].map(function(x){return h("th",{text:x})}))]),tb])]));
+  }
+  /* sign-up form for the website */
+  var src=(CM.info.base||location.origin)+"/m.php?iscriviti=embed&lang=it";
+  var code='<iframe src="'+src+'" style="width:100%;max-width:480px;height:460px;border:0" title="Iscriviti alle novità di Dvor"></iframe>';
+  var ta=h("textarea",{rows:"3",readonly:"readonly"});ta.value=code;
+  box.append(h("details",{class:"card"},[h("summary",{style:"cursor:pointer",text:"Modulo di iscrizione per il sito"}),h("div",{class:"stack",style:"margin-top:.75rem"},[
+    h("p",{class:"small muted",text:"Incolla questo codice in una pagina di osteriadvor.com: chi si iscrive riceve un'email per confermare (doppio consenso, come chiede il GDPR) ed entra nei contatti con il tag «newsletter». Cambia lang=it in en, de, sl o nl per le altre lingue."}),
+    ta,h("div",{class:"row"},[h("button",{class:"btn ghost small",type:"button",text:"Copia il codice",onclick:function(){ta.select();try{navigator.clipboard.writeText(code)}catch(e){document.execCommand("copy")}this.textContent="✓ Copiato"}}),h("a",{class:"btn ghost small",href:src.replace("=embed",""),target:"_blank",rel:"noopener",text:"Apri il modulo"})])])]));
+}
+async function cmOpenCamp(id){
+  var box=el("mk-p-camp");box.textContent="";box.append(h("p",{class:"small muted",text:"Apro la campagna…"}));
+  try{var j=await mkCall({op:"camp_get",id:id,report:1});
+    if(["draft","scheduled"].indexOf(j.data.status||"draft")>=0){CM.view="edit";cmOpen("camp",id,j.data)}
+    else{CM.view="report";CM.repId=id;CM.rep=j;CM.repF="all";CM.repQ="";CM.repShown=300;cmRender();cmPump()}
+  }catch(e){box.textContent="";box.append(h("p",{class:"small",text:"Non aperta: "+cmMsg(e)}),h("button",{class:"btn ghost small",type:"button",text:"‹ Torna alle campagne",onclick:cmBack}))}
+}
+
+/* ---- new campaign: start from a ready-made model or a saved template ---- */
+function cmNewView(box){
+  box.textContent="";
+  var card=h("div",{class:"card stack"},[h("div",{class:"row",style:"justify-content:space-between;align-items:center"},[h("h2",{text:"Nuova campagna"}),h("button",{class:"btn ghost small",type:"button",text:"‹ Campagne",onclick:cmBack})]),
+    CM.newAud?h("p",{class:"small",text:"Destinatari: "+CM.newAud.ids.length+" lead scelti nella pagina Contatti ("+CM.newAud.idsLabel+")."}):null,
+    h("p",{class:"small muted",text:"Da dove parti? Testi e foto si cambiano tutti dopo."})]);
+  var grid=h("div",{class:"cm-st"});
+  CM_STARTERS.forEach(function(s){grid.append(h("button",{type:"button",onclick:function(){cmStart(s.data,s.seg)}},[h("b",{text:s.name}),h("span",{class:"small muted",text:s.desc})]))});
+  card.append(grid);
+  if(CM.tpls.length){card.append(h("h3",{text:"I tuoi template"}));var g2=h("div",{class:"cm-st"});
+    CM.tpls.forEach(function(t){g2.append(h("button",{type:"button",onclick:function(){cmStart(t.data)}},[h("b",{text:t.data.name||"Template"}),h("span",{class:"small muted",text:t.data.subject||""})]))});card.append(g2)}
+  box.append(card);
+}
+function cmStart(data,seg){
+  var d=cmJ(data);d.blocks=(d.blocks||[]).map(function(b){if(b.t==="event"&&!b.id&&S.events[0])b.id=S.events[0].id;return b});
+  var ev=d.blocks.filter(function(b){return b.t==="event"&&b.id})[0],evd=ev&&S.events.filter(function(e){return e.id===ev.id})[0];
+  if(evd&&d.name==="Invito evento")d.name="Invito: "+(evd.title_it||"evento");
+  d.audience=CM.newAud?{seg:"all",ids:CM.newAud.ids,idsLabel:CM.newAud.idsLabel}:{seg:seg||"all"};
+  if(!d.name)d.name="";
+  CM.newAud=null;CM.view="edit";cmOpen("camp","",d);cmChange();
+}
+
+/* ---- editor (campaign or template) ---- */
+function cmOpen(kind,id,data){
+  CM.kind=kind;CM.curId=id||"";CM.cur=cmJ(data);CM.cur.blocks=CM.cur.blocks||[];if(kind==="camp")CM.cur.audience=CM.cur.audience||{seg:"all"};
+  CM.dirty=false;CM.sel=-1;CM.aud=null;CM.aiUndo=null;CM.aiLast=null;cmRender();cmPreview(0);if(kind==="camp")cmAudience(0);
+}
+function cmState(){if(!CM.stEl)return;CM.stEl.textContent=CM.saving?"Salvo…":CM.dirty?"Modifiche non salvate":CM.curId?"✓ Salvato":""}
+function cmChange(){CM.dirty=true;cmState();cmPreview(700);if(CM.kind==="camp"){clearTimeout(CM.saveT);CM.saveT=setTimeout(cmSave,2500)}}
+async function cmSave(){
+  clearTimeout(CM.saveT);if(!CM.cur)return null;
+  if(CM.saving){await new Promise(function(r){setTimeout(r,400)});return cmSave()}
+  CM.saving=true;cmState();var cur=CM.cur,was=CM.dirty;CM.dirty=false;
+  try{var j=await mkCall({op:CM.kind==="tpl"?"tpl_save":"camp_save",id:CM.curId,data:cur});if(CM.cur===cur){CM.curId=j.id;if(j.data&&j.data.name&&!cur.name)cur.name=j.data.name}CM.saving=false;cmState();return j}
+  catch(e){CM.saving=false;CM.dirty=CM.dirty||was;if(CM.stEl)CM.stEl.textContent="Non salvato: "+cmMsg(e);throw e}
+}
+function cmPreview(delay){clearTimeout(CM.prevT);CM.prevT=setTimeout(async function(){
+  if(!CM.cur||!CM.frame)return;var cur=CM.cur;
+  try{var j=await mkCall({op:"camp_preview",data:cur,lang:CM.prevLang});if(cur!==CM.cur||!CM.frame)return;
+    var y=0;try{y=CM.frame.contentWindow.scrollY}catch(e){}
+    CM.frame.onload=function(){try{CM.frame.contentWindow.scrollTo(0,y)}catch(e){}};
+    CM.frame.srcdoc=j.html;
+    if(CM.inbox){CM.inbox.textContent="";CM.inbox.append(h("div",{class:"small muted",text:(CM.cur.fromName||CM.info.from||"Osteria Enoteca Dvor")}),h("b",{text:j.subject}),h("div",{class:"small muted",text:CM.cur.preheader?campMergeJs(CM.cur.preheader):(j.text||"").slice(0,90)}))}
+  }catch(e){if(CM.inbox)CM.inbox.textContent="Anteprima non disponibile: "+cmMsg(e)}
+},delay||0)}
+function campMergeJs(s){return String(s||"").replace(/\{\{\s*(nome|nome_completo|email)\s*(?:\|([^}]*))?\}\}/g,function(m,k){return k==="email"?"ospite@esempio.it":k==="nome"?"Maria":"Maria Rossi"})}
+function cmAudience(delay){clearTimeout(CM.audT);CM.audT=setTimeout(async function(){
+  if(!CM.cur||CM.kind!=="camp")return;var cur=CM.cur;
+  try{var j=await mkCall({op:"camp_audience",audience:cur.audience});if(cur!==CM.cur)return;CM.aud=j}catch(e){CM.aud={err:cmMsg(e)}}
+  cmAudText();
+},delay||0)}
+function cmAudText(){
+  var a=CM.aud,e=CM.audEl;if(!e)return;e.textContent="";
+  if(!a){e.append(h("span",{class:"muted",text:"Conto i destinatari…"}));return}
+  if(a.err){e.append(h("span",{text:"Non contati: "+a.err}));return}
+  var x=a.excluded||{},parts=[];
+  if(x.noconsent)parts.push(x.noconsent+" senza consenso");if(x.unsub)parts.push(x.unsub+" disiscritti o contrari");if(x.noemail)parts.push(x.noemail+" senza email");if(x.bounced)parts.push(x.bounced+" con email rimbalzata");if(x.dup)parts.push(x.dup+" doppioni");
+  e.append(h("b",{text:a.count+(a.count===1?" contatto riceverà":" contatti riceveranno")+" l'email"}));if(parts.length)e.append(h("div",{class:"small muted",text:"Su "+a.matched+" del gruppo restano fuori "+parts.join(", ")+"."}));
+  if(CM.sendBtn)cmSendLabel();
+}
+function cmField(label,obj,key,opt){opt=opt||{};
+  var i=h(opt.area?"textarea":"input",opt.area?{rows:String(opt.rows||5)}:{type:opt.type||"text",placeholder:opt.ph||""});if(opt.area&&opt.ph)i.placeholder=opt.ph;
+  i.value=obj[key]||"";if(opt.max)i.maxLength=opt.max;
+  i.addEventListener("input",function(){obj[key]=i.value;cmChange();if(opt.after)opt.after()});
+  return [h("label",{style:opt.style||""},[label,i]),i];
+}
+function cmSelect(label,opts,val,fn){var s=h("select",{},opts.map(function(o){var e=h("option",{value:o[0],text:o[1]});if(o[0]===val)e.selected=true;return e}));s.addEventListener("change",function(){fn(s.value)});return h("label",{},[label,s])}
+/* Claude writes or rewrites the campaign from a few words of the staff (camp_ai in api.php → campAi in mailing.php) */
+function cmAiCard(){
+  var c=CM.cur,isT=CM.kind==="tpl";
+  var card=h("div",{class:"card stack",style:"border-color:var(--gold)"},[h("h3",{text:"✨ Scrivi con Claude"})]);
+  if(!CM.info.ai){card.append(h("p",{class:"small muted",text:"Serve la chiave anthropic_api_key in config.php (la stessa dell'assistente delle prenotazioni)."}));return card}
+  var brief=h("textarea",{rows:"3",placeholder:"Es.: invito per San Martino, menù a 60 € con i vini a 80 €, posti limitati. Oppure: email ai clienti che non tornano da tempo, offriamo un calice di benvenuto."});
+  try{brief.value=sessionStorage.getItem("dvor-cm-brief-"+(CM.curId||"new"))||""}catch(e){}
+  brief.addEventListener("input",function(){try{sessionStorage.setItem("dvor-cm-brief-"+(CM.curId||"new"),brief.value)}catch(e){}});
+  var a=c.audience||{},al=/^(it|en|de|sl|nl)$/.test(a.lang||"")?a.lang:a.lang==="xit"?"en":"it";
+  var tone=h("select",{},["Caldo e ospitale","Elegante","Allegro e festoso","Breve e diretto","Familiare, come a un amico"].map(function(x){return h("option",{value:x,text:x})}));
+  var lang=h("select",{},[["it","Italiano"],["en","Inglese"],["de","Tedesco"],["sl","Sloveno"],["nl","Olandese"]].map(function(o){var e=h("option",{value:o[0],text:o[1]});if(o[0]===al)e.selected=true;return e}));
+  var msg=h("div",{class:"small","aria-live":"polite"}),chips=h("div",{class:"cm-tb"});
+  var hasText=c.blocks.some(function(b){return (b.text||"").trim()});
+  var audTxt=a.ids?"ospiti scelti a mano nei Contatti":((MK_SEG[a.seg||"all"]||MK_SEG.all)[0]+(a.tag?", tag "+a.tag:"")+(a.lang?", lingua "+a.lang:""));
+  var run=async function(only){
+    var b=this;b.disabled=true;msg.textContent="Claude sta scrivendo…";chips.textContent="";
+    try{var j=await mkCall({op:"camp_ai",brief:brief.value,tone:tone.value,lang:lang.value,audience:audTxt,data:c});
+      if(!only){
+        var prev=cmJ({subject:c.subject,preheader:c.preheader,blocks:c.blocks,name:c.name});
+        var imgs=c.blocks.filter(function(x){return x.t==="image"&&x.src});
+        c.blocks=j.blocks.map(function(x){if(x.t==="image"){var k=imgs.shift();if(k){x.src=k.src;x.alt=x.alt||k.alt||""}}return x}).filter(function(x){return x.t!=="image"||x.src||true});
+        imgs.forEach(function(k){c.blocks.unshift(k)});
+        if(j.subjects[0])c.subject=j.subjects[0];c.preheader=j.preheader||c.preheader;if(!c.name&&j.name)c.name=j.name;
+        CM.aiUndo=prev;CM.aiLast={subjects:j.subjects,note:j.note};
+        cmChange();cmRender();
+        return;
+      }
+      CM.aiLast={subjects:j.subjects,note:j.note};cmAiShow(chips,msg);b.disabled=false;
+    }catch(e){msg.textContent="Non riuscito: "+cmMsg(e);b.disabled=false}
+  };
+  card.append(h("label",{},["Cosa vuoi dire in questa email?",brief]),
+    h("div",{class:"row",style:"align-items:flex-end"},[h("label",{},["Tono",tone]),h("label",{},["Scrivi in",lang]),
+      h("button",{class:"btn",type:"button",text:hasText?"Riscrivi la campagna":"Scrivi la campagna",onclick:function(){run.call(this,false)}}),
+      h("button",{class:"btn ghost",type:"button",text:"Solo idee per l'oggetto",onclick:function(){run.call(this,true)}})]),
+    msg,chips,
+    h("p",{class:"small muted",text:"Claude conosce Dvor, gli eventi in programma e quello che c'è già nell'email: lo riscrive tutto, le foto restano. Controlla sempre prezzi e date; dove manca un dato mette un segnaposto tra [parentesi]."}));
+  if(CM.aiLast)cmAiShow(chips,msg);
+  return card;
+}
+function cmAiShow(chips,msg){var c=CM.cur,j=CM.aiLast;chips.textContent="";msg.textContent=j.note?"Claude: "+j.note:"";
+  if(j.subjects&&j.subjects.length){chips.append(h("span",{class:"small muted",style:"align-self:center",text:"Oggetti: "}));
+    j.subjects.forEach(function(sj){chips.append(h("button",{class:"cm-ib",type:"button","aria-pressed":String(sj===c.subject),text:sj,style:sj===c.subject?"border-color:var(--wine)":"",onclick:function(){c.subject=sj;cmChange();cmRender()}}))})}
+  if(CM.aiUndo)chips.append(h("button",{class:"btn ghost small",type:"button",text:"↶ Torna a prima",onclick:function(){var p=CM.aiUndo;CM.aiUndo=null;c.subject=p.subject;c.preheader=p.preheader;c.blocks=p.blocks;c.name=p.name;cmChange();cmRender()}}));
+}
+function cmEditor(box){
+  box.textContent="";CM.frame=null;var c=CM.cur,isT=CM.kind==="tpl";
+  CM.stEl=h("span",{class:"small muted","aria-live":"polite"});
+  var head=h("div",{class:"card stack"},[
+    h("div",{class:"row",style:"justify-content:space-between;align-items:center"},[
+      h("button",{class:"btn ghost small",type:"button",text:isT?"‹ Template":"‹ Campagne",onclick:cmBack}),
+      h("div",{class:"row",style:"align-items:center;gap:.5rem"},[CM.stEl,
+        h("button",{class:"btn small",type:"button",text:isT?"Salva template":"Salva",onclick:function(){var b=this;b.disabled=true;cmSave().then(function(){b.disabled=false;if(isT)CM.at=0},function(){b.disabled=false})}}),
+        !isT?h("button",{class:"btn ghost small",type:"button",text:"Salva come template",onclick:async function(){var b=this;b.disabled=true;try{await mkCall({op:"tpl_save",data:{name:c.name||c.subject||"Template",subject:c.subject,preheader:c.preheader,fromName:c.fromName,blocks:c.blocks}});b.textContent="✓ Template salvato";CM.at=0}catch(e){b.textContent="Non salvato";b.disabled=false}}}):null,
+        h("button",{class:"btn ghost small",type:"button",text:"Elimina",onclick:function(){twoStep(this,"Eliminare? Tocca ancora",async function(){if(CM.curId){try{await mkCall({op:isT?"tpl_delete":"camp_delete",id:CM.curId})}catch(e){alert("Non eliminata: "+cmMsg(e));return}}CM.dirty=false;CM.curId="";cmBack()})}})])]),
+    cmField(isT?"Nome del template":"Nome della campagna (lo vedi solo tu)",c,"name",{max:120,ph:isT?"Serata a tema":"San Martino 2026"})[0]
+  ]);
+  if(!isT&&(c.status==="scheduled")){
+    head.append(h("div",{class:"row",style:"align-items:center"},[h("span",{class:"pill s-lastcall",text:"Programmata"}),h("span",{class:"small",text:"Partirà "+cmIso(c.scheduledAt)+". Puoi ancora cambiarla: le modifiche si salvano da sole."}),
+      h("button",{class:"btn ghost small",type:"button",text:"Annulla la programmazione",onclick:async function(){this.disabled=true;try{await mkCall({op:"camp_unschedule",id:CM.curId});c.status="draft";delete c.scheduledAt;cmRender()}catch(e){alert(cmMsg(e));this.disabled=false}}})]));
+  }
+  var left=h("div",{class:"stack"}),right=h("div",{class:"stack cm-pv"});
+  left.append(cmAiCard());
+  /* audience */
+  if(!isT){
+    var a=c.audience;CM.audEl=h("div",{"aria-live":"polite"});
+    var ac=h("div",{class:"card stack"},[h("h3",{text:"1 · Destinatari"})]);
+    if(a.ids){ac.append(h("p",{class:"small",text:a.ids.length+" lead scelti nella pagina Contatti"+(a.idsLabel?" ("+a.idsLabel+")":"")+"."}),h("div",{},[h("button",{class:"btn ghost small",type:"button",text:"Scegli invece un gruppo",onclick:function(){c.audience={seg:"all"};cmChange();cmAudience(0);cmRender()}})]))}
+    else{
+      var tags={};MK.leads.forEach(function(L){(L.tags||[]).forEach(function(x){tags[x]=1})});
+      var upd=function(k){return function(v){a[k]=v;cmChange();CM.aud=null;cmAudText();cmAudience(300)}};
+      ac.append(h("div",{class:"row"},[
+        cmSelect("Gruppo",Object.keys(MK_SEG).map(function(k){return [k,MK_SEG[k][0]]}),a.seg||"all",upd("seg")),
+        cmSelect("Tag",[["","Tutti"]].concat(Object.keys(tags).sort().map(function(x){return [x,x]})),a.tag||"",upd("tag")),
+        cmSelect("Lingua dell'ospite",CM_LANGS,a.lang||"",upd("lang")),
+        cmSelect("Origine",CM_ORIG,a.origin||"all",upd("origin"))]));
+    }
+    ac.append(CM.audEl,h("p",{class:"small muted",text:"Partono solo a chi ha detto sì al consenso marketing e non si è disiscritto. Chi ha l'email rimbalzata resta fuori finché non la correggi nei Contatti."}));
+    cmAudText();left.append(ac);
+  }
+  /* subject */
+  var hint="Scrivi {{nome}} dove vuoi il nome dell'ospite; {{nome|amico}} mette «amico» quando il nome manca.";
+  left.append(h("div",{class:"card stack"},[h("h3",{text:(isT?"":"2 · ")+"Oggetto"}),
+    cmField("Oggetto",c,"subject",{max:200,ph:"{{nome|Ciao}}, arriva San Martino"})[0],
+    cmField("Anteprima del testo (la riga grigia dopo l'oggetto)",c,"preheader",{max:200,ph:"Vino nuovo, castagne e un menù della tradizione"})[0],
+    cmField("Mittente",c,"fromName",{max:80,ph:CM.info.from||"Osteria Enoteca Dvor"})[0],
+    h("p",{class:"small muted",text:hint})]));
+  /* blocks */
+  var bc=h("div",{class:"card stack"},[h("h3",{text:(isT?"":"3 · ")+"Contenuto"}),h("p",{class:"small muted",text:"Il logo in alto e il piè di pagina con indirizzo e disiscrizione ci sono sempre. Nei testi: **grassetto**, *corsivo*, [parola](https://…) per un link; una riga vuota va a capo con un nuovo paragrafo."})]);
+  var list=h("div",{class:"stack",style:"gap:.6rem"});bc.append(list);
+  function drawBlocks(){list.textContent="";c.blocks.forEach(function(b,i){list.append(cmBlock(b,i,drawBlocks))});
+    if(!c.blocks.length)list.append(h("p",{class:"small muted",text:"Nessun blocco: aggiungine uno qui sotto."}))}
+  drawBlocks();
+  var add=h("div",{class:"cm-add"},[h("span",{class:"small muted",style:"align-self:center",text:"Aggiungi:"})]);
+  Object.keys(CM_BL).forEach(function(t){add.append(h("button",{class:"btn ghost small",type:"button",text:"+ "+CM_BL[t],onclick:function(){
+    var b={t:t};if(t==="event"&&S.events[0])b.id=S.events[0].id;if(t==="button"){b.label="Scopri di più";b.href="https://www.osteriadvor.com"}
+    c.blocks.push(b);cmChange();drawBlocks();var last=list.lastChild;if(last&&last.scrollIntoView)last.scrollIntoView({block:"nearest"});var f=last&&last.querySelector("textarea,input");if(f)f.focus()}}))});
+  bc.append(add);left.append(bc);
+  /* test and send */
+  var tc=h("div",{class:"card stack"},[h("h3",{text:(isT?"":"4 · ")+"Prova"+(isT?"":" e invio")})]);
+  var to=h("input",{type:"email",multiple:"multiple",placeholder:"tu@esempio.it"});to.value=(function(){try{return localStorage.getItem("dvor-cm-test")||""}catch(e){return ""}})()||CM.info.replyTo||"";
+  var tmsg=h("span",{class:"small muted","aria-live":"polite"});
+  tc.append(h("div",{class:"row",style:"align-items:flex-end"},[h("label",{style:"flex:3 1 220px"},["Manda una prova a (anche più indirizzi, separati da virgola)",to]),
+    h("button",{class:"btn ghost",type:"button",text:"Manda la prova",onclick:async function(){var b=this,list=to.value.split(/[,;\s]+/).filter(Boolean);if(!list.length){tmsg.textContent="Scrivi un indirizzo";return}
+      b.disabled=true;tmsg.textContent="Invio…";try{localStorage.setItem("dvor-cm-test",to.value)}catch(e){}
+      try{var j=await mkCall({op:"camp_test",data:c,to:list,lang:CM.prevLang});tmsg.textContent=(j.sent.length?"✓ Mandata a "+j.sent.join(", ")+" (oggetto con «[Prova]», nella lingua dell'anteprima)":"")+(j.errors.length?" Errori: "+j.errors.join("; "):"")}catch(e){tmsg.textContent="Non mandata: "+cmMsg(e)}b.disabled=false}})]),tmsg);
+  if(!isT)cmSendBox(tc);
+  left.append(tc);
+  /* preview */
+  CM.inbox=h("div",{class:"cm-inbox"},[h("span",{class:"small muted",text:"Anteprima…"})]);
+  CM.frame=h("iframe",{class:"cm-frame"+(CM.phone?" phone":""),title:"Anteprima dell'email",sandbox:"allow-popups allow-popups-to-escape-sandbox allow-same-origin"});
+  var lg=h("select",{"aria-label":"Lingua dell'anteprima"},[["it","Italiano"],["en","English"],["de","Deutsch"],["sl","Slovenščina"],["nl","Nederlands"]].map(function(o){var e=h("option",{value:o[0],text:o[1]});if(o[0]===CM.prevLang)e.selected=true;return e}));
+  lg.addEventListener("change",function(){CM.prevLang=lg.value;cmPreview(0)});
+  var dv=h("div",{class:"seg",role:"group","aria-label":"Larghezza"},[["Computer",false],["Telefono",true]].map(function(o){return h("button",{type:"button","aria-pressed":String(CM.phone===o[1]),text:o[0],onclick:function(){CM.phone=o[1];CM.frame.classList.toggle("phone",o[1]);Array.prototype.forEach.call(dv.children,function(x,k){x.setAttribute("aria-pressed",String(k===(o[1]?1:0)))})}})}));
+  right.append(h("div",{class:"card stack"},[h("div",{class:"row",style:"justify-content:space-between;align-items:center"},[h("h3",{text:"Anteprima"}),h("div",{class:"row",style:"align-items:center;gap:.5rem"},[dv,h("label",{style:"flex:0 0 auto"},[lg])])]),
+    CM.inbox,CM.frame,h("p",{class:"small muted",text:"Il testo che non dipende da te (pulsanti «Prenota», date degli eventi, piè di pagina) esce nella lingua di ogni ospite. I tuoi testi restano come li scrivi: per gli stranieri puoi fare una campagna a parte con il filtro della lingua."})]));
+  box.append(head,h("div",{class:"cm-ed"},[left,right]));
+  cmState();cmPreview(0);
+}
+/* one block of the editor */
+function cmBlock(b,i,redraw){
+  var c=CM.cur,n=c.blocks.length;
+  var mv=function(d){return function(){var j=i+d;if(j<0||j>=n)return;var x=c.blocks[i];c.blocks[i]=c.blocks[j];c.blocks[j]=x;cmChange();redraw()}};
+  var ib=function(txt,lbl,fn,dis){var x=h("button",{class:"cm-ib",type:"button",text:txt,title:lbl,"aria-label":lbl,onclick:fn});x.disabled=!!dis;return x};
+  var box=h("div",{class:"cm-bl"},[h("div",{class:"cm-bh"},[h("span",{class:"caps",text:CM_BL[b.t]||b.t}),
+    ib("↑","Sposta su",mv(-1),i===0),ib("↓","Sposta giù",mv(1),i===n-1),
+    ib("⧉","Duplica",function(){c.blocks.splice(i+1,0,cmJ(b));cmChange();redraw()}),
+    ib("✕","Elimina il blocco",function(){c.blocks.splice(i,1);cmChange();redraw()})])]);
+  var align=function(){return cmSelect("Allineamento",[["left","A sinistra"],["center","Al centro"]],b.align||"left",function(v){b.align=v;cmChange()})};
+  if(b.t==="heading"){box.append(h("div",{class:"row"},[h("label",{style:"flex:3 1 220px"},["Titolo",(function(){var x=cmField("",b,"text",{max:300})[1];return x})()]),cmSelect("Grandezza",[["big","Grande"],["small","Piccolo"]],b.size||"big",function(v){b.size=v;cmChange()}),align()]))}
+  else if(b.t==="text"){
+    var f=cmField("Testo",b,"text",{area:true,rows:6,max:8000,ph:"Ciao {{nome}},\n\n…"}),ta=f[1];
+    var wrap=function(a,z,ph){return function(){var s=ta.selectionStart,e=ta.selectionEnd,v=ta.value,sel=v.slice(s,e)||ph;ta.value=v.slice(0,s)+a+sel+z+v.slice(e);ta.focus();ta.selectionStart=s+a.length;ta.selectionEnd=s+a.length+sel.length;b.text=ta.value;cmChange()}};
+    box.append(h("div",{class:"cm-tb"},[
+      h("button",{class:"cm-ib",type:"button",title:"Grassetto",onclick:wrap("**","**","testo")},[h("b",{text:"G"})]),
+      h("button",{class:"cm-ib",type:"button",title:"Corsivo",onclick:wrap("*","*","testo")},[h("i",{text:"C"})]),
+      h("button",{class:"cm-ib",type:"button",text:"🔗 Link",onclick:function(){var u=prompt("Indirizzo del link (https://…)","https://www.osteriadvor.com");if(!u)return;if(!/^(https?:|mailto:|tel:)/i.test(u))u="https://"+u;wrap("[","]("+u+")","link")()}}),
+      h("button",{class:"cm-ib",type:"button",text:"+ Nome",title:"Il nome dell'ospite",onclick:wrap("{{nome}}","","")}),
+      align()]),f[0]);
+  }
+  else if(b.t==="image"){
+    var th=h("div"),msg=h("span",{class:"small muted","aria-live":"polite"});
+    var drawT=function(){th.textContent="";if(b.src)th.append(h("img",{class:"cm-thumb",src:b.src,alt:""}))};drawT();
+    var file=h("input",{type:"file",accept:"image/jpeg,image/png,image/webp,image/gif"});
+    file.addEventListener("change",async function(){var f2=file.files[0];if(!f2)return;if(!assets){msg.textContent="Caricamento immagini non disponibile";return}
+      msg.textContent="Carico…";try{var up=await assets.upload(f2);b.src="uploads/"+up.id;msg.textContent="✓ Caricata";drawT();cmChange()}catch(e){msg.textContent="Non caricata: "+cmMsg(e)}});
+    var evs=S.events.filter(function(e){return e.imageId});
+    box.append.apply(box,[h("div",{class:"row",style:"align-items:center"},[th,h("label",{style:"flex:2 1 200px"},["Foto (JPG o PNG, larga almeno 1100 pixel)",file]),msg]),
+      evs.length?cmSelect("Oppure la foto di un evento",[["","—"]].concat(evs.map(function(e){return ["uploads/"+e.imageId,e.title_it||e.id]})),b.src||"",function(v){if(v){b.src=v;drawT();cmChange()}}):null,
+      h("div",{class:"row"},[cmField("Descrizione (per chi non vede le immagini)",b,"alt",{max:200})[0],cmField("Link quando la toccano (facoltativo)",b,"href",{type:"url",ph:"https://www.osteriadvor.com"})[0]])].filter(Boolean));
+  }
+  else if(b.t==="button"){box.append(h("div",{class:"row"},[cmField("Scritta",b,"label",{max:80})[0],h("label",{style:"flex:2 1 220px"},["Link",cmField("",b,"href",{type:"url",ph:"https://www.osteriadvor.com/eventi.html"})[1]]),align()]))}
+  else if(b.t==="book"){box.append(h("div",{class:"row"},[cmField("Scritta (vuoto = «Prenota il tuo tavolo» nella lingua dell'ospite)",b,"label",{max:80})[0],align()]),h("p",{class:"small muted",text:"Porta alla pagina di prenotazione; le prenotazioni fatte da qui si contano nel report della campagna."}))}
+  else if(b.t==="event"){
+    if(!S.events.length)box.append(h("p",{class:"small",text:"Nessun evento in programma: aggiungilo da Altro → Eventi e torna qui."}));
+    else box.append(h("div",{class:"row"},[cmSelect("Quale evento",[["","— scegli —"]].concat(S.events.map(function(e){return [e.id,mkD(e.date)+" · "+(e.title_it||e.id)]})),b.id||"",function(v){b.id=v;cmChange()})]),h("p",{class:"small muted",text:"Foto, data, descrizione e prezzo vengono dall'evento, nella lingua dell'ospite (inglese per chi non è italiano, se c'è)."}));
+  }
+  else if(b.t==="divider"||b.t==="spacer"){box.append(h("p",{class:"small muted",text:b.t==="divider"?"Una linea sottile tra due parti dell'email.":"Un po' di spazio vuoto."}))}
+  return box;
+}
+/* sending: now or at a given time, admin only */
+function cmSendBox(tc){
+  var c=CM.cur,admin=!!CM.info.admin;
+  if(!admin){tc.append(h("p",{class:"small muted",text:"Solo un amministratore può inviare la campagna: preparala e salvala, poi chiedi a lui."}));return}
+  var when=c.status==="scheduled"&&c.scheduledAt?"later":"now";
+  var dt=h("input",{type:"datetime-local"});var pad2=function(n){return (n<10?"0":"")+n},loc=function(d){return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate())+"T"+pad2(d.getHours())+":"+pad2(d.getMinutes())};
+  var d0=c.scheduledAt?new Date(c.scheduledAt):new Date(Date.now()+86400000);if(!c.scheduledAt){d0.setHours(10,0,0,0)}dt.value=loc(d0);dt.min=loc(new Date());
+  var smsg=h("span",{class:"small muted","aria-live":"polite"});
+  var seg=h("div",{class:"seg",role:"group","aria-label":"Quando"},[["now","Adesso"],["later","Programma"]].map(function(o){return h("button",{type:"button","aria-pressed":String(when===o[0]),text:o[1],onclick:function(){when=o[0];Array.prototype.forEach.call(seg.children,function(x,k){x.setAttribute("aria-pressed",String((k===0)===(when==="now")))});dt.parentNode.hidden=when!=="later";cmSendLabel()}})}));
+  var dl=h("label",{style:"flex:0 1 240px"},["Giorno e ora",dt]);dl.hidden=when!=="later";
+  CM.sendWhen=function(){return when};CM.sendAt=function(){return dt.value};
+  CM.sendBtn=h("button",{class:"btn",type:"button",onclick:function(){var b=this;
+    if(!c.subject.trim()){smsg.textContent="Manca l'oggetto.";return}
+    if(!c.blocks.some(function(x){return (x.t==="text"&&x.text.trim())||(x.t==="heading"&&x.text.trim())||(x.t==="image"&&x.src)||(x.t==="event"&&x.id)})){smsg.textContent="Manca il contenuto.";return}
+    if(CM.aud&&!CM.aud.count){smsg.textContent="Nessun destinatario con consenso in questo gruppo.";return}
+    if(when==="later"&&!(new Date(dt.value)>new Date())){smsg.textContent="Scegli un giorno e un'ora nel futuro.";return}
+    twoStep(b,when==="later"?"Programmare? Tocca ancora":"Inviare a "+(CM.aud?CM.aud.count:"tutti")+"? Tocca ancora",async function(){
+      smsg.textContent="Salvo e preparo l'invio…";
+      try{await cmSave();var j=await mkCall({op:"camp_send",id:CM.curId,at:when==="later"?new Date(dt.value).toISOString():""});
+        if(when==="later"){c.status="scheduled";c.scheduledAt=j.scheduledAt;CM.dirty=false;cmRender()}else{CM.dirty=false;cmOpenCamp(CM.curId)}
+      }catch(e){smsg.textContent="Non partita: "+cmMsg(e);b.disabled=false;b.textContent="Riprova"}
+    })}});
+  tc.append(h("div",{style:"border-top:1px solid var(--line);margin:.25rem 0"}),h("div",{class:"row",style:"align-items:flex-end"},[h("label",{style:"flex:0 0 auto"},["Quando",seg]),dl,CM.sendBtn]),smsg,
+    h("p",{class:"small muted",text:"Partono "+(CM.info.rate||40)+" email al minuto dal server della posta. Una campagna partita non si modifica più, ma si può mettere in pausa."}));
+  cmSendLabel();
+}
+function cmSendLabel(){if(!CM.sendBtn||CM.sendBtn.dataset.armed)return;var n=CM.aud&&CM.aud.count!=null?CM.aud.count:null,later=CM.sendWhen&&CM.sendWhen()==="later";
+  CM.sendBtn.textContent=(later?"Programma":"Invia adesso")+(n!=null?" a "+n+(n===1?" contatto":" contatti"):"")}
+
+/* ---- report of a campaign ---- */
+function cmPump(){clearTimeout(CM.runT);var r=CM.rep;if(!r||CM.view!=="report"||r.data.status!=="sending")return;
+  CM.runT=setTimeout(async function(){if(CM.view!=="report"||CM.repId!==r.id||S.sp!=="mkt"||CM.tab!=="camp")return;
+    try{await mkCall({op:"camp_run"})}catch(e){}
+    try{var j=await mkCall({op:"camp_get",id:r.id,report:1});if(CM.view==="report"&&CM.repId===r.id){CM.rep=j;cmRender()}}catch(e){}
+    cmPump()},3000)}
+function cmReportView(box){
+  var r=CM.rep,d=r.data,s=r.stats||{total:0,delivered:0,opened:0,clicked:0,unsub:0,bounced:0,failed:0,queued:0,skipped:0,opens:0,clicks:0},rp=r.report||{recipients:[],links:[],bookings:{}},st=d.status,admin=!!CM.info.admin;
+  var y=window.scrollY;box.textContent="";
+  var act=function(op,txt,ghost){return h("button",{class:"btn small"+(ghost?" ghost":""),type:"button",text:txt,onclick:async function(){this.disabled=true;try{await mkCall({op:op,id:r.id});var j=await mkCall({op:"camp_get",id:r.id,report:1});CM.rep=j;cmRender();cmPump()}catch(e){alert(cmMsg(e));this.disabled=false}}})};
+  var dup=async function(aud,suffix){try{var j=await mkCall({op:"camp_get",id:r.id});var x=j.data;CM.view="edit";cmOpen("camp","",{name:(x.name||"")+suffix,subject:x.subject,preheader:x.preheader,fromName:x.fromName,blocks:x.blocks,audience:aud||x.audience});cmChange()}catch(e){alert(cmMsg(e))}};
+  var head=h("div",{class:"card stack"},[
+    h("div",{class:"row",style:"justify-content:space-between;align-items:center"},[h("button",{class:"btn ghost small",type:"button",text:"‹ Campagne",onclick:cmBack}),
+      h("div",{class:"row",style:"gap:.4rem"},[
+        st==="sending"?act("camp_pause","Pausa",true):null,
+        st==="paused"&&admin?act("camp_resume","Riprendi l'invio"):null,
+        (st==="paused"||st==="sending")&&admin?h("button",{class:"btn ghost small",type:"button",text:"Ferma qui",title:"Le email ancora in coda non partono",onclick:function(){var b=this;twoStep(b,"Fermare? Tocca ancora",async function(){try{await mkCall({op:"camp_stop",id:r.id});CM.rep=await mkCall({op:"camp_get",id:r.id,report:1});cmRender()}catch(e){alert(cmMsg(e))}})}}):null,
+        h("button",{class:"btn ghost small",type:"button",text:"Duplica",onclick:function(){dup(null," (copia)")}}),
+        st!=="sending"&&admin?h("button",{class:"btn ghost small",type:"button",text:"Elimina",title:"Elimina la campagna e i suoi numeri",onclick:function(){twoStep(this,"Eliminare anche i numeri? Tocca ancora",async function(){try{await mkCall({op:"camp_delete",id:r.id});cmBack()}catch(e){alert(cmMsg(e))}})}}):null])]),
+    h("div",{class:"row",style:"align-items:center;gap:.6rem"},[h("h2",{text:d.name||"Campagna"}),cmPill(st),d.stopped?h("span",{class:"small muted",text:"fermata a metà"}):null]),
+    h("p",{class:"small muted",text:"Oggetto: «"+(d.subject||"")+"» · partita "+cmIso(d.startedAt)+(d.sentAt?" · finita "+cmIso(d.sentAt):"")+(d.createdBy?" · preparata da "+d.createdBy:"")})]);
+  if(st==="sending"||st==="paused"){var done=s.total-s.queued;head.append(h("div",{class:"cm-prog",role:"progressbar","aria-valuemin":"0","aria-valuemax":String(s.total),"aria-valuenow":String(done)},[h("div",{style:"width:"+(s.total?Math.round(done/s.total*100):0)+"%"})]),
+    h("p",{class:"small",text:done+" di "+s.total+" email partite"+(st==="sending"?" · "+(CM.info.rate||40)+" al minuto, continua anche se chiudi la pagina":" · in pausa")}))}
+  var bk=rp.bookings||{};
+  head.append(h("div",{class:"tdkpi"},[
+    kpi2(s.delivered,"consegnate","su "+s.total+" destinatari"),
+    kpi2(cmPct(s.opened,s.delivered),"aperture",s.opened+(s.opened===1?" persona":" persone")+" · "+s.opens+" aperture",s.delivered&&s.opened/s.delivered>=.3?"good":""),
+    kpi2(cmPct(s.clicked,s.delivered),"clic",s.clicked+(s.clicked===1?" persona":" persone")+" · "+s.clicks+" clic",s.delivered&&s.clicked/s.delivered>=.03?"good":""),
+    kpi2(bk.recipients||0,"prenotazioni","entro 14 giorni dai destinatari"+(bk.recipientsPeople?" · "+bk.recipientsPeople+" persone":"")+(bk.link?" · "+bk.link+" dal link":""),bk.recipients?"good":""),
+    kpi2(s.unsub,"disiscritti",cmPct(s.unsub,s.delivered)),
+    kpi2(s.bounced+s.failed,"non consegnate",s.bounced+" rimbalzate · "+s.failed+" errori",s.bounced+s.failed>0&&(s.bounced+s.failed)/Math.max(1,s.total)>.05?"hot":"")]));
+  head.append(h("p",{class:"small muted",text:"Le aperture sono indicative: Apple Mail apre le immagini da solo e conta come aperta anche chi non l'ha letta, altri programmi le bloccano. Clic e prenotazioni sono i numeri più affidabili."}));
+  box.append(head);
+  /* opens over time */
+  var t0=Math.floor((new Date(d.startedAt).getTime()||0)/1000),H=48,bars=[];for(var i=0;i<H;i++)bars.push(0);
+  rp.recipients.forEach(function(x){if(x.opened&&t0){var k=Math.floor((x.opened-t0)/3600);if(k>=0&&k<H)bars[k]++}});
+  var mx=Math.max.apply(null,bars);
+  if(s.opened){var bw=h("div",{class:"cm-bars",role:"img","aria-label":"Aperture per ora nelle prime 48 ore"});
+    bars.forEach(function(v,k){bw.append(h("div",{style:"height:"+(mx?Math.max(v?3:0,v/mx*100):0)+"%",title:"Dalla "+k+"ª alla "+(k+1)+"ª ora: "+v+(v===1?" apertura":" aperture")}))});
+    box.append(h("div",{class:"card stack"},[h("h3",{text:"Aperture nelle prime 48 ore"}),h("div",{},[bw,h("div",{class:"cm-axis"},[h("span",{text:"invio"}),h("span",{text:"12 ore"}),h("span",{text:"24 ore"}),h("span",{text:"36 ore"}),h("span",{text:"48 ore"})])]),
+      h("p",{class:"small muted",text:"Il momento con più aperture dice a che ora mandare la prossima."})]))}
+  /* links */
+  if(rp.links.length){var lt=h("tbody");rp.links.forEach(function(l){lt.append(h("tr",{},[h("td",{style:"overflow-wrap:anywhere"},[h("a",{href:l.url,target:"_blank",rel:"noopener",text:l.url.replace(/^https?:\/\/(www\.)?/,"")})]),h("td",{class:"num",text:String(l.people)}),h("td",{class:"num",text:String(l.clicks)})]))});
+    box.append(h("div",{class:"card stack"},[h("h3",{text:"Link toccati"}),h("div",{class:"tablewrap"},[h("table",{},[h("thead",{},[h("tr",{},[h("th",{text:"Link"}),h("th",{text:"Persone"}),h("th",{text:"Clic"})])]),lt])])]))}
+  /* bookings */
+  if(bk.list&&bk.list.length){box.append(h("div",{class:"card stack"},[h("h3",{text:"Prenotazioni arrivate dopo l'email"}),
+    h("div",{class:"small stack",style:"gap:.2rem"},bk.list.map(function(b){return h("div",{class:"num",text:(b.name||"—")+" · "+mkD(b.date)+" "+(b.time||"")+" · "+b.party+" pers."+(b.link?" · dal link dell'email":"")+" · prenotato il "+mkD(b.createdAt)})}))]))}
+  /* recipients */
+  var F={all:["Tutti",function(){return true}],opened:["Aperta",function(x){return x.opened>0}],clicked:["Clic",function(x){return x.clicked>0}],notopened:["Non aperta",function(x){return x.status==="sent"&&!x.opened}],
+    unsub:["Disiscritti",function(x){return x.unsub>0}],bounced:["Rimbalzate",function(x){return x.status==="bounced"}],failed:["Errori e saltate",function(x){return x.status==="failed"||x.status==="skipped"}],queued:["In coda",function(x){return x.status==="queued"}]};
+  var q=mkNorm(CM.repQ),rows=rp.recipients.filter(function(x){return F[CM.repF][1](x)&&(!q||mkNorm(x.name+" "+x.email).indexOf(q)>=0)});
+  var rc=h("div",{class:"card stack"},[h("h3",{text:"Destinatari"})]);
+  var fs=h("select",{"aria-label":"Filtro"},Object.keys(F).map(function(k){var e=h("option",{value:k,text:F[k][0]+" ("+rp.recipients.filter(F[k][1]).length+")"});if(k===CM.repF)e.selected=true;return e}));
+  fs.addEventListener("change",function(){CM.repF=fs.value;CM.repShown=300;cmRender()});
+  var qs=h("input",{type:"search",placeholder:"Nome o email"});qs.value=CM.repQ;qs.addEventListener("change",function(){CM.repQ=qs.value;cmRender()});
+  var STX={queued:"in coda",sent:"consegnata",failed:"errore",bounced:"rimbalzata",skipped:"saltata"};
+  var non=rp.recipients.filter(F.notopened[1]);
+  rc.append(h("div",{class:"row"},[h("label",{style:"flex:0 1 220px"},["Mostra",fs]),h("label",{style:"flex:1 1 200px"},["Cerca",qs])]));
+  var tb=h("tbody");
+  rows.slice(0,CM.repShown).forEach(function(x){tb.append(h("tr",{},[h("td",{},[h("div",{text:x.name||"—"}),h("div",{class:"small muted",text:x.email})]),
+    h("td",{class:"small",text:(STX[x.status]||x.status)+(x.error&&x.status!=="sent"?" · "+x.error:"")+(x.unsub?" · disiscritto":"")}),
+    h("td",{class:"small num",text:x.opened?cmTs(x.opened)+(x.opens>1?" · "+x.opens+" volte":""):"—"}),
+    h("td",{class:"small num",text:x.clicked?cmTs(x.clicked)+(x.clicks>1?" · "+x.clicks+" clic":""):"—"})]))});
+  rc.append(h("div",{class:"tablewrap"},[h("table",{},[h("thead",{},[h("tr",{},["Ospite","Esito","Aperta","Clic"].map(function(x){return h("th",{text:x})}))]),tb])]));
+  if(rows.length>CM.repShown)rc.append(h("div",{},[h("button",{class:"btn ghost small",type:"button",text:"Mostra altri "+Math.min(300,rows.length-CM.repShown),onclick:function(){CM.repShown+=300;cmRender()}})]));
+  rc.append(h("div",{class:"row"},[
+    h("button",{class:"btn ghost small",type:"button",text:"Scarica questi (CSV)",onclick:function(){var out=[["Nome","Email","Esito","Errore","Inviata","Aperta","Aperture","Clic","Numero di clic","Disiscritto"]];
+      rows.forEach(function(x){out.push([x.name,x.email,STX[x.status]||x.status,x.error,cmTs(x.sent),cmTs(x.opened),x.opens,cmTs(x.clicked),x.clicks,x.unsub?"sì":""])});mkDownload("dvor-campagna-"+(d.code||r.id)+".csv",mkCsv(out,";",true),true)}}),
+    non.length&&st==="sent"?h("button",{class:"btn ghost small",type:"button",text:"Nuova campagna a chi non l'ha aperta ("+non.length+")",title:"Stesso contenuto, nuovo oggetto: di solito qualche giorno dopo",onclick:function(){dup({seg:"all",ids:non.map(function(x){return x.lead}).filter(Boolean),idsLabel:"non hanno aperto «"+(d.name||"")+"»"}," (seconda possibilità)")}}):null]));
+  box.append(rc);
+  window.scrollTo(0,y);
+}
+
+/* ---- templates tab ---- */
+function cmTplView(box){
+  box.textContent="";
+  var card=h("div",{class:"card stack"},[h("h2",{text:"Template"}),h("p",{class:"small muted",text:"Un template è un'email già impaginata da riusare: per partire più in fretta con una nuova campagna. Si salvano da qui o da una campagna con «Salva come template»."}),
+    h("div",{},[h("button",{class:"btn small",type:"button",text:"+ Nuovo template",onclick:function(){CM.tview="edit";cmOpen("tpl","",CM_STARTERS[CM_STARTERS.length-1].data)}})])]);
+  if(!CM.list&&CM.busy)card.append(h("p",{class:"small muted",text:"Caricamento…"}));
+  if(CM.tpls.length){var tb=h("tbody");
+    CM.tpls.slice().sort(function(a,b){return String(b.data.updatedAt||"").localeCompare(String(a.data.updatedAt||""))}).forEach(function(t){
+      tb.append(h("tr",{},[h("td",{},[h("div",{text:t.data.name||"Template"}),h("div",{class:"small muted",text:t.data.subject||""})]),h("td",{class:"small num",text:cmIso(t.data.updatedAt)}),
+        h("td",{},[h("div",{class:"row",style:"gap:.35rem;justify-content:flex-end"},[
+          h("button",{class:"btn small",type:"button",text:"Usa",onclick:function(){CM.newAud=null;cmTab("camp");cmStart(t.data)}}),
+          h("button",{class:"btn ghost small",type:"button",text:"Modifica",onclick:function(){CM.tview="edit";cmOpen("tpl",t.id,t.data)}}),
+          h("button",{class:"btn ghost small",type:"button",text:"Elimina",onclick:function(){twoStep(this,"Eliminare? Tocca ancora",async function(){try{await mkCall({op:"tpl_delete",id:t.id});CM.tpls=CM.tpls.filter(function(x){return x.id!==t.id});cmRender()}catch(e){alert(cmMsg(e))}})}})])])]))});
+    card.append(h("h3",{text:"I tuoi template"}),h("div",{class:"tablewrap"},[h("table",{},[h("thead",{},[h("tr",{},[h("th",{text:"Template"}),h("th",{text:"Modificato"}),h("th",{text:""})])]),tb])]))}
+  card.append(h("h3",{text:"Modelli pronti"}));
+  var g=h("div",{class:"cm-st"});
+  CM_STARTERS.forEach(function(s){g.append(h("button",{type:"button",title:"Personalizza e salvalo come tuo template",onclick:function(){CM.tview="edit";var d=cmJ(s.data);d.name=s.name;cmOpen("tpl","",d);cmChange()}},[h("b",{text:s.name}),h("span",{class:"small muted",text:s.desc})]))});
+  card.append(g);box.append(card);
+}
+
+/* ---- from the Contatti page: a campaign for the filtered leads ---- */
+el("mk-mail").addEventListener("click",function(){
+  var L=MK.view||[],ok=L.filter(cmGoodLead);
+  if(!L.length){el("mk-mail-msg").textContent="Nessun lead con questi filtri.";return}
+  var f=[],sg=el("mk-seg"),q=el("mk-q").value.trim();if(sg.value!=="all")f.push(sg.options[sg.selectedIndex].text.toLowerCase());if(el("mk-tag").value)f.push("tag "+el("mk-tag").value);if(q)f.push("«"+q+"»");if(el("mk-from").value||el("mk-to").value)f.push("visite "+(el("mk-from").value?"dal "+mkD(el("mk-from").value):"")+(el("mk-to").value?" al "+mkD(el("mk-to").value):""));
+  CM.newAud={ids:L.map(function(x){return x.id}),idsLabel:(f.join(", ")||"tutti")+" · "+ok.length+" con consenso"};
+  cmTab("camp");CM.view="new";cmRender();
+});
+
+function render(){try{if(S.view==="staff"){renderToday();renderWeek();renderPlanner();mbInfo();renderBlacklist();renderBoard();renderDay();renderEvAdmin();if(S.sp==="mkt"){mkLoad(false);cmTick()}}else{renderMine();renderEvents();renderCal();renderSlots()}}catch(e){dbStatus("Errore di visualizzazione: "+(e&&e.message))}}
 setInterval(render,60000);
 window.DVOR_LOGIC={check:check,dinnerState:dinnerState,slotsFor:slotsFor,S:S};
 boot();

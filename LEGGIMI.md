@@ -10,6 +10,10 @@ Sistema di prenotazione tavoli di **prenota.osteriadvor.com**. Contiene la pagin
 | `api.php` | Server: prenotazioni, eventi, impostazioni, email |
 | `db.php` | Collegamento al database MySQL/MariaDB (le tabelle si creano da sole) |
 | `email-logo.png` | Logo nelle email |
+| `mailing.php` | Campagne email: template a blocchi, destinatari, coda di invio, aperture, clic, disiscrizioni, rimbalzi |
+| `m.php` | I link delle email promozionali (apertura, clic, disiscrizione) e il modulo di iscrizione per il sito |
+| `strumenti/campagne.php` | Manda la coda delle campagne (da cron, ogni minuto) |
+| `strumenti/rimbalzi.php` | Legge i rimbalzi dal registro di Postfix (da cron come root, ogni 10 minuti) |
 | `push.php` | Notifiche push all'area staff (chiavi VAPID e cifratura, senza librerie esterne) |
 | `sw.js`, `staff.webmanifest`, `icone/` | Area staff installabile come app (iPhone, Android, computer) |
 | `config.example.php` | Modello della configurazione |
@@ -54,6 +58,8 @@ Tabelle (create da sole al primo avvio):
 | `rate_hits` | Limite di richieste per IP |
 | `day_locks` | Blocco per giornata durante il controllo dei posti |
 | `leads` | Un ospite per riga (stesso telefono o stessa email = un solo lead), per il marketing |
+| `mail_sends` | Una riga per destinatario di ogni campagna: esito, apertura, clic, disiscrizione, rimbalzo |
+| `mail_events` | I clic sui link delle campagne (per il report dei link) |
 
 ## Marketing (lead)
 
@@ -66,6 +72,21 @@ Nell'area staff, scheda **Marketing**:
 - **Gruppi pronti:** abituali, venuti una volta, da riconquistare (6 mesi), con prenotazione in arrivo, nuovi, compleanno nei prossimi 30 giorni, menù degustazione, eventi, no show.
 
 Al primo avvio della nuova versione la tabella `leads` si crea e si riempie da sola con le prenotazioni già nel database. Il pulsante «Ricalcola dalle prenotazioni» rifà lo stesso passaggio senza doppiare nulla.
+
+## Campagne email (come Mailchimp)
+
+Area staff → **Marketing → Campagne email**.
+
+- **Nuova campagna:** si parte da un modello pronto (invito a un evento, novità di stagione, ci manchi, compleanno, newsletter, pagina bianca) o da un template salvato. Oppure dalla pagina Contatti, «✉ Email a questi lead», con i filtri scelti.
+- **Destinatari:** un gruppo (gli stessi dei Contatti, più «hanno aperto negli ultimi 90 giorni», «ricevono ma non aprono», «non hanno ancora ricevuto campagne»), un tag, la lingua dell'ospite e l'origine. Partono **solo a chi ha il consenso marketing «sì»**, non si è disiscritto e non ha l'email rimbalzata; la pagina dice quanti e chi resta fuori.
+- **Contenuto:** blocchi titolo, testo (**grassetto**, *corsivo*, [link](https://…)), immagine, pulsante, «Prenota» e evento (foto, data e descrizione dall'evento, nella lingua dell'ospite). `{{nome}}` mette il nome, `{{nome|amico}}` con un'alternativa. Anteprima dal vivo da computer e telefono in 5 lingue, prova a uno o più indirizzi. Le bozze si salvano da sole.
+- **Scrivi con Claude:** nell'editor scrivi in due righe cosa vuoi dire (per esempio «San Martino, menù a 60 €, posti limitati»), scegli tono e lingua: Claude scrive titolo, testi, anteprima e 5 oggetti tra cui scegliere, usando gli eventi in programma e quello che c'è già nell'email. Le foto restano, «Torna a prima» annulla. Non inventa prezzi o date: dove manca un dato mette un segnaposto tra [parentesi]. Usa `anthropic_api_key` e il modello `campaign_model` di config.php (se manca, `anthropic_model`).
+- **Invio:** adesso o programmato (giorno e ora). Solo gli **amministratori** inviano; lo staff prepara e prova. Partono `campaign_per_minute` email al minuto (config.php, 40 se manca) da `strumenti/campagne.php`, che `aggiorna.sh` mette in cron ogni minuto (`/etc/cron.d/dvor-campagne`); mentre la pagina è aperta manda anche lei. Pausa, ripresa e «Ferma qui».
+- **Report:** consegnate, aperture, clic (anche per link), disiscritti, rimbalzi, errori, aperture ora per ora nelle prime 48 ore, prenotazioni arrivate dopo (dal link con `utm_campaign` e da qualsiasi destinatario entro 14 giorni), elenco dei destinatari scaricabile, «Nuova campagna a chi non l'ha aperta».
+- **Disiscrizione:** link in fondo a ogni email e intestazione `List-Unsubscribe` con un tocco (Gmail, Apple Mail). Chi si disiscrive passa a consenso «no» e un'importazione di liste vecchie non lo rimette dentro. Le email delle prenotazioni continuano ad arrivare.
+- **Rimbalzi:** `strumenti/rimbalzi.php` legge `/var/log/maillog` (o `'maillog'` in config.php) ogni 10 minuti come root. Un'email rimbalzata non riceve più campagne finché l'indirizzo non cambia.
+- **Modulo di iscrizione per il sito:** `https://prenota.osteriadvor.com/m.php?iscriviti=embed&lang=it` dentro un iframe (il codice da copiare è nella pagina Campagne email). Doppio consenso: l'iscritto conferma dal link che riceve via email.
+- **Privacy:** le aperture si contano con un'immagine di 1 pixel e i clic passano da `m.php`; va scritto nell'informativa privacy del sito. Le aperture sono indicative (Apple Mail le apre da solo).
 
 ### Prepararlo con lo script (consigliato)
 

@@ -16,11 +16,50 @@ function dbConnect(array $C): PDO {
 
 /* creates the tables if they are missing; on a new database it also loads events and settings from seed/ */
 function dbInstall(PDO $pdo): void {
-  if ($pdo->query("SHOW TABLES LIKE 'leads'")->fetchColumn() !== false) return;
+  $has = fn(string $t) => $pdo->query("SHOW TABLES LIKE '$t'")->fetchColumn() !== false;
+  if ($has('mail_events')) return; // the newest table: everything is there
   /* two first requests at the same moment: only one fills the tables */
   $pdo->query("SELECT GET_LOCK('dvor_install', 20)");
-  try { if ($pdo->query("SHOW TABLES LIKE 'leads'")->fetchColumn() === false) dbCreate($pdo); }
+  try {
+    if (!$has('leads')) dbCreate($pdo);
+    if (!$has('mail_events')) dbCreateMail($pdo);
+  }
   finally { $pdo->query("SELECT RELEASE_LOCK('dvor_install')"); }
+}
+/* email campaigns: one row per recipient of a campaign (the id is the personal token in the links), plus the clicks.
+   Times are Unix seconds, 0 = not yet. Campaigns and templates are documents in `docs` (campaigns, mtemplates). */
+function dbCreateMail(PDO $pdo): void {
+  $opt = 'ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin';
+  $pdo->exec("CREATE TABLE IF NOT EXISTS mail_sends (
+    id CHAR(24) NOT NULL PRIMARY KEY,
+    n BIGINT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE,
+    campaign VARCHAR(64) NOT NULL,
+    lead_id VARCHAR(64) NOT NULL DEFAULT '',
+    email VARCHAR(160) NOT NULL,
+    status VARCHAR(12) NOT NULL DEFAULT 'queued',
+    error VARCHAR(300) NOT NULL DEFAULT '',
+    sent_at INT UNSIGNED NOT NULL DEFAULT 0,
+    opened_at INT UNSIGNED NOT NULL DEFAULT 0,
+    opens INT UNSIGNED NOT NULL DEFAULT 0,
+    clicked_at INT UNSIGNED NOT NULL DEFAULT 0,
+    clicks INT UNSIGNED NOT NULL DEFAULT 0,
+    unsub_at INT UNSIGNED NOT NULL DEFAULT 0,
+    bounced_at INT UNSIGNED NOT NULL DEFAULT 0,
+    tries TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    UNIQUE KEY one_each (campaign, email),
+    KEY by_status (campaign, status),
+    KEY by_lead (lead_id),
+    KEY by_email (email, sent_at)
+  ) $opt");
+  $pdo->exec("CREATE TABLE IF NOT EXISTS mail_events (
+    n BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    send_id CHAR(24) NOT NULL,
+    campaign VARCHAR(64) NOT NULL,
+    type VARCHAR(10) NOT NULL,
+    url VARCHAR(600) NOT NULL DEFAULT '',
+    ts INT UNSIGNED NOT NULL,
+    KEY by_campaign (campaign, type)
+  ) $opt");
 }
 function dbCreate(PDO $pdo): void {
   $opt = 'ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin';
@@ -168,6 +207,7 @@ function leadImport(PDO $pdo, array $r, string $label, bool $consentAll): string
   $c = strtolower($s('consent', 20));
   $yes = $c !== '' ? (bool)preg_match('/^(s|si|sì|y|yes|ja|da|1|x|true|vero|ok)/u', $c) : $consentAll;
   $no = $c !== '' && !$yes;
+  if ($yes && !empty($L['unsubAt'])) $yes = false; // unsubscribed from a campaign email: an old list does not bring them back
   if ($yes && ($L['consent'] ?? '') !== 'yes') { $L['consent'] = 'yes'; $L['consentAt'] = date('c'); $L['consentSource'] = 'importazione' . ($label !== '' ? ': ' . $label : ''); }
   elseif ($no && ($L['consent'] ?? '') === '') $L['consent'] = 'no';
   if (!$found) { $L['importFile'] = $label; $L['importedAt'] = date('c'); }

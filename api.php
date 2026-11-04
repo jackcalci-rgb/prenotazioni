@@ -27,6 +27,7 @@ function fail(string $code, string $msg, int $http = 400): void { out(['error' =
    docs: events, overrides, settings, blacklist as documents. Tables are created on first start. */
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/push.php';
+require_once __DIR__ . '/mailing.php';
 function dataDir(): string { global $C; $d = $C['data_dir'] ?? (__DIR__ . '/data'); if (!is_dir($d)) mkdir($d, 0750, true); return $d; } // only for mail.log
 function db(): PDO {
   static $pdo = null; global $C;
@@ -378,12 +379,13 @@ function encHeader(string $s): string { return preg_match('/[^\x20-\x7E]/', $s) 
 function buildMime(array $C, string $to, array $m): array {
   $b1 = 'b1_' . bin2hex(random_bytes(8)); $b2 = 'b2_' . bin2hex(random_bytes(8)); $b3 = 'b3_' . bin2hex(random_bytes(8));
   $headers = [
-    'From: ' . encHeader($C['mail_from_name']) . ' <' . $C['mail_from'] . '>',
+    'From: ' . encHeader((string)($m['fromName'] ?? $C['mail_from_name'])) . ' <' . $C['mail_from'] . '>',
     'Reply-To: ' . ($C['reply_to'] ?: $C['mail_from']),
     'MIME-Version: 1.0',
     'Date: ' . date('r'),
     'Message-ID: <' . bin2hex(random_bytes(12)) . '@' . (explode('@', $C['mail_from'])[1] ?? 'localhost') . '>',
   ];
+  foreach ((array)($m['headers'] ?? []) as $x) $headers[] = $x; // campaigns: List-Unsubscribe
   $logoFile = __DIR__ . '/email-logo.png';
   $withLogo = !empty($m['logo']) && is_file($logoFile);
   $body = '';
@@ -804,7 +806,8 @@ switch ($op) {
   case 'leads_list': {
     if (!$staff) fail('not_granted', 'Solo staff', 403);
     $res = [];
-    foreach (db()->query('SELECT id, data FROM leads ORDER BY n DESC')->fetchAll(PDO::FETCH_NUM) as [$id, $data]) { $x = json_decode((string)$data, true); if (is_array($x)) $res[] = ['id' => (string)$id, 'data' => $x]; }
+    $mail = campLeadMail(db()); // campaign emails per lead: received, opened, clicked
+    foreach (db()->query('SELECT id, data FROM leads ORDER BY n DESC')->fetchAll(PDO::FETCH_NUM) as [$id, $data]) { $x = json_decode((string)$data, true); if (is_array($x)) $res[] = ['id' => (string)$id, 'data' => $x, 'mail' => $mail[(string)$id] ?? null]; }
     out(['leads' => $res]);
   }
 
@@ -849,6 +852,169 @@ switch ($op) {
   case 'leads_rebuild': {
     if (!$staff) fail('not_granted', 'Solo staff', 403);
     out(['bookings' => tx(fn(PDO $pdo) => leadRebuild($pdo))]);
+  }
+
+  /* ---------- email campaigns (mailing.php): everyone in the staff prepares and tests, only an admin sends ---------- */
+  case 'camp_list': {
+    if (!$staff) fail('not_granted', 'Solo staff', 403);
+    $st = campStats(); $res = [];
+    foreach (load('campaigns') as $id => $c) { unset($c['blocks']); $res[] = ['id' => (string)$id, 'data' => $c, 'stats' => $st[$id] ?? null]; }
+    $tpl = []; foreach (load('mtemplates') as $id => $t) $tpl[] = ['id' => (string)$id, 'data' => $t];
+    $pend = db()->query("SELECT COUNT(*) FROM mail_sends WHERE status = 'queued'")->fetchColumn();
+    out(['campaigns' => $res, 'templates' => $tpl, 'queued' => (int)$pend, 'admin' => ($me['role'] ?? '') === 'admin', 'rate' => (int)($C['campaign_per_minute'] ?? 40),
+      'from' => (string)($C['mail_from_name'] ?? ''), 'fromEmail' => (string)($C['mail_from'] ?? ''), 'replyTo' => (string)($C['reply_to'] ?? ''), 'base' => campBase($C), 'ai' => !empty($C['anthropic_api_key'])]);
+  }
+
+  case 'camp_get': {
+    if (!$staff) fail('not_granted', 'Solo staff', 403);
+    $id = (string)($in['id'] ?? ''); if (!preg_match('/^[A-Za-z0-9_-]{1,64}$/', $id)) fail('bad_path', 'Campagna non valida');
+    $c = getDoc('campaigns', $id); if ($c === null) fail('not_found', 'Campagna non trovata', 404);
+    $res = ['id' => $id, 'data' => $c, 'stats' => campStats($id)[$id] ?? null];
+    if (!empty($in['report']) && !in_array($c['status'] ?? 'draft', ['draft', 'scheduled'], true)) $res['report'] = campReport($id, $c);
+    out($res);
+  }
+
+  case 'camp_save': {
+    if (!$staff) fail('not_granted', 'Solo staff', 403);
+    $id = (string)($in['id'] ?? ''); $data = campClean(is_array($in['data'] ?? null) ? $in['data'] : []);
+    if ($id !== '' && !preg_match('/^[A-Za-z0-9_-]{1,64}$/', $id)) fail('bad_path', 'Campagna non valida');
+    $res = tx(function () use ($id, $data, $me) {
+      $old = $id !== '' ? getDoc('campaigns', $id, true) : null;
+      if ($old && !in_array($old['status'] ?? 'draft', ['draft', 'scheduled'], true)) return null; // already going out: the content stays as sent
+      $id = $id !== '' ? $id : newId();
+      $c = array_merge($old ?? ['status' => 'draft', 'createdAt' => date('c'), 'createdBy' => (string)($me['name'] ?? $me['username'] ?? '')], $data, ['updatedAt' => date('c')]);
+      if ($c['name'] === '') $c['name'] = $c['subject'] !== '' ? $c['subject'] : 'Campagna del ' . date('d/m/Y');
+      putDoc('campaigns', $id, $c); return ['id' => $id, 'data' => $c];
+    });
+    if ($res === null) fail('bad_request', 'La campagna è già partita e non si può più modificare: duplicala per farne una nuova');
+    out($res);
+  }
+
+  case 'camp_delete': {
+    if (!$staff) fail('not_granted', 'Solo staff', 403);
+    $id = (string)($in['id'] ?? ''); if (!preg_match('/^[A-Za-z0-9_-]{1,64}$/', $id)) fail('bad_path', 'Campagna non valida');
+    $c = getDoc('campaigns', $id); if ($c === null) out(['ok' => true]);
+    $st = $c['status'] ?? 'draft';
+    if ($st === 'sending') fail('bad_request', 'Metti in pausa l\'invio prima di eliminarla');
+    if (!in_array($st, ['draft', 'scheduled'], true) && ($me['role'] ?? '') !== 'admin') fail('not_granted', 'Solo un amministratore elimina una campagna già inviata', 403);
+    tx(function (PDO $pdo) use ($id) {
+      delDoc('campaigns', $id);
+      $pdo->prepare('DELETE FROM mail_events WHERE campaign = ?')->execute([$id]);
+      $pdo->prepare('DELETE FROM mail_sends WHERE campaign = ?')->execute([$id]);
+    });
+    out(['ok' => true]);
+  }
+
+  case 'camp_audience': {
+    if (!$staff) fail('not_granted', 'Solo staff', 403);
+    $a = campAudience(campCleanAudience($in['audience'] ?? []));
+    out(['count' => count($a['list']), 'matched' => $a['matched'], 'excluded' => $a['excluded'],
+      'sample' => array_map(fn($x) => ['id' => $x[0], 'email' => $x[1], 'name' => $x[2]['name'], 'lang' => $x[2]['lang']], array_slice($a['list'], 0, 8))]);
+  }
+
+  case 'camp_preview': {
+    if (!$staff) fail('not_granted', 'Solo staff', 403);
+    $c = campClean(is_array($in['data'] ?? null) ? $in['data'] : []);
+    $lang = preg_match('/^(it|en|de|sl|nl)$/', (string)($in['lang'] ?? '')) ? (string)$in['lang'] : 'it';
+    $r = ['name' => (string)($in['name'] ?? 'Maria Rossi'), 'firstName' => '', 'email' => 'ospite@esempio.it', 'lang' => $lang];
+    $C['_logo_url'] = 'email-logo.png';
+    $m = campRender($c, $r, $C, CAMP_TEST, true);
+    out(['subject' => $m['subject'], 'html' => str_replace('<head>', '<head><base target="_blank">', $m['html']), 'text' => $m['text']]);
+  }
+
+  case 'camp_test': {
+    if (!$staff) fail('not_granted', 'Solo staff', 403);
+    rateLimit('camp_test', 30, 600);
+    $c = campClean(is_array($in['data'] ?? null) ? $in['data'] : []);
+    $to = array_slice(array_values(array_filter(array_map(fn($x) => strtolower(trim((string)$x)), is_array($in['to'] ?? null) ? $in['to'] : []), fn($x) => filter_var($x, FILTER_VALIDATE_EMAIL))), 0, 5);
+    if (!$to) fail('bad_request', 'Scrivi almeno un indirizzo email valido');
+    $lang = preg_match('/^(it|en|de|sl|nl)$/', (string)($in['lang'] ?? '')) ? (string)$in['lang'] : 'it';
+    $ok = []; $err = [];
+    foreach ($to as $e) {
+      $m = campRender($c, ['name' => (string)($me['name'] ?? ''), 'firstName' => '', 'email' => $e, 'lang' => $lang], $C, CAMP_TEST);
+      $m['subject'] = '[Prova] ' . $m['subject'];
+      try { sendMail($C, $e, $m); $ok[] = $e; logMail("camp test ok $e"); } catch (Throwable $x) { $err[] = "$e: " . $x->getMessage(); logMail("camp test ERR $e " . $x->getMessage()); }
+    }
+    out(['sent' => $ok, 'errors' => $err]);
+  }
+
+  case 'camp_send': { // now, or at a given time
+    if (!$staff) fail('not_granted', 'Solo staff', 403);
+    if (($me['role'] ?? '') !== 'admin') fail('not_granted', 'Solo un amministratore può inviare le campagne', 403);
+    $id = (string)($in['id'] ?? ''); if (!preg_match('/^[A-Za-z0-9_-]{1,64}$/', $id)) fail('bad_path', 'Campagna non valida');
+    $c = getDoc('campaigns', $id); if ($c === null) fail('not_found', 'Campagna non trovata', 404);
+    if (trim((string)($c['subject'] ?? '')) === '' || !array_filter((array)($c['blocks'] ?? []), fn($b) => in_array($b['t'] ?? '', ['text', 'heading', 'image', 'event'], true))) fail('bad_request', 'Mancano l\'oggetto o il contenuto');
+    $at = trim((string)($in['at'] ?? ''));
+    if ($at !== '') {
+      $t = strtotime($at); if (!$t || $t < time() - 60) fail('bad_request', 'Scegli un giorno e un\'ora nel futuro');
+      $ok = tx(function () use ($id, $t) { $c = getDoc('campaigns', $id, true); if (!$c || !in_array($c['status'] ?? 'draft', ['draft', 'scheduled'], true)) return false; $c['status'] = 'scheduled'; $c['scheduledAt'] = date('c', $t); putDoc('campaigns', $id, $c); return true; });
+      if (!$ok) fail('bad_request', 'La campagna è già partita');
+      out(['ok' => true, 'scheduledAt' => date('c', $t)]);
+    }
+    $n = campStart($id);
+    if ($n < 0) fail('bad_request', 'La campagna è già partita');
+    out(['ok' => true, 'total' => $n, 'run' => campRun($C, 12)]);
+  }
+
+  case 'camp_unschedule': {
+    if (!$staff) fail('not_granted', 'Solo staff', 403);
+    $id = (string)($in['id'] ?? ''); if (!preg_match('/^[A-Za-z0-9_-]{1,64}$/', $id)) fail('bad_path', 'Campagna non valida');
+    tx(function () use ($id) { $c = getDoc('campaigns', $id, true); if ($c && ($c['status'] ?? '') === 'scheduled') { $c['status'] = 'draft'; unset($c['scheduledAt']); putDoc('campaigns', $id, $c); } });
+    out(['ok' => true]);
+  }
+
+  case 'camp_pause':
+  case 'camp_resume':
+  case 'camp_stop': { // stop: what is still in the queue is not sent
+    if (!$staff) fail('not_granted', 'Solo staff', 403);
+    if ($op !== 'camp_pause' && ($me['role'] ?? '') !== 'admin') fail('not_granted', 'Solo un amministratore', 403);
+    $id = (string)($in['id'] ?? ''); if (!preg_match('/^[A-Za-z0-9_-]{1,64}$/', $id)) fail('bad_path', 'Campagna non valida');
+    tx(function (PDO $pdo) use ($id, $op) {
+      $c = getDoc('campaigns', $id, true); if (!$c) return;
+      $st = $c['status'] ?? '';
+      if ($op === 'camp_pause' && $st === 'sending') $c['status'] = 'paused';
+      elseif ($op === 'camp_resume' && $st === 'paused') $c['status'] = 'sending';
+      elseif ($op === 'camp_stop' && in_array($st, ['sending', 'paused'], true)) {
+        $pdo->prepare("UPDATE mail_sends SET status = 'skipped', error = 'invio fermato' WHERE campaign = ? AND status = 'queued'")->execute([$id]);
+        $c['status'] = 'sent'; $c['sentAt'] = date('c'); $c['stopped'] = true;
+      } else return;
+      putDoc('campaigns', $id, $c);
+    });
+    out(['ok' => true]);
+  }
+
+  case 'camp_run': { // the page keeps the queue moving while it is open; cron does the same every minute
+    if (!$staff) fail('not_granted', 'Solo staff', 403);
+    out(campRun($C, 15));
+  }
+
+  case 'camp_ai': {
+    if (!$staff) fail('not_granted', 'Solo staff', 403);
+    rateLimit('camp_ai', 30, 600);
+    try { out(campAi($C, $in, load('events'))); } catch (RuntimeException $e) { fail('upstream', $e->getMessage(), 502); }
+  }
+
+  case 'tpl_save': {
+    if (!$staff) fail('not_granted', 'Solo staff', 403);
+    $id = (string)($in['id'] ?? ''); if ($id !== '' && !preg_match('/^[A-Za-z0-9_-]{1,64}$/', $id)) fail('bad_path', 'Template non valido');
+    $c = campClean(is_array($in['data'] ?? null) ? $in['data'] : []); unset($c['audience']);
+    $id = $id ?: newId(); $c['name'] = $c['name'] ?: 'Template'; $c['updatedAt'] = date('c');
+    putDoc('mtemplates', $id, $c); out(['id' => $id, 'data' => $c]);
+  }
+
+  case 'tpl_delete': {
+    if (!$staff) fail('not_granted', 'Solo staff', 403);
+    $id = (string)($in['id'] ?? ''); if (preg_match('/^[A-Za-z0-9_-]{1,64}$/', $id)) delDoc('mtemplates', $id);
+    out(['ok' => true]);
+  }
+
+  case 'lead_mail': { // campaign emails of one guest, for the lead card
+    if (!$staff) fail('not_granted', 'Solo staff', 403);
+    $id = (string)($in['id'] ?? ''); if (!preg_match('/^[A-Za-z0-9_-]{1,64}$/', $id)) fail('bad_path', 'Lead non valido');
+    $q = db()->prepare('SELECT campaign, status, sent_at, opened_at, clicked_at, unsub_at FROM mail_sends WHERE lead_id = ? ORDER BY n DESC LIMIT 50'); $q->execute([$id]);
+    $camps = load('campaigns'); $res = [];
+    foreach ($q->fetchAll(PDO::FETCH_NUM) as $r) $res[] = ['campaign' => (string)$r[0], 'name' => (string)($camps[$r[0]]['name'] ?? ''), 'status' => (string)$r[1], 'sent' => (int)$r[2], 'opened' => (int)$r[3], 'clicked' => (int)$r[4], 'unsub' => (int)$r[5]];
+    out(['mails' => $res]);
   }
 
   case 'claude': {

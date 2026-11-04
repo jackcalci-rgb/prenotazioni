@@ -28,6 +28,10 @@ return [
   'smtp_user'     => 'prenotazioni@profumidistria.com',
   'smtp_pass'     => '',
 
+  // Campagne email: quante email al minuto (per non farsi segnare come spam) e dove Postfix scrive il registro (per i rimbalzi)
+  'campaign_per_minute' => 40,
+  'maillog' => '/var/log/maillog',
+
   // Database MySQL / MariaDB: in Virtualmin, Modifica database → Crea un nuovo database.
   // Utente e password sono quelli del server virtuale (o quelli indicati nella scheda «Accesso»).
   'db' => [
@@ -40,6 +44,7 @@ return [
   // Facoltativo: chat dello chef. Senza chiave la chat non compare.
   'anthropic_api_key' => '',
   'anthropic_model'   => 'claude-haiku-5-5',
+  'campaign_model'    => 'claude-sonnet-5-5', // chi scrive le campagne email (Marketing → «Scrivi con Claude»): un modello che scrive meglio
 
   // Cartella del registro email (mail.log) e dei vecchi file JSON da importare. Meglio fuori dalla cartella pubblica.
   'data_dir' => __DIR__ . '/data',
