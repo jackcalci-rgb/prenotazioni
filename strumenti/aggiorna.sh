@@ -62,7 +62,7 @@ main() {
 
   # controllo: i file PHP si leggono e la pagina risponde; se no, si torna alla versione di prima
   local bad=""
-  for f in api.php db.php strumenti/*.php; do php -l "$f" >/dev/null 2>&1 || bad="$bad $f"; done
+  for f in api.php db.php push.php mailing.php m.php strumenti/*.php; do php -l "$f" >/dev/null 2>&1 || bad="$bad $f"; done
   if [ -z "$bad" ] && ! curl -fsS -m 20 -X POST -H 'Content-Type: application/json' -d '{"op":"info"}' "$SITE/api.php" 2>/dev/null | grep -q '"staff"'; then bad="la pagina non risponde ($SITE/api.php)"; fi
   if [ -n "$bad" ]; then
     echo "ATTENZIONE: qualcosa non va dopo l'aggiornamento:$bad"
@@ -98,6 +98,11 @@ finish() {
   if [ -d /etc/cron.d ] && [ ! -f /etc/cron.d/dvor-promemoria ]; then
     echo "*/15 * * * * $OWNER $(command -v php) $PUB/strumenti/promemoria.php >/dev/null 2>&1" > /etc/cron.d/dvor-promemoria
     chmod 644 /etc/cron.d/dvor-promemoria; echo "Promemoria email attivati (/etc/cron.d/dvor-promemoria)"
+  fi
+  # campagne email: la coda parte ogni minuto; i rimbalzi si leggono dal registro di Postfix (solo root) ogni 10 minuti
+  if [ -d /etc/cron.d ] && [ ! -f /etc/cron.d/dvor-campagne ]; then
+    printf '%s\n' "* * * * * $OWNER $(command -v php) $PUB/strumenti/campagne.php >/dev/null 2>&1" "*/10 * * * * root $(command -v php) $PUB/strumenti/rimbalzi.php >/dev/null 2>&1" > /etc/cron.d/dvor-campagne
+    chmod 644 /etc/cron.d/dvor-campagne; echo "Invio campagne email e rimbalzi attivati (/etc/cron.d/dvor-campagne)"
   fi
 }
 

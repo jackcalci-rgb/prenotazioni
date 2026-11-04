@@ -28,6 +28,10 @@ return [
   'smtp_user'     => 'prenotazioni@profumidistria.com',
   'smtp_pass'     => '',
 
+  // Campagne email: quante email al minuto (per non farsi segnare come spam) e dove Postfix scrive il registro (per i rimbalzi)
+  'campaign_per_minute' => 40,
+  'maillog' => '/var/log/maillog',
+
   // Database MySQL / MariaDB: in Virtualmin, Modifica database → Crea un nuovo database.
   // Utente e password sono quelli del server virtuale (o quelli indicati nella scheda «Accesso»).
   'db' => [
