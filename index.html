@@ -2648,11 +2648,11 @@ var CM_LANGS=[["","Tutte le lingue"],["it","Italiano"],["en","Inglese"],["de","T
 var CM_ORIG=[["all","Tutte"],["site","Dal sito"],["staff","Telefono, WhatsApp, di persona"],["import","Liste importate"],["signup","Iscritti dal sito"]];
 var CM_STARTERS=[
   {key:"event",name:"Invito a un evento",desc:"Il prossimo evento con foto, data, descrizione e pulsante per prenotare.",
-    data:{name:"Invito evento",subject:"{{nome|Ciao}}, ti aspettiamo da Dvor",preheader:"Posti limitati: prenota il tuo tavolo",blocks:[{t:"heading",text:"Ciao {{nome}}, ti aspettiamo!"},{t:"text",text:"Abbiamo preparato una giornata speciale e ci piacerebbe averti con noi.\n\nI posti sono limitati: prenota il tuo tavolo in un minuto."},{t:"event",id:""},{t:"book",align:"center"}]}},
+    data:{name:"Invito evento",subject:"Ciao {{nome}}, ti aspettiamo da Dvor",preheader:"Posti limitati: prenota il tuo tavolo",blocks:[{t:"heading",text:"Ciao {{nome}}, ti aspettiamo!"},{t:"text",text:"Abbiamo preparato una giornata speciale e ci piacerebbe averti con noi.\n\nI posti sono limitati: prenota il tuo tavolo in un minuto."},{t:"event",id:""},{t:"book",align:"center"}]}},
   {key:"season",name:"Novità di stagione",desc:"Il menù nuovo con una foto, due righe e i pulsanti per il menù e la prenotazione.",
     data:{name:"Menù di stagione",subject:"Il nuovo menù è in tavola",preheader:"I sapori della stagione e il vino nuovo del Collio",blocks:[{t:"image",src:"",alt:"Il nuovo menù"},{t:"heading",text:"La stagione cambia, la cucina anche"},{t:"text",text:"Ciao {{nome}},\n\nin cucina sono arrivati i sapori nuovi: racconta qui due o tre piatti che non vedi l'ora di far assaggiare.\n\n**Ti aspettiamo** a pranzo e a cena."},{t:"button",label:"Guarda il menù",href:"https://www.osteriadvor.com"},{t:"book"}]}},
   {key:"winback",name:"Ci manchi",desc:"Per chi non torna da sei mesi, con un piccolo pensiero di benvenuto.",seg:"lapsed",
-    data:{name:"Ci manchi",subject:"{{nome|Ciao}}, è passato un po' di tempo",preheader:"Un calice di benvenuto ti aspetta",blocks:[{t:"heading",text:"Ci manchi, {{nome|caro ospite}}"},{t:"text",text:"È passato un po' di tempo dalla tua ultima visita da Dvor.\n\nTorna a trovarci: alla prossima prenotazione ti offriamo **un calice di Collio di benvenuto**. Scrivi «calice» nelle note."},{t:"book",align:"center"}]}},
+    data:{name:"Ci manchi",subject:"Ciao {{nome}}, è passato un po' di tempo",preheader:"Un calice di benvenuto ti aspetta",blocks:[{t:"heading",text:"Ci manchi, {{nome|caro ospite}}"},{t:"text",text:"È passato un po' di tempo dalla tua ultima visita da Dvor.\n\nTorna a trovarci: alla prossima prenotazione ti offriamo **un calice di Collio di benvenuto**. Scrivi «calice» nelle note."},{t:"book",align:"center"}]}},
   {key:"bday",name:"Buon compleanno",desc:"Per chi compie gli anni nei prossimi 30 giorni, con il dolce offerto.",seg:"bday",
     data:{name:"Compleanno",subject:"Buon compleanno, {{nome|caro ospite}}!",preheader:"Festeggia da Dvor: il dolce lo offriamo noi",blocks:[{t:"heading",text:"Tanti auguri, {{nome}}!",align:"center"},{t:"text",text:"Il tuo compleanno è vicino e ci piacerebbe festeggiarlo con te.\n\nSe prenoti per il tuo compleanno, **il dolce lo offriamo noi**. Scrivi «compleanno» nelle note della prenotazione.",align:"center"},{t:"book",align:"center"}]}},
   {key:"news",name:"Newsletter",desc:"Più notizie in una sola email: titoli, testi, foto e pulsanti.",
@@ -2891,9 +2891,9 @@ function cmEditor(box){
     cmAudText();left.append(ac);
   }
   /* subject */
-  var hint="Scrivi {{nome}} dove vuoi il nome dell'ospite; {{nome|amico}} mette «amico» quando il nome manca.";
+  var hint="Scrivi {{nome}} dove vuoi il nome dell'ospite: «Ciao {{nome}},» diventa «Ciao Mario,» e, se il nome manca, «Ciao,». Con {{nome|amico}} al posto del nome mancante compare «amico».";
   left.append(h("div",{class:"card stack"},[h("h3",{text:(isT?"":"2 · ")+"Oggetto"}),
-    cmField("Oggetto",c,"subject",{max:200,ph:"{{nome|Ciao}}, arriva San Martino"})[0],
+    cmField("Oggetto",c,"subject",{max:200,ph:"Ciao {{nome}}, arriva San Martino"})[0],
     cmField("Anteprima del testo (la riga grigia dopo l'oggetto)",c,"preheader",{max:200,ph:"Vino nuovo, castagne e un menù della tradizione"})[0],
     cmField("Mittente",c,"fromName",{max:80,ph:CM.info.from||"Osteria Enoteca Dvor"})[0],
     h("p",{class:"small muted",text:hint})]));

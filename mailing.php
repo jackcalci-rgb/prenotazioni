@@ -132,12 +132,18 @@ function campClean(array $x): array {
 
 /* ---------- the email ---------- */
 function campMerge(string $s, array $r): string {
-  return preg_replace_callback('/\{\{\s*(nome|nome_completo|email)\s*(?:\|([^}]*))?\}\}/u', function ($m) use ($r) {
+  $s = preg_replace_callback('/\{\{\s*(nome|nome_completo|email)\s*(?:\|([^}]*))?\}\}/u', function ($m) use ($r) {
     $full = trim((string)($r['name'] ?? ''));
     $v = $m[1] === 'email' ? (string)($r['email'] ?? '') : ($m[1] === 'nome' ? (trim((string)($r['firstName'] ?? '')) ?: (preg_split('/\s+/', $full)[0] ?? '')) : $full);
     if ($v !== '' && $m[1] !== 'email' && ($v === mb_strtoupper($v) || $v === mb_strtolower($v))) $v = mb_convert_case(mb_strtolower($v), MB_CASE_TITLE); // «MARIO ROSSI» from an old list reads as «Mario Rossi»
-    return $v !== '' ? $v : trim($m[2] ?? '');
+    $v = $v !== '' ? $v : trim($m[2] ?? '');
+    return $v !== '' ? $v : "\x03";
   }, $s) ?? $s;
+  if (!str_contains($s, "\x03")) return $s;
+  /* a name that is missing leaves no gap: «Ciao {{nome}}, …» reads «Ciao, …» and «Auguri, {{nome}}!» reads «Auguri!» */
+  $s = preg_replace(['/[ \t]*,?[ \t]*\x03(?=[ \t]*[!?.])/u', '/[ \t]*\x03(?=[ \t]*[,;:])/u', '/[ \t]*\x03[ \t]*/u'], ['', '', ' '], $s) ?? $s;
+  $s = preg_replace_callback('/^[ \t]*[,;:][ \t]*(\p{Ll})?/mu', fn($m) => isset($m[1]) ? mb_strtoupper($m[1]) : '', $s) ?? $s; // «{{nome}}, ti aspettiamo» → «Ti aspettiamo»
+  return trim(preg_replace('/ {2,}/', ' ', $s) ?? $s, " \t");
 }
 /* text with **bold**, *italic*, [label](https://…) and plain links; blank line = new paragraph */
 function campInline(string $s, callable $href, string $color): string {
@@ -583,7 +589,7 @@ function campAi(array $C, array $in, array $events): array {
   $system = "Sei il copywriter di Osteria Enoteca Dvor, a San Floriano del Collio (Gorizia): cucina di confine e friulana, vini del Collio, una terrazza e un parco sulle colline, eventi e serate a tema. "
     . "Scrivi email promozionali per gli ospiti che hanno dato il consenso. Voce: calda, ospitale, concreta, come il titolare che scrive a un cliente che conosce. Frasi brevi, niente toni da televendita, niente maiuscole urlate, niente punti esclamativi a raffica, niente parole da spam (gratis!!!, urgente, offerta imperdibile). "
     . "Non inventare prezzi, date, piatti, sconti o regali che non ti vengono dati: se servono e mancano, usa un segnaposto tra parentesi quadre, per esempio [piatto del giorno]. Niente urgenza finta. "
-    . "Formato del testo: **grassetto**, *corsivo*, [parola](https://…) per i link, una riga vuota tra i paragrafi. {{nome}} è il nome dell'ospite; usa {{nome|alternativa}} nell'oggetto e nei saluti, così l'email funziona anche senza nome. "
+    . "Formato del testo: **grassetto**, *corsivo*, [parola](https://…) per i link, una riga vuota tra i paragrafi. {{nome}} è il nome dell'ospite: scrivi «Ciao {{nome}},» (se il nome manca diventa «Ciao,»); {{nome|alternativa}} mette l'alternativa al posto del nome mancante, quindi non usarlo per aggiungere un saluto. "
     . "Blocchi disponibili: heading (titolo, size big o small), text, button (label e href, solo link veri come https://www.osteriadvor.com), book (pulsante per prenotare il tavolo), event (id di uno degli eventi dati), image (una foto: mettila solo se lo staff ne ha già messa una o se chiede una foto; la foto la sceglie lui), divider. "
     . "Di solito: un titolo, uno o due testi brevi (in tutto 60-150 parole), eventualmente l'evento, e un pulsante book alla fine. Oggetto sotto i 55 caratteri, anteprima sotto i 90 che completa l'oggetto senza ripeterlo. Scrivi tutto in $LN.";
   $ctx = ['richiesta dello staff' => $s('brief', 3000) ?: 'Migliora la campagna attuale.', 'tono' => $s('tone', 60) ?: 'caldo e ospitale',
