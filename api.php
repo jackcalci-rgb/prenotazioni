@@ -842,6 +842,31 @@ switch ($op) {
     out(['ok' => true]);
   }
 
+  /* consent for many leads at once (the filtered ones on the Contatti page). «Sì» needs the staff to confirm where it was collected;
+     whoever unsubscribed from an email stays out unless keepUnsub is false and the staff says they asked again. */
+  case 'leads_consent': {
+    if (!$staff) fail('not_granted', 'Solo staff', 403);
+    $ids = array_values(array_filter(is_array($in['ids'] ?? null) ? array_slice($in['ids'], 0, 20000) : [], fn($x) => is_string($x) && preg_match('/^[A-Za-z0-9_-]{1,64}$/', $x)));
+    $to = $in['consent'] ?? null; if (!in_array($to, ['yes', 'no', ''], true)) fail('bad_request', 'Consenso non valido');
+    $src = mb_substr(trim((string)($in['source'] ?? '')), 0, 160);
+    if ($to === 'yes' && ($src === '' || empty($in['confirm']))) fail('bad_request', 'Per il «sì» scrivi dove è stato raccolto il consenso e conferma');
+    $who = (string)($me['name'] ?? $me['username'] ?? 'staff');
+    $n = tx(function (PDO $pdo) use ($ids, $to, $src, $who) {
+      $n = ['changed' => 0, 'same' => 0, 'unsub' => 0, 'missing' => 0];
+      $q = $pdo->prepare('SELECT data FROM leads WHERE id = ? FOR UPDATE');
+      foreach ($ids as $id) {
+        $q->execute([$id]); $d = $q->fetchColumn(); if ($d === false) { $n['missing']++; continue; }
+        $L = json_decode((string)$d, true) ?: [];
+        if (($L['consent'] ?? '') === $to) { $n['same']++; continue; }
+        if ($to === 'yes' && !empty($L['unsubAt'])) { $n['unsub']++; continue; } // unsubscribed from an email: only they can come back
+        $L['consent'] = $to; $L['consentAt'] = date('c'); $L['consentSource'] = 'staff, in blocco (' . $who . ')' . ($src !== '' ? ': ' . $src : '');
+        leadSave($pdo, $id, $L); $n['changed']++;
+      }
+      return $n;
+    });
+    out($n);
+  }
+
   case 'leads_delete': {
     if (!$staff) fail('not_granted', 'Solo staff', 403);
     $ids = array_values(array_filter(is_array($in['ids'] ?? null) ? $in['ids'] : [], fn($x) => is_string($x) && preg_match('/^[A-Za-z0-9_-]{1,64}$/', $x)));

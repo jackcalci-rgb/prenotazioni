@@ -554,6 +554,16 @@ html.embed .wrap{max-width:none}
           <label>al<input type="date" id="mk-to"></label>
         </div>
         <div id="mk-list" class="stack"></div>
+        <details class="stack" id="mk-bulk"><summary class="small" style="cursor:pointer">Cambia il consenso marketing di tutti i lead che vedi qui sopra</summary>
+          <div class="stack" style="margin-top:.6rem">
+            <div class="row" style="align-items:flex-end">
+              <label style="flex:0 1 230px">Nuovo consenso<select id="mk-b-to"><option value="yes">Sì, ha dato il consenso</option><option value="no">No, non contattare</option><option value="">Non indicato</option></select></label>
+              <label style="flex:2 1 260px" id="mk-b-src-l">Dove e come l'hanno dato (resta scritto su ogni lead)<input id="mk-b-src" maxlength="160" placeholder="Modulo cartaceo firmato in sala, ottobre 2026"></label>
+            </div>
+            <label class="tick" id="mk-b-ok-l"><input type="checkbox" id="mk-b-ok"><span>Confermo che queste persone hanno dato il consenso a ricevere email promozionali e che posso dimostrarlo (GDPR). Chi si è disiscritto da un'email resta fuori.</span></label>
+            <div class="row" style="align-items:center"><button class="btn small" type="button" id="mk-b-go">Applica</button><span class="small muted" id="mk-b-msg" aria-live="polite"></span></div>
+          </div>
+        </details>
         <div class="row" style="align-items:center"><button class="btn small" type="button" id="mk-mail">✉ Email a questi lead</button><span class="small muted" id="mk-mail-msg" aria-live="polite">Prepara una campagna per i lead che vedi qui sopra, con i filtri scelti. Partirà solo a chi ha dato il consenso.</span></div>
       </div>
       <div class="card stack">
@@ -2324,7 +2334,7 @@ function renderMk(){
   var ts=el("mk-tag"),cur=ts.value;ts.textContent="";ts.append(h("option",{value:"",text:"Tutti"}));Object.keys(tags).sort().forEach(function(x){ts.append(h("option",{value:x,text:x}))});ts.value=tags[cur]?cur:"";
   var A=MK.leads,k=el("mk-kpis");k.textContent="";
   [[A.length,"lead in tutto"],[A.filter(function(L){return L.consent==="yes"}).length,"con consenso marketing"],[A.filter(MK_SEG.recent[1]).length,"nuovi in 30 giorni"],[A.filter(MK_SEG.regular[1]).length,"abituali"],[A.filter(MK_SEG.lapsed[1]).length,"da riconquistare"]].forEach(function(x){k.append(h("div",{class:"kpi"},[h("b",{text:String(x[0])}),h("span",{text:x[1]})]))});
-  var L=MK.view=mkFiltered();
+  var L=MK.view=mkFiltered();if(el("mk-bulk")&&el("mk-bulk").open)mkBulkUI();
   el("mk-count").textContent=MK.busy&&!MK.at?"Caricamento…":MK.err?"Non caricati: "+MK.err:L.length+(L.length===1?" lead":" lead")+(L.length!==A.length?" su "+A.length:"");
   box.textContent="";
   if(!L.length){box.append(h("p",{class:"small muted",text:MK.busy&&!MK.at?"":A.length?"Nessun lead con questi filtri.":"Ancora nessun lead. Arrivano da soli con le nuove prenotazioni; i clienti passati si importano qui sotto."}));return}
@@ -2543,6 +2553,21 @@ el("tab-guest").addEventListener("click",function(){setView("guest")});
 el("tab-staff").addEventListener("click",function(){setView("staff")});
 if(location.hash==="#staff")setTimeout(function(){setView("staff")},0);
 
+/* ---- consent for all the filtered leads at once ---- */
+function mkBulkUI(){var y=el("mk-b-to").value==="yes";el("mk-b-ok-l").hidden=!y;
+  var L=MK.view||[],ch=L.filter(function(x){return (x.consent||"")!==el("mk-b-to").value&&!(y&&x.unsubAt)}).length;
+  el("mk-b-go").textContent="Applica a "+ch+(ch===1?" lead":" lead");el("mk-b-go").disabled=!ch}
+["mk-b-to","mk-b-ok","mk-b-src"].forEach(function(id){el(id).addEventListener(id==="mk-b-src"?"input":"change",mkBulkUI)});
+el("mk-bulk").addEventListener("toggle",mkBulkUI);
+el("mk-b-go").addEventListener("click",function(){
+  var b=this,to=el("mk-b-to").value,src=el("mk-b-src").value.trim(),m=el("mk-b-msg"),L=MK.view||[];
+  if(to==="yes"&&(!src||!el("mk-b-ok").checked)){m.textContent="Per il «sì» scrivi dove è stato raccolto il consenso e spunta la conferma.";return}
+  twoStep(b,"Sicuro? Tocca ancora",async function(){m.textContent="Salvo…";
+    try{var j=await mkCall({op:"leads_consent",ids:L.map(function(x){return x.id}),consent:to,source:src,confirm:el("mk-b-ok").checked});
+      m.textContent="✓ Cambiati "+j.changed+(j.same?" · "+j.same+" erano già così":"")+(j.unsub?" · "+j.unsub+" lasciati fuori perché si sono disiscritti da un'email":"");
+      el("mk-b-ok").checked=false;b.disabled=false;mkLoad(true)}catch(e){m.textContent="Non salvato: "+((e&&e.message)||e);b.disabled=false}
+    delete b.dataset.armed;b.style.background=b.style.color=b.style.borderColor="";setTimeout(mkBulkUI,1500)});
+});
 /* ---------- marketing: email campaigns like Mailchimp (server in mailing.php, links in m.php) ----------
    Campagne email: list → «Nuova» (starter or saved template) → editor (audience, subject, blocks, live preview, test, send or schedule) → report.
    Template: saved designs and the ready-made ones. Drafts save by themselves a few seconds after each change. */
@@ -2895,7 +2920,7 @@ function cmSendBox(tc){
       smsg.textContent="Salvo e preparo l'invio…";
       try{await cmSave();var j=await mkCall({op:"camp_send",id:CM.curId,at:when==="later"?new Date(dt.value).toISOString():""});
         if(when==="later"){c.status="scheduled";c.scheduledAt=j.scheduledAt;CM.dirty=false;cmRender()}else{CM.dirty=false;cmOpenCamp(CM.curId)}
-      }catch(e){smsg.textContent="Non partita: "+cmMsg(e);b.disabled=false;b.textContent="Riprova"}
+      }catch(e){smsg.textContent="Non partita: "+cmMsg(e);delete b.dataset.armed;b.style.background=b.style.color=b.style.borderColor="";b.disabled=false;cmSendLabel()}
     })}});
   tc.append(h("div",{style:"border-top:1px solid var(--line);margin:.25rem 0"}),h("div",{class:"row",style:"align-items:flex-end"},[h("label",{style:"flex:0 0 auto"},["Quando",seg]),dl,CM.sendBtn]),smsg,
     h("p",{class:"small muted",text:"Partono "+(CM.info.rate||40)+" email al minuto dal server della posta. Una campagna partita non si modifica più, ma si può mettere in pausa."}));
