@@ -885,21 +885,28 @@ html.staff .cm-inbox{background:var(--card);border-radius:12px}
   var db = { collection: function (c) { return query(c, [], 0) }, doc: docRef };
   window.DVOR_CALL = call; // staff marketing page: leads_* operations
 
-  /* phone photos are often 4–12 MB (or HEIC): resize to max 2000 px and send a JPEG, so the upload always fits the server limits */
+  /* phone photos are often 4–12 MB (or HEIC): resize and send a JPEG under ~900 KB,
+     so the upload fits even the strictest server limit (nginx accepts 1 MB by default) */
   function shrinkImage(file) {
-    var MAX = 2000;
+    var TARGET = 900000;
     if (!file || !/^image\//.test(file.type || "image/")) return Promise.resolve(file);
-    if (file.type === "image/gif") return Promise.resolve(file); // keep animations
+    if (file.type === "image/gif" && file.size <= TARGET) return Promise.resolve(file); // keep animations
     return new Promise(function (res) {
       var url = URL.createObjectURL(file), img = new Image();
       img.onload = function () {
         var w = img.naturalWidth, hh = img.naturalHeight; URL.revokeObjectURL(url);
-        var okType = /^image\/(jpeg|png|webp)$/.test(file.type);
-        if (okType && file.size <= 1500000 && w <= MAX && hh <= MAX) return res(file);
-        var k = Math.min(1, MAX / Math.max(w, hh)), c = document.createElement("canvas");
-        c.width = Math.round(w * k); c.height = Math.round(hh * k);
-        var g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
-        c.toBlob(function (b) { res(b || file) }, "image/jpeg", 0.86);
+        if (/^image\/(jpeg|png|webp)$/.test(file.type) && file.size <= TARGET && Math.max(w, hh) <= 2400) return res(file);
+        var tries = [[2000, .85], [2000, .75], [1600, .75], [1600, .65], [1280, .65], [1024, .6]], i = 0;
+        (function next() {
+          var t = tries[i], k = Math.min(1, t[0] / Math.max(w, hh)), c = document.createElement("canvas");
+          c.width = Math.round(w * k); c.height = Math.round(hh * k);
+          var g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+          c.toBlob(function (b) {
+            if (!b) return res(file);
+            if (b.size <= TARGET || ++i >= tries.length) return res(b);
+            next();
+          }, "image/jpeg", t[1]);
+        })();
       };
       img.onerror = function () { URL.revokeObjectURL(url); res(file) }; // the server will say what is wrong
       img.src = url;
@@ -914,7 +921,7 @@ html.staff .cm-inbox{background:var(--card);border-radius:12px}
       }).then(function (r) {
         return r.text().then(function (txt) {
           var j = null; try { j = JSON.parse(txt) } catch (e) {}
-          if (!j) throw { code: "error", message: r.status === 413 ? "immagine troppo grande per il server" : "risposta non valida dal server (" + r.status + ")" };
+          if (!j) throw { code: "error", message: r.status === 413 ? "immagine troppo grande per il server (limite di nginx, vedi LEGGIMI)" : "risposta non valida dal server (" + r.status + ")" };
           if (!r.ok || j.error) throw { code: (j.error || {}).code || "error", message: (j.error || {}).message || "Caricamento non riuscito" };
           return j;
         });
