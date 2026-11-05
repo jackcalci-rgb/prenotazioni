@@ -126,6 +126,8 @@ Ogni evento creato in ⚙ **Altro → Eventi** ha da subito:
 
 Gli eventi creati prima di questa versione tengono come link il loro nome di sempre (per esempio `natale-2026`). Anche il vecchio codice dell'evento continua a funzionare nel link.
 
+**Foto di copertina.** La pagina rimpicciolisce da sola ogni foto sotto i 900 KB prima di caricarla, così passa anche con il limite di nginx di 1 MB. Per caricare file più grandi (GIF animate, locandine pesanti) alza il limite in Virtualmin: **Configurazione server web → Modifica direttive** del sito `prenota`, aggiungi `client_max_body_size 12m;` nel blocco `server { … }` e riavvia nginx (`systemctl reload nginx`). PHP prende già 10 MB da `.user.ini`.
+
 ## Prima installazione (VPS Contabo + Virtualmin)
 
 1. In Virtualmin crea il sub-server `prenota.osteriadvor.com` e attiva SSL (Let's Encrypt).
