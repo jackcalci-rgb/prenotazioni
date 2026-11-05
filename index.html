@@ -836,8 +836,17 @@ html.staff .cm-inbox{background:var(--card);border-radius:12px}
   })();
   window.DVOR_MANAGED = function (id) { return !!keys()[id] };
   function headers() { var h = { "Content-Type": "application/json", "X-Client-Id": cid }; var t = token(); if (t) h["X-Staff-Token"] = t; var k = keys(), list = Object.keys(k).slice(-30).map(function (i) { return i + "." + k[i] }); if (list.length) h["X-Manage-Keys"] = list.join(","); return h }
+  /* a request never waits forever: after ms the page shows an error instead of staying on «Salvo…» */
+  function fetchT(url, opt, ms) {
+    var ac = window.AbortController ? new AbortController() : null, tm = null;
+    if (ac) { opt = Object.assign({}, opt, { signal: ac.signal }); tm = setTimeout(function () { ac.abort() }, ms) }
+    return fetch(url, opt).then(function (r) { if (tm) clearTimeout(tm); return r }, function (e) {
+      if (tm) clearTimeout(tm);
+      throw (e && e.name === "AbortError") ? { code: "timeout", message: "il server non risponde (" + Math.round(ms / 1000) + " s), riprova" } : { code: "network", message: "connessione non riuscita" };
+    });
+  }
   function call(body) {
-    return fetch(API, { method: "POST", headers: headers(), body: JSON.stringify(body), cache: "no-store" }).then(function (r) {
+    return fetchT(API, { method: "POST", headers: headers(), body: JSON.stringify(body), cache: "no-store" }, 30000).then(function (r) {
       return r.json().catch(function () { return {} }).then(function (j) {
         if (!r.ok || j.error) { var e = j.error || {}; throw { code: e.code || ("http_" + r.status), message: e.message || ("Errore " + r.status) } }
         return j;
@@ -891,7 +900,9 @@ html.staff .cm-inbox{background:var(--card);border-radius:12px}
     var TARGET = 900000;
     if (!file || !/^image\//.test(file.type || "image/")) return Promise.resolve(file);
     if (file.type === "image/gif" && file.size <= TARGET) return Promise.resolve(file); // keep animations
-    return new Promise(function (res) {
+    return new Promise(function (res0) {
+      var done = false, res = function (x) { if (!done) { done = true; clearTimeout(tm); res0(x) } };
+      var tm = setTimeout(function () { res(file) }, 20000); // the browser could not read it: send it as it is, the server says what is wrong
       var url = URL.createObjectURL(file), img = new Image();
       img.onload = function () {
         var w = img.naturalWidth, hh = img.naturalHeight; URL.revokeObjectURL(url);
@@ -913,11 +924,14 @@ html.staff .cm-inbox{background:var(--card);border-radius:12px}
     });
   }
   var assets = {
-    upload: function (file) {
+    upload: function (file, step) {
+      step = step || function () { };
+      step("Preparo l'immagine…");
       return shrinkImage(file).then(function (blob) {
+        step("Carico l'immagine (" + Math.max(1, Math.round(blob.size / 1024)) + " KB)…");
         var fd = new FormData(); fd.append("file", blob, blob === file ? (file.name || "immagine") : "immagine.jpg");
         var h = { "X-Client-Id": cid }; var t = token(); if (t) h["X-Staff-Token"] = t;
-        return fetch(API + "?op=upload", { method: "POST", headers: h, body: fd });
+        return fetchT(API + "?op=upload", { method: "POST", headers: h, body: fd }, 60000);
       }).then(function (r) {
         return r.text().then(function (txt) {
           var j = null; try { j = JSON.parse(txt) } catch (e) {}
@@ -2404,7 +2418,7 @@ el("ev-form").addEventListener("submit",async function(ev){
   el("e-save").disabled=true;m.textContent="Salvo…";
   try{
     var f=el("e-img").files&&el("e-img").files[0];
-    if(f){if(!assets)throw {message:"caricamento immagini non disponibile"};var up=await assets.upload(f);v.imageId=up.id}
+    if(f){if(!assets)throw {message:"caricamento immagini non disponibile"};var up=await assets.upload(f,function(t){m.textContent=t});v.imageId=up.id;m.textContent="Salvo l'evento…"}
     else if(S.editEv&&S.editEv.imageId)v.imageId=S.editEv.imageId;
     if(S.editEv)await db.doc("events/"+S.editEv.id).set(v);else await db.collection("events").add(v);
     m.textContent=S.editEv?"Evento salvato.":"Evento salvato: il link da condividere è accanto all'evento, qui sopra. Sul sito compare da solo entro un minuto.";resetEvForm();if(window.reloadData)reloadData();
