@@ -153,6 +153,38 @@ function manageUrl(array $b, array $C): string {
   $u = rtrim((string)($C['booking_url'] ?? ''), '/'); if ($u === '' || empty($b['id'])) return '';
   return $u . '/?gestisci=' . rawurlencode($b['id'] . '.' . manageKey($b['id']));
 }
+/* ---------- one public page per event (evento.php?e=slug): the link to share in campaigns, on social and on the website ---------- */
+function eventSlug(string $id, array $ev): string { $s = (string)($ev['slug'] ?? ''); return preg_match('/^[a-z0-9][a-z0-9-]{0,79}$/', $s) ? $s : $id; }
+function eventPageUrl(array $C, string $id, array $ev): string { return rtrim((string)($C['booking_url'] ?? ''), '/') . '/evento.php?e=' . rawurlencode(eventSlug($id, $ev)); }
+function eventBookUrl(array $C, string $id, array $ev): string { return rtrim((string)($C['booking_url'] ?? ''), '/') . '/?evento=' . rawurlencode(eventSlug($id, $ev)); }
+function eventFind(string $key): ?array {
+  if ($key === '' || !preg_match('/^[A-Za-z0-9_-]{1,80}$/', $key)) return null;
+  $all = load('events');
+  if (isset($all[$key])) return [$key, $all[$key]];
+  foreach ($all as $id => $ev) if (eventSlug((string)$id, $ev) === $key) return [(string)$id, $ev];
+  return null;
+}
+/* «Pranzo di Natale» on 2026-12-25 → pranzo-di-natale-2026; unique among all events, past ones included */
+function eventNewSlug(array $ev, string $selfId): string {
+  $t = (string)($ev['title_it'] ?? '') ?: (string)($ev['title_en'] ?? '');
+  $t = strtr(mb_strtolower($t), ['à'=>'a','á'=>'a','â'=>'a','ä'=>'a','è'=>'e','é'=>'e','ê'=>'e','ë'=>'e','ì'=>'i','í'=>'i','î'=>'i','ï'=>'i','ò'=>'o','ó'=>'o','ô'=>'o','ö'=>'o','ù'=>'u','ú'=>'u','û'=>'u','ü'=>'u','č'=>'c','ć'=>'c','š'=>'s','ž'=>'z','đ'=>'d','ß'=>'ss','ñ'=>'n','ç'=>'c','’'=>'',"'"=>'']);
+  $t = trim((string)preg_replace('/[^a-z0-9]+/', '-', $t), '-');
+  $t = rtrim(substr($t, 0, 60), '-') ?: 'evento';
+  $y = preg_match('/^(\d{4})-/', (string)($ev['date'] ?? ''), $m) ? $m[1] : date('Y');
+  if (!str_ends_with($t, $y)) $t .= '-' . $y;
+  $taken = [];
+  foreach (load('events') as $id => $x) if ((string)$id !== $selfId) { $taken[(string)$id] = true; $taken[eventSlug((string)$id, $x)] = true; }
+  $s = $t; for ($i = 2; isset($taken[$s]); $i++) $s = "$t-$i";
+  return $s;
+}
+/* the link never changes once the event exists: the staff form does not send the slug, so it is kept here */
+function eventKeepSlug(string $id, array $data, ?array $old): array {
+  if (!empty($old['slug'])) $data['slug'] = $old['slug'];
+  elseif ($old !== null && !preg_match('/^[a-f0-9]{20}$/', $id)) unset($data['slug']); // old events with a readable id (natale-2026): the id is the link
+  else $data['slug'] = eventNewSlug($data, $id);
+  return $data;
+}
+
 /* ids whose manage key the browser sends in X-Manage-Keys (comma separated id.key) */
 function managedIds(): array {
   static $ids = null; if ($ids !== null) return $ids;
@@ -727,7 +759,9 @@ switch ($op) {
       out(['id' => $id, 'key' => manageKey($id)]);
     }
     if (!$staff) fail('not_granted', 'Solo staff', 403);
-    $id = newId(); putDoc($coll, $id, $data);
+    $id = newId();
+    if ($coll === 'events') $data = eventKeepSlug($id, $data, null);
+    putDoc($coll, $id, $data);
     out(['id' => $id]);
   }
 
@@ -737,7 +771,12 @@ switch ($op) {
     $data = is_array($in['data'] ?? null) ? $in['data'] : [];
     if ($coll !== 'bookings') {
       if (!$staff) fail('not_granted', 'Solo staff', 403);
-      tx(function () use ($coll, $id, $data, $op) { putDoc($coll, $id, $op === 'set' ? $data : array_merge(getDoc($coll, $id, true) ?? [], $data)); });
+      tx(function () use ($coll, $id, $data, $op) {
+        $old = getDoc($coll, $id, true);
+        $doc = $op === 'set' ? $data : array_merge($old ?? [], $data);
+        if ($coll === 'events') $doc = eventKeepSlug($id, $doc, $old);
+        putDoc($coll, $id, $doc);
+      });
       out(['ok' => true]);
     }
     $res = tx(function () use ($id, $data, $staff, $cid, $op) {

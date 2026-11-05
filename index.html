@@ -188,6 +188,8 @@ dialog p{margin:0}
 a.btn{display:inline-block;text-decoration:none;font:400 .8rem var(--sans);letter-spacing:.14em;text-transform:uppercase;border:1px solid var(--wine);background:var(--wine);color:var(--on-wine);padding:.65rem 1.1rem;border-radius:6px}
 .evrow{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--line)}
 .evrow>div{min-width:0}
+.evlink{display:flex;flex-wrap:wrap;gap:.3rem .6rem;align-items:center;margin-top:.25rem}
+.evlink a{color:var(--gold);word-break:break-all}
 .cal{display:flex;flex-direction:column;gap:.4rem}
 .calhead{display:flex;align-items:center;justify-content:space-between;gap:.5rem}
 .calmonth{font-family:var(--serif);font-size:1.35rem;text-transform:capitalize}
@@ -702,7 +704,7 @@ html.staff .cm-inbox{background:var(--card);border-radius:12px}
       </div>
       <div class="card stack" id="eventsbox">
         <h2>Eventi</h2>
-        <p class="small muted">Cene a tema, feste e celebrazioni. Gli ospiti li vedono in cima alla pagina di prenotazione: un clic apre l'anteprima, il pulsante porta alla pagina dell'evento.</p>
+        <p class="small muted">Cene a tema, feste e celebrazioni. Gli ospiti li vedono in cima alla pagina di prenotazione e, da soli, sulla pagina Eventi di osteriadvor.com. Ogni evento ha la sua pagina con un link da condividere in email, sui social e su WhatsApp: «Copia link» accanto all'evento.</p>
         <div id="ev-list"></div>
         <form id="ev-form" class="stack">
           <h3 id="ev-form-title">Nuovo evento</h3>
@@ -723,7 +725,7 @@ html.staff .cm-inbox{background:var(--card);border-radius:12px}
           </div>
           <label>Descrizione (italiano)<textarea id="e-desc-it" rows="4"></textarea></label>
           <label>Descrizione (inglese)<textarea id="e-desc-en" rows="3"></textarea></label>
-          <label>Link alla pagina dell'evento<input id="e-link" type="url" placeholder="https://www.osteriadvor.com/eventi.html"></label>
+          <label>Altro link (facoltativo)<input id="e-link" type="url" placeholder="Vuoto = la pagina dell'evento"><span class="small muted">Ogni evento ha già la sua pagina. Metti un link qui solo per mandare gli ospiti altrove dall'anteprima della pagina di prenotazione.</span></label>
           <label>Immagine o locandina (facoltativa)<input id="e-img" type="file" accept="image/*"></label>
           <div class="row"><button class="btn" type="submit" id="e-save">Salva evento</button><button class="btn ghost" type="button" id="e-cancel" hidden>Annulla modifica</button><span class="small muted" id="e-msg"></span></div>
         </form>
@@ -1340,7 +1342,17 @@ function el(id){return document.getElementById(id)}
 function h(tag,attrs,kids){var e=document.createElement(tag);if(attrs)for(var k in attrs){if(k==="text")e.textContent=attrs[k];else if(k==="class")e.className=attrs[k];else if(k.slice(0,2)==="on")e.addEventListener(k.slice(2),attrs[k]);else e.setAttribute(k,attrs[k])}(kids||[]).forEach(function(c){if(c!=null)e.append(c)});return e}
 
 function applyBookings(q,src){S.bookings=q.docs.map(function(d){return Object.assign({},d.data()||{},{id:d.id})});S.bkSrc=src;S.bkErr="";dbStatus(S.bookings.length+" prenotazioni caricate · aggiornato alle "+hm(new Date().getHours()*60+new Date().getMinutes()));render()}
-function applyEvents(q,src){S.evLoaded=true;S.evSrc=src;S.evErr="";S.events=q.docs.map(function(d){return Object.assign({},d.data()||{},{id:d.id})}).filter(function(e){return e.date>=today()}).sort(function(a,b){return (a.date+(a.time||"")).localeCompare(b.date+(b.time||""))});fillTimes();render()}
+function applyEvents(q,src){S.evLoaded=true;S.evSrc=src;S.evErr="";S.events=q.docs.map(function(d){return Object.assign({},d.data()||{},{id:d.id})}).filter(function(e){return e.date>=today()}).sort(function(a,b){return (a.date+(a.time||"")).localeCompare(b.date+(b.time||""))});fillTimes();render();evDeepLink()}
+/* ?evento=natale-2026 (from the event page, the website or a campaign): that day is already chosen in the form */
+var EV_DEEP=(function(){try{var q=new URLSearchParams(location.search);return {ev:q.get("evento")||"",lang:q.get("lang")||""}}catch(e){return {ev:"",lang:""}}})();
+function evSlug(e){return e.slug||e.id}
+function evPageUrl(e){return location.origin+location.pathname.replace(/[^\/]*$/,"")+"evento.php?e="+encodeURIComponent(evSlug(e))}
+function evDeepLink(){
+  if(!EV_DEEP.ev||S.view==="staff")return;var e=S.events.filter(function(x){return evSlug(x)===EV_DEEP.ev||x.id===EV_DEEP.ev})[0];EV_DEEP.ev="";if(!e)return;
+  var sel=el("lang");if(sel&&/^(it|en|de|sl|nl)$/.test(EV_DEEP.lang)&&sel.value!==EV_DEEP.lang&&!/[?&]embed=1(&|$)/.test(location.search)){sel.value=EV_DEEP.lang;sel.dispatchEvent(new Event("change"))}
+  S.selDate=e.date;el("f-date").value=e.date;var d=parseD(e.date);S.calMonth=new Date(d.getFullYear(),d.getMonth(),1);fillTimes();renderCal();renderSlots();
+  var f=el("f-date");try{(f.closest("section,.card,form")||f).scrollIntoView({behavior:"smooth",block:"start"})}catch(_){}
+}
 function applyOverrides(q){var o={};q.docs.forEach(function(d){var x=d.data()||{};if(x.state)o[d.id]=x.state});S.overrides=o;render()}
 function applySettings(d){S.settings=Object.assign({},DEFAULTS,d.exists?d.data():{});WINDOWS=goodWindows(S.settings.windows)||DEFAULT_WINDOWS;fillTimes();fillSettings();aiUI();render()}
 function dbStatus(t){var e=el("db-status");if(e)e.textContent=t}
@@ -2308,7 +2320,7 @@ function openEvent(e){
   el("evd-when").textContent=evWhen(e);el("evd-title").textContent=evTitle(e);
   el("evd-price").textContent=e.price||"";el("evd-price").hidden=!e.price;
   el("evd-desc").textContent=evDesc(e);
-  var a=el("evd-link");if(e.link){a.href=e.link;a.hidden=false}else a.hidden=true;
+  var a=el("evd-link");a.href=e.link||evPageUrl(e);a.hidden=false;
   if(d.showModal)d.showModal();else d.setAttribute("open","");
 }
 el("evd-close").addEventListener("click",function(){el("evdlg").close()});
@@ -2318,13 +2330,24 @@ function renderEvAdmin(){
   if(!S.events.length){box.append(h("p",{class:"muted small",text:"Nessun evento in programma. Aggiungi il primo con il modulo qui sotto."}));return}
   S.events.forEach(function(e){
     box.append(h("div",{class:"evrow"},[
-      h("div",{},[h("div",{class:"small muted",text:evWhen(e)}),h("div",{text:e.title_it||""}),(e.openLunch||e.openDinner)?h("div",{class:"small",text:"Prenotabile dal sito: "+[e.openLunch?"pranzo":"",e.openDinner?"cena":""].filter(Boolean).join(" e ")}):null,e.link?null:h("div",{class:"small muted",text:"Senza link: l'anteprima non avrà il pulsante."})]),
+      h("div",{},[h("div",{class:"small muted",text:evWhen(e)}),h("div",{text:e.title_it||""}),(e.openLunch||e.openDinner)?h("div",{class:"small",text:"Prenotabile dal sito: "+[e.openLunch?"pranzo":"",e.openDinner?"cena":""].filter(Boolean).join(" e ")}):null,evLinkRow(e)]),
       h("div",{class:"row"},[
         h("button",{class:"btn ghost small",type:"button",text:"Modifica",onclick:function(){editEvent(e)}}),
         h("button",{class:"btn ghost small",type:"button",text:"Elimina",onclick:function(){delEvent(e,this)}})
       ])
     ]));
   });
+}
+/* each event has its own page: one link for email, Instagram, Facebook, WhatsApp; it also appears by itself on osteriadvor.com/eventi.html */
+var EV_CH=[["","Link semplice"],["email","…per email"],["instagram","…per Instagram"],["facebook","…per Facebook"],["whatsapp","…per WhatsApp"],["qr","…per volantino / QR"]];
+function evShareUrl(e,ch){var u=evPageUrl(e);if(!ch)return u;var med={email:"email",qr:"print"}[ch]||"social";return u+"&utm_source="+ch+"&utm_medium="+med+"&utm_campaign="+encodeURIComponent(evSlug(e))}
+function evCopy(txt,btn,label){var ok=function(){btn.textContent="✓ Copiato";setTimeout(function(){btn.textContent=label},1800)};
+  try{navigator.clipboard.writeText(txt).then(ok,function(){prompt("Copia il link:",txt)})}catch(x){prompt("Copia il link:",txt)}}
+function evLinkRow(e){
+  var u=evPageUrl(e),sel=h("select",{class:"small","aria-label":"Link con la fonte, per vedere da dove arrivano le prenotazioni",style:"width:auto;padding:.25rem .4rem"});
+  EV_CH.forEach(function(c){sel.append(h("option",{value:c[0],text:c[1]}))});
+  var b=h("button",{class:"btn ghost small",type:"button",text:"Copia link",onclick:function(){evCopy(evShareUrl(e,sel.value),this,"Copia link")}});
+  return h("div",{class:"evlink small"},[h("a",{href:u,target:"_blank",rel:"noopener",text:u.replace(/^https?:\/\//,""),title:"Apri la pagina dell'evento"}),h("span",{class:"row",style:"gap:.4rem;align-items:center"},[sel,b])]);
 }
 function editEvent(e){
   S.editEv=e;el("ev-form-title").textContent="Modifica evento";el("e-cancel").hidden=false;
@@ -2350,7 +2373,7 @@ el("ev-form").addEventListener("submit",async function(ev){
     if(f){if(!assets)throw {message:"caricamento immagini non disponibile"};var up=await assets.upload(f);v.imageId=up.id}
     else if(S.editEv&&S.editEv.imageId)v.imageId=S.editEv.imageId;
     if(S.editEv)await db.doc("events/"+S.editEv.id).set(v);else await db.collection("events").add(v);
-    m.textContent="Evento salvato.";resetEvForm();if(window.reloadData)reloadData();
+    m.textContent=S.editEv?"Evento salvato.":"Evento salvato: il link da condividere è accanto all'evento, qui sopra. Sul sito compare da solo entro un minuto.";resetEvForm();if(window.reloadData)reloadData();
   }catch(x){m.textContent="Non salvato: "+(x&&(x.message||x.code)||"errore");}
   el("e-save").disabled=false;
 });

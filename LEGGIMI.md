@@ -11,6 +11,7 @@ Sistema di prenotazione tavoli di **prenota.osteriadvor.com**. Contiene la pagin
 | `db.php` | Collegamento al database MySQL/MariaDB (le tabelle si creano da sole) |
 | `email-logo.png` | Logo nelle email |
 | `mailing.php` | Campagne email: template a blocchi, destinatari, coda di invio, aperture, clic, disiscrizioni, rimbalzi |
+| `evento.php` | La pagina pubblica di ogni evento (il link da condividere) e l'elenco degli eventi in JSON per `eventi.html` del sito |
 | `m.php` | I link delle email promozionali (apertura, clic, disiscrizione) e il modulo di iscrizione per il sito |
 | `strumenti/campagne.php` | Manda la coda delle campagne (da cron, ogni minuto) |
 | `strumenti/rimbalzi.php` | Legge i rimbalzi dal registro di Postfix (da cron come root, ogni 10 minuti) |
@@ -112,6 +113,18 @@ Lo script fa tre cose:
 4. Importa i vecchi dati: `sudo -u <utente> php strumenti/importa-json.php` dalla cartella `public_html`.
 
 PHP deve avere l'estensione `pdo_mysql` (in Virtualmin c'è già; altrimenti `dnf install php-mysqlnd`).
+
+## Eventi: link unico e pagina Eventi del sito
+
+Ogni evento creato in ⚙ **Altro → Eventi** ha da subito:
+
+- **La sua pagina:** `https://prenota.osteriadvor.com/evento.php?e=nome-evento-2026` (il nome viene dal titolo italiano e dall'anno, e non cambia più, anche se poi cambi il titolo). Foto, data, ora, prezzo, descrizione, pulsanti «Prenota il tuo posto» e «Tutti gli eventi», condivisione su WhatsApp e Facebook. Con `&l=en` è in inglese. WhatsApp, Facebook e Instagram mostrano l'anteprima con foto e titolo.
+- **«Copia link»** accanto all'evento, nell'area staff. Dal menù si sceglie il link «per email», «per Instagram», «per Facebook», «per WhatsApp» o «per volantino / QR»: ha già `utm_source`, `utm_medium` e `utm_campaign`, così nei Contatti si vede da dove arriva ogni prenotazione.
+- **«Prenota il tuo posto»** apre la pagina di prenotazione con il giorno dell'evento già scelto (`/?evento=nome-evento-2026`) e porta con sé i parametri utm.
+- **Nelle campagne email** il blocco «Evento» porta alla pagina dell'evento.
+- **Sul sito:** `https://www.osteriadvor.com/eventi.html` legge anche `evento.php?json=1` e mostra da sola ogni evento nuovo (entro un minuto). Gli eventi che sul sito ci sono già (stessa data, titolo simile, in `data/events.json` del sito) restano come sono lì: dall'area staff prendono solo il link di prenotazione e i campi che lì sono vuoti.
+
+Gli eventi creati prima di questa versione tengono come link il loro nome di sempre (per esempio `natale-2026`). Anche il vecchio codice dell'evento continua a funzionare nel link.
 
 ## Prima installazione (VPS Contabo + Virtualmin)
 
