@@ -1,5 +1,5 @@
 DirectoryIndex index.html
-<FilesMatch "^(config\.php|db\.php|push\.php|mailing\.php|.*\.(json|log|lock|tmp|pos))$">
+<FilesMatch "^(\.user\.ini|config\.php|db\.php|push\.php|mailing\.php|.*\.(json|log|lock|tmp|pos))$">
   <IfModule mod_authz_core.c>
     Require all denied
   </IfModule>
@@ -17,3 +17,13 @@ DirectoryIndex index.html
     Header set Cache-Control "no-cache"
   </IfModule>
 </Files>
+
+# limiti per il caricamento delle immagini (solo con mod_php; con PHP-FPM vale .user.ini)
+<IfModule mod_php.c>
+  php_value upload_max_filesize 10M
+  php_value post_max_size 12M
+</IfModule>
+<IfModule mod_php7.c>
+  php_value upload_max_filesize 10M
+  php_value post_max_size 12M
+</IfModule>

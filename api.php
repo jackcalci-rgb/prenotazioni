@@ -597,13 +597,22 @@ $me = staffMe($C); $staff = $me !== null; $cid = clientId();
 if (($_GET['op'] ?? '') === 'upload') {
   if (!$staff) fail('not_granted', 'Solo staff', 403);
   $f = $_FILES['file'] ?? null;
-  if (!$f || $f['error'] !== UPLOAD_ERR_OK || $f['size'] > 8 * 1024 * 1024) fail('bad_request', 'File non valido (max 8 MB)');
+  $limit = ini_get('upload_max_filesize');
+  if (!$f) fail('bad_request', "Immagine troppo grande per il server (limite PHP: $limit)", 413); // post_max_size exceeded: PHP drops the whole body
+  $err = (int)$f['error'];
+  if ($err === UPLOAD_ERR_INI_SIZE || $err === UPLOAD_ERR_FORM_SIZE) fail('bad_request', "Immagine troppo grande per il server (limite PHP: $limit)", 413);
+  if ($err === UPLOAD_ERR_PARTIAL || $err === UPLOAD_ERR_NO_FILE) fail('bad_request', 'Caricamento interrotto, riprova');
+  if ($err !== UPLOAD_ERR_OK) fail('server_error', 'Il server non riesce a ricevere file (errore PHP ' . $err . ')', 500);
+  if ($f['size'] > 8 * 1024 * 1024) fail('bad_request', 'Immagine troppo grande (max 8 MB)', 413);
   $types = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif'];
   $mime = (new finfo(FILEINFO_MIME_TYPE))->file($f['tmp_name']);
-  if (!isset($types[$mime])) fail('bad_request', 'Solo immagini JPG, PNG, WEBP o GIF');
+  if (!isset($types[$mime])) fail('bad_request', 'Formato non supportato (' . $mime . '): usa JPG, PNG, WEBP o GIF');
   $name = bin2hex(random_bytes(12)) . '.' . $types[$mime];
-  if (!is_dir(__DIR__ . '/uploads')) mkdir(__DIR__ . '/uploads', 0755, true);
-  move_uploaded_file($f['tmp_name'], __DIR__ . '/uploads/' . $name);
+  $dir = __DIR__ . '/uploads';
+  if (!is_dir($dir)) @mkdir($dir, 0755, true);
+  if (!is_dir($dir) || !is_writable($dir)) fail('server_error', 'La cartella uploads non è scrivibile sul server', 500);
+  if (!move_uploaded_file($f['tmp_name'], "$dir/$name")) fail('server_error', 'Immagine non salvata sul server', 500);
+  @chmod("$dir/$name", 0644);
   out(['id' => $name, 'url' => 'uploads/' . $name]);
 }
 
