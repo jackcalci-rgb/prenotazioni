@@ -883,13 +883,40 @@ html.staff .cm-inbox{background:var(--card);border-radius:12px}
   var db = { collection: function (c) { return query(c, [], 0) }, doc: docRef };
   window.DVOR_CALL = call; // staff marketing page: leads_* operations
 
+  /* phone photos are often 4–12 MB (or HEIC): resize to max 2000 px and send a JPEG, so the upload always fits the server limits */
+  function shrinkImage(file) {
+    var MAX = 2000;
+    if (!file || !/^image\//.test(file.type || "image/")) return Promise.resolve(file);
+    if (file.type === "image/gif") return Promise.resolve(file); // keep animations
+    return new Promise(function (res) {
+      var url = URL.createObjectURL(file), img = new Image();
+      img.onload = function () {
+        var w = img.naturalWidth, hh = img.naturalHeight; URL.revokeObjectURL(url);
+        var okType = /^image\/(jpeg|png|webp)$/.test(file.type);
+        if (okType && file.size <= 1500000 && w <= MAX && hh <= MAX) return res(file);
+        var k = Math.min(1, MAX / Math.max(w, hh)), c = document.createElement("canvas");
+        c.width = Math.round(w * k); c.height = Math.round(hh * k);
+        var g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+        c.toBlob(function (b) { res(b || file) }, "image/jpeg", 0.86);
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); res(file) }; // the server will say what is wrong
+      img.src = url;
+    });
+  }
   var assets = {
     upload: function (file) {
-      var fd = new FormData(); fd.append("file", file);
-      var h = { "X-Client-Id": cid }; var t = token(); if (t) h["X-Staff-Token"] = t;
-      return fetch(API + "?op=upload", { method: "POST", headers: h, body: fd }).then(function (r) {
-        return r.json().then(function (j) { if (!r.ok || j.error) throw { code: (j.error || {}).code || "error", message: (j.error || {}).message || "Caricamento non riuscito" }; return j });
-      });
+      return shrinkImage(file).then(function (blob) {
+        var fd = new FormData(); fd.append("file", blob, blob === file ? (file.name || "immagine") : "immagine.jpg");
+        var h = { "X-Client-Id": cid }; var t = token(); if (t) h["X-Staff-Token"] = t;
+        return fetch(API + "?op=upload", { method: "POST", headers: h, body: fd });
+      }).then(function (r) {
+        return r.text().then(function (txt) {
+          var j = null; try { j = JSON.parse(txt) } catch (e) {}
+          if (!j) throw { code: "error", message: r.status === 413 ? "immagine troppo grande per il server" : "risposta non valida dal server (" + r.status + ")" };
+          if (!r.ok || j.error) throw { code: (j.error || {}).code || "error", message: (j.error || {}).message || "Caricamento non riuscito" };
+          return j;
+        });
+      }, function (e) { throw (e && e.message) ? e : { code: "error", message: "connessione non riuscita" } });
     }
   };
 
