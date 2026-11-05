@@ -228,7 +228,7 @@ function campRender(array $camp, array $r, array $C, string $tok, bool $preview 
         $pick = fn($k) => trim((string)($ev[$k . '_' . $lang] ?? '')) ?: (trim((string)($ev[$k . '_' . ($lang === 'it' ? 'it' : 'en')] ?? '')) ?: trim((string)($ev[$k . '_it'] ?? '')));
         $title = $pick('title'); $desc = $pick('desc'); $day = campEventDay($ev, $lang);
         $short = mb_strlen($desc) > 420 ? rtrim(mb_substr($desc, 0, 400)) . '…' : $desc;
-        $link = (string)($ev['link'] ?? '') ?: (string)($C['booking_url'] ?? $site);
+        $link = eventPageUrl($C, (string)$b['id'], $ev); // the event's own page: photo, details and «Prenota»
         $img = !empty($ev['imageId']) ? '<img src="' . $h($base . '/uploads/' . $ev['imageId']) . '" width="522" alt="' . $h($title) . '" style="display:block;width:100%;max-width:522px;height:auto;border:0;border-radius:12px 12px 0 0">' : '';
         $rows .= '<tr><td style="padding:10px 28px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:' . $cream . ';border:1px solid ' . $line . ';border-radius:12px">'
           . ($img ? '<tr><td>' . $img . '</td></tr>' : '')
