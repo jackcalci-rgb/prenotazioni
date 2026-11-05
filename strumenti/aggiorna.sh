@@ -99,6 +99,13 @@ finish() {
     echo "*/15 * * * * $OWNER $(command -v php) $PUB/strumenti/promemoria.php >/dev/null 2>&1" > /etc/cron.d/dvor-promemoria
     chmod 644 /etc/cron.d/dvor-promemoria; echo "Promemoria email attivati (/etc/cron.d/dvor-promemoria)"
   fi
+  # pagina Eventi del sito principale (stesso server): legge anche gli eventi dell'area staff, così ogni evento nuovo compare da solo
+  local SITO_EV="" c
+  for c in /home/*/public_html/eventi.html /home/*/domains/osteriadvor.com/public_html/eventi.html /home/*/domains/www.osteriadvor.com/public_html/eventi.html /var/www/osteriadvor.com/eventi.html /var/www/html/eventi.html; do
+    [ -f "$c" ] && grep -q 'id="evjs"' "$c" && { SITO_EV="$c"; break; }
+  done
+  if [ -n "$SITO_EV" ]; then php "$PUB/strumenti/sito-eventi.php" "$SITO_EV" "$BK" || true
+  else echo "Non trovo eventi.html del sito principale su questo server: gli eventi nuovi non compaiono da soli su osteriadvor.com/eventi.html."; fi
   # campagne email: la coda parte ogni minuto; i rimbalzi si leggono dal registro di Postfix (solo root) ogni 10 minuti
   if [ -d /etc/cron.d ] && [ ! -f /etc/cron.d/dvor-campagne ]; then
     printf '%s\n' "* * * * * $OWNER $(command -v php) $PUB/strumenti/campagne.php >/dev/null 2>&1" "*/10 * * * * root $(command -v php) $PUB/strumenti/rimbalzi.php >/dev/null 2>&1" > /etc/cron.d/dvor-campagne

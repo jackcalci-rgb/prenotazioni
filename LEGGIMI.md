@@ -21,6 +21,7 @@ Sistema di prenotazione tavoli di **prenota.osteriadvor.com**. Contiene la pagin
 | `seed/` | Eventi e impostazioni iniziali, usati solo al primo avvio |
 | `strumenti/installa.sh` | Prima installazione sul VPS |
 | `strumenti/aggiorna.sh` | Scarica l'ultima versione da GitHub e attiva il cron dei promemoria |
+| `strumenti/sito-eventi.php` | Collega `eventi.html` del sito principale agli eventi dell'area staff (lo lancia `aggiorna.sh`) |
 | `strumenti/vai-live.php` | Cancella le prenotazioni di prova rimaste dai test e mette la copertina di San Martino (lo lancia `aggiorna.sh`) |
 | `strumenti/promemoria.php` | Manda i promemoria via email prima dell'arrivo (da cron) |
 | `strumenti/database.sh` | Crea il database MySQL e ci copia i vecchi file JSON |
@@ -122,7 +123,7 @@ Ogni evento creato in ⚙ **Altro → Eventi** ha da subito:
 - **«Copia link»** accanto all'evento, nell'area staff. Dal menù si sceglie il link «per email», «per Instagram», «per Facebook», «per WhatsApp» o «per volantino / QR»: ha già `utm_source`, `utm_medium` e `utm_campaign`, così nei Contatti si vede da dove arriva ogni prenotazione.
 - **«Prenota il tuo posto»** apre la pagina di prenotazione con il giorno dell'evento già scelto (`/?evento=nome-evento-2026`) e porta con sé i parametri utm.
 - **Nelle campagne email** il blocco «Evento» porta alla pagina dell'evento.
-- **Sul sito:** `https://www.osteriadvor.com/eventi.html` legge anche `evento.php?json=1` e mostra da sola ogni evento nuovo (entro un minuto). Gli eventi che sul sito ci sono già (stessa data, titolo simile, in `data/events.json` del sito) restano come sono lì: dall'area staff prendono solo il link di prenotazione e i campi che lì sono vuoti.
+- **Sul sito:** `dvor-aggiorna` collega da solo `eventi.html` del sito principale (stesso server; `strumenti/sito-eventi.php`, con una copia della pagina di prima in `backup-prenota`). Da lì `https://www.osteriadvor.com/eventi.html` legge anche `evento.php?json=1` e mostra da sola ogni evento nuovo (entro un minuto). Gli eventi che sul sito ci sono già (stessa data, titolo simile, in `data/events.json` del sito) restano come sono lì: dall'area staff prendono solo il link di prenotazione e i campi che lì sono vuoti.
 
 Gli eventi creati prima di questa versione tengono come link il loro nome di sempre (per esempio `natale-2026`). Anche il vecchio codice dell'evento continua a funzionare nel link.
 
