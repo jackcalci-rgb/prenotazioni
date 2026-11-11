@@ -54,6 +54,9 @@ h1,h2,h3{font-family:var(--serif);font-weight:500;line-height:1.15;text-wrap:bal
 h1{font-size:2.2rem} h2{font-size:1.6rem} h3{font-size:1.25rem}
 .caps{font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;font-weight:400;color:var(--muted)}
 header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:1rem;padding-block:1.6rem 1rem;border-bottom:1px solid var(--line);margin-bottom:1.5rem}
+.home-link{display:inline-flex;align-items:center;gap:.35rem;margin-bottom:.9rem;padding:.35rem .8rem .35rem .65rem;border:1px solid var(--line);border-radius:999px;color:var(--ink);font:400 .78rem var(--sans);letter-spacing:.08em;text-decoration:none;transition:border-color .15s,background .15s}
+.home-link:hover,.home-link:focus-visible{border-color:var(--wine);background:var(--alt)}
+html.staff .home-link{display:none}
 .tabs{display:flex;gap:.25rem;background:var(--alt);padding:.25rem;border-radius:999px}
 .tabs button{border:0;background:transparent;color:var(--ink);font:400 .8rem var(--sans);letter-spacing:.12em;text-transform:uppercase;padding:.5rem 1rem;border-radius:999px;cursor:pointer}
 .tabs button[aria-selected="true"]{background:var(--wine);color:var(--on-wine)}
@@ -491,6 +494,7 @@ html.staff .cm-inbox{background:var(--card);border-radius:12px}
 <div class="wrap">
   <header>
     <div>
+      <a id="home-link" class="home-link" href="https://www.osteriadvor.com/"><span aria-hidden="true">←</span> <span id="t-home">Torna al sito</span></a>
       <div class="caps">Osteria Enoteca Dvor</div>
       <h1 id="h-title">Prenota un tavolo</h1>
     </div>
@@ -1277,6 +1281,7 @@ de:{edit:"Ändern",editTitle:"Reservierung ändern",save:"Änderungen speichern"
 sl:{edit:"Spremeni",editTitle:"Spremeni rezervacijo",save:"Shrani spremembe",saving:"Shranjujem…",saved:"Rezervacija posodobljena. Nove podatke smo vam poslali po e-pošti.",savedNotes:"Sprememba shranjena.",noChange:"Nič ni spremenjeno.",noSlotDay:"Ta dan ni prostega termina za {n} oseb: poskusite drug dan.",bigParty:"Za več kot {n} oseb nas pokličite: +39 0481 090740.",editErr:"Ni shranjeno: {m}",editHint:"Dan, uro, število oseb in opombe lahko spremenite do dneva rezervacije."},
 nl:{edit:"Wijzigen",editTitle:"Reservering wijzigen",save:"Wijzigingen opslaan",saving:"Opslaan…",saved:"Reservering bijgewerkt. We hebben je de nieuwe gegevens gemaild.",savedNotes:"Wijziging opgeslagen.",noChange:"Er is niets gewijzigd.",noSlotDay:"Die dag is er geen tijd vrij voor {n} personen: probeer een andere dag.",bigParty:"Voor meer dan {n} personen bel ons: +39 0481 090740.",editErr:"Niet opgeslagen: {m}",editHint:"Je kunt dag, tijd, personen en notities wijzigen tot de dag van je reservering."}};
 for(var _l3 in T3)for(var _k3 in T3[_l3])if(T[_l3])T[_l3][_k3]=T3[_l3][_k3];
+var HOME={it:"Torna al sito",en:"Back to website",de:"Zurück zur Website",sl:"Nazaj na spletno stran",nl:"Terug naar de website"};
 /* honest social proof: built only from real bookings (test and example data excluded) */
 function recentProof(){var now=Date.now(),last=0,n=0;S.bookings.forEach(function(b){if(b.example||b.source==="test"||!b.createdAt)return;var ts=Date.parse(b.createdAt);if(isNaN(ts))return;if(ts>last)last=ts;if(now-ts<7*864e5)n++});
   if(last&&now-last<48*36e5){var m=Math.max(1,Math.round((now-last)/6e4));return t("recentH",{n:m<60?t("min",{n:m}):t("hr",{n:Math.round(m/60)})})}
@@ -1455,6 +1460,7 @@ function aiUI(){var on=aiOn(),box=el("assistant"),was=!box.hidden;box.hidden=!on
 function applyLang(){
   document.documentElement.lang=S.lang;
   el("h-title").textContent=S.view==="staff"?"Prenotazioni":t("title");
+  el("t-home").textContent=HOME[S.lang]||HOME.it;
   el("t-ask").textContent=t("ask");el("t-ask-sub").textContent=t("askSub");el("t-msg").textContent=t("msg");el("chat-send").textContent=t("send");
   aiUI();el("t-date").textContent=t("date");el("t-party").textContent=t("party");el("t-time").textContent=t("time");el("f-check").textContent=t("check");
   el("t-events").textContent=t("events");el("evd-link").textContent=t("evLink");el("evd-close").textContent=t("close");
