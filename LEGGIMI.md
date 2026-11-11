@@ -21,7 +21,8 @@ Sistema di prenotazione tavoli di **prenota.osteriadvor.com**. Contiene la pagin
 | `seed/` | Eventi e impostazioni iniziali, usati solo al primo avvio |
 | `strumenti/installa.sh` | Prima installazione sul VPS |
 | `strumenti/aggiorna.sh` | Scarica l'ultima versione da GitHub e attiva il cron dei promemoria |
-| `strumenti/sito-eventi.php` | Collega `eventi.html` del sito principale agli eventi dell'area staff (lo lancia `aggiorna.sh`) |
+| `strumenti/sito-eventi.php` | Collega `eventi.html` del sito principale agli eventi dell'area staff, mette la striscia «Cancellato» sugli eventi annullati e aggiunge l'avviso a comparsa (lo lancia `aggiorna.sh`) |
+| `strumenti/sito/avviso-eventi.js` | Avviso a comparsa sul sito principale quando un evento è annullato (copiato sul sito da `sito-eventi.php`) |
 | `strumenti/vai-live.php` | Cancella le prenotazioni di prova rimaste dai test e mette la copertina di San Martino (lo lancia `aggiorna.sh`) |
 | `strumenti/promemoria.php` | Manda i promemoria via email prima dell'arrivo (da cron) |
 | `strumenti/database.sh` | Crea il database MySQL e ci copia i vecchi file JSON |
@@ -199,3 +200,14 @@ Dall'area staff, ⚙ → **Regole e offerte → Orari settimanali**: una riga pe
   - `tail prenota-data/mail.log` dice se è partita dal programma.
   - `grep <email> /var/log/maillog | tail` mostra la risposta del destinatario (`status=sent` oppure il motivo del rifiuto).
 - **DNS necessario:** SPF con l'IP del VPS, DKIM (selettore `202409`), DMARC, e reverse DNS `mail.profumidistria.com`.
+
+## Annullare un evento
+
+Area staff, ⚙ **Eventi**: accanto all'evento c'è **Annulla evento** (due clic, il secondo conferma). Succede questo:
+
+- sull'evento compare una **striscia rossa «Cancellato»**: nella pagina di prenotazione, nella pagina dell'evento (`evento.php`), su `eventi.html` e sulla home del sito; il pulsante «Prenota» sparisce;
+- il pranzo e la cena che l'evento apriva **non si possono più prenotare** (se era un giorno di chiusura, il calendario torna a dire «Chiuso»);
+- sul sito principale compare un **avviso a comparsa** «Evento annullato», una volta per visita, fino al giorno dell'evento;
+- le prenotazioni già fatte per quel giorno restano: l'area staff dice quante sono, e si annullano dal Calendario (il cliente riceve l'email di annullamento).
+
+**Ripristina evento** toglie la striscia; pranzo e cena si riaprono da **Modifica**. Nel modulo c'è anche la casella «Evento cancellato».
