@@ -28,7 +28,7 @@ if (isset($_GET['json'])) {
       'title_it' => (string)($ev['title_it'] ?? ''), 'title_en' => (string)($ev['title_en'] ?? ''),
       'desc_it' => (string)($ev['desc_it'] ?? ''), 'desc_en' => (string)($ev['desc_en'] ?? ''),
       'price' => (string)($ev['price'] ?? ''), 'flyer' => evImg($base, $ev),
-      'link' => eventBookUrl($C, $id, $ev), 'page' => eventPageUrl($C, $id, $ev), 'source' => 'prenota',
+      'link' => eventBookUrl($C, $id, $ev), 'page' => eventPageUrl($C, $id, $ev), 'source' => 'prenota', 'cancelled' => !empty($ev['cancelled']),
     ];
   }
   usort($list, fn($a, $b) => strcmp($a['date'] . $a['time'], $b['date'] . $b['time']));
@@ -42,9 +42,9 @@ if (!preg_match('/^(it|en|de|sl|nl)$/', $l)) $l = strtolower(substr((string)($_S
 $lang = $l === 'it' || !preg_match('/^(en|de|sl|nl)$/', $l) ? 'it' : 'en'; // the event form has Italian and English
 $T = [
   'it' => ['book' => 'Prenota il tuo posto', 'all' => 'Tutti gli eventi', 'at' => 'ore', 'allDay' => 'tutto il giorno', 'past' => 'Questo evento si è già svolto.', 'share' => 'Condividi', 'copy' => 'Copia link', 'copied' => 'Link copiato',
-    'nf' => 'Evento non trovato', 'nfText' => 'Questo evento non c\'è più o il link non è completo. Trovi tutti i prossimi appuntamenti sul nostro sito.', 'event' => 'Evento', 'call' => 'Per informazioni', 'other' => 'English'],
+    'canc' => 'Cancellato', 'cancText' => 'Questo evento è stato cancellato. Ci scusiamo per il disagio: per informazioni chiamaci o scrivici su WhatsApp.', 'nf' => 'Evento non trovato', 'nfText' => 'Questo evento non c\'è più o il link non è completo. Trovi tutti i prossimi appuntamenti sul nostro sito.', 'event' => 'Evento', 'call' => 'Per informazioni', 'other' => 'English'],
   'en' => ['book' => 'Book your place', 'all' => 'All events', 'at' => 'at', 'allDay' => 'all day', 'past' => 'This event has already taken place.', 'share' => 'Share', 'copy' => 'Copy link', 'copied' => 'Link copied',
-    'nf' => 'Event not found', 'nfText' => 'This event is no longer available or the link is incomplete. You can find all our upcoming events on our website.', 'event' => 'Event', 'call' => 'Information', 'other' => 'Italiano'],
+    'canc' => 'Cancelled', 'cancText' => 'This event has been cancelled. We apologise for the inconvenience: for information, call us or message us on WhatsApp.', 'nf' => 'Event not found', 'nfText' => 'This event is no longer available or the link is incomplete. You can find all our upcoming events on our website.', 'event' => 'Event', 'call' => 'Information', 'other' => 'Italiano'],
 ][$lang];
 
 $found = eventFind((string)($_GET['e'] ?? ''));
@@ -69,18 +69,19 @@ if ($found) {
   $day = mb_strtoupper(mb_substr($day, 0, 1)) . mb_substr($day, 1);
   $when = $day . (!empty($ev['allDay']) ? ' · ' . $T['allDay'] : (!empty($ev['time']) ? ' · ' . $T['at'] . ' ' . $ev['time'] : ''));
   $past = (string)$ev['date'] < date('Y-m-d');
+  $canc = !empty($ev['cancelled']);
   $canon = eventPageUrl($C, $id, $ev) . ($lang === 'en' ? '&l=en' : '');
   $book = eventBookUrl($C, $id, $ev) . '&lang=' . $lang . $qs;
   $allUrl = $site . '/eventi.html#ev-' . $slug;
   $short = trim((string)preg_replace('/\s+/', ' ', $desc)); if (mb_strlen($short) > 200) $short = rtrim(mb_substr($short, 0, 195)) . '…';
-  $metaDesc = trim($when . '. ' . (!empty($ev['price']) ? $ev['price'] . '. ' : '') . $short);
+  $metaDesc = trim(($canc ? $T['canc'] . ' · ' : '') . $when . '. ' . (!empty($ev['price']) ? $ev['price'] . '. ' : '') . $short);
   $pageTitle = $title . ' · Osteria Enoteca Dvor';
   $ld = ['@context' => 'https://schema.org', '@type' => 'Event', 'name' => $title, 'startDate' => $ev['date'] . (!empty($ev['time']) && empty($ev['allDay']) ? 'T' . $ev['time'] . ':00' : ''),
-    'eventStatus' => 'https://schema.org/EventScheduled', 'eventAttendanceMode' => 'https://schema.org/OfflineEventAttendanceMode', 'description' => $desc ?: null, 'url' => $canon,
+    'eventStatus' => $canc ? 'https://schema.org/EventCancelled' : 'https://schema.org/EventScheduled', 'eventAttendanceMode' => 'https://schema.org/OfflineEventAttendanceMode', 'description' => $desc ?: null, 'url' => $canon,
     'location' => ['@type' => 'Place', 'name' => 'Osteria Enoteca Dvor', 'address' => ['@type' => 'PostalAddress', 'streetAddress' => 'Via Castello 5', 'addressLocality' => 'San Floriano del Collio', 'postalCode' => '34070', 'addressCountry' => 'IT']],
     'organizer' => ['@type' => 'Organization', 'name' => 'Osteria Enoteca Dvor', 'url' => $site]];
   if ($img) $ld['image'] = [$img];
-  if (!empty($ev['price'])) $ld['offers'] = ['@type' => 'Offer', 'description' => $ev['price'], 'url' => eventBookUrl($C, $id, $ev)];
+  if (!empty($ev['price']) && !$canc) $ld['offers'] = ['@type' => 'Offer', 'description' => $ev['price'], 'url' => eventBookUrl($C, $id, $ev)];
   $ld = array_filter($ld, fn($v) => $v !== null);
 } else {
   $title = $T['nf']; $pageTitle = $T['nf'] . ' · Osteria Enoteca Dvor'; $metaDesc = $T['nfText']; $canon = ''; $img = '';
@@ -144,6 +145,13 @@ h1{font-family:var(--serif);font-weight:300;font-size:clamp(2.1rem,4.4vw,3.2rem)
 .btn.fill{background:var(--fill);border-color:var(--fill);color:var(--on-fill)}
 .btn:hover{background:var(--gold);border-color:var(--gold);color:#fff}
 .past{color:var(--muted);font-style:italic;margin:.6rem 0 0}
+/* evento cancellato: striscia rossa in diagonale */
+.ev.canc{position:relative;overflow:hidden}
+.rib{position:absolute;z-index:3;top:2.1rem;left:-4.2rem;width:17rem;transform:rotate(-35deg);background:#B3261E;color:#fff;text-align:center;font:500 .85rem/2.5 var(--sans);letter-spacing:.3em;text-transform:uppercase;box-shadow:0 3px 12px rgba(0,0,0,.3);pointer-events:none}
+.ev.canc .pic img{filter:grayscale(.55)}
+.ev.canc h1{text-decoration:line-through;text-decoration-color:#B3261E;text-decoration-thickness:2px}
+.cnote{border-left:3px solid #B3261E;padding:.4rem 0 .4rem .9rem;margin:0 0 1.2rem;color:var(--ink)}
+@media (max-width:820px){.rib{top:1.4rem;left:-3.6rem;width:13rem;font-size:.75rem;line-height:2.2}}
 .share{display:flex;gap:1rem;flex-wrap:wrap;align-items:center;margin-top:1.8rem;padding-top:1.2rem;border-top:1px solid var(--line);font-size:.8rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 .share a,.share button{color:var(--ink);background:none;border:0;border-bottom:1px solid var(--gold);padding:0;font:inherit;letter-spacing:inherit;text-transform:inherit;cursor:pointer;text-decoration:none}
 footer{max-width:1180px;margin:0 auto;padding:2rem 16px 3rem;border-top:1px solid var(--line);color:var(--muted);font-size:.9rem;text-align:center}
@@ -158,16 +166,18 @@ footer a{text-decoration:none;border-bottom:1px solid var(--line)}
 </header>
 <main>
 <?php if ($found): ?>
-  <article class="ev<?= $img ? '' : ' noimg' ?>">
+  <article class="ev<?= $img ? '' : ' noimg' ?><?= $canc ? ' canc' : '' ?>">
+    <?php if ($canc): ?><span class="rib"><?= $h($T['canc']) ?></span><?php endif ?>
     <?php if ($img): ?><div class="pic"><img src="<?= $h($img) ?>" alt="<?= $h($title) ?>"></div><?php endif ?>
     <div>
-      <span class="caps"><?= $h($T['event']) ?></span><?php if (!$past): ?><span class="cd" id="cd" data-date="<?= $h($ev['date']) ?>"></span><?php endif ?>
+      <span class="caps"><?= $h($T['event']) ?></span><?php if (!$past && !$canc): ?><span class="cd" id="cd" data-date="<?= $h($ev['date']) ?>"></span><?php endif ?>
       <h1><?= $h($title) ?></h1>
       <p class="dt"><?= $h($when) ?></p>
+      <?php if ($canc): ?><p class="cnote"><?= $h($T['cancText']) ?></p><?php endif ?>
       <div class="desc"><?= $paras ?></div>
       <?php if (!empty($ev['price'])): ?><span class="pr"><?= $h($ev['price']) ?></span><?php endif ?>
       <div class="bt">
-        <?php if (!$past): ?><a class="btn fill" href="<?= $h($book) ?>"><?= $h($T['book']) ?></a><?php endif ?>
+        <?php if (!$past && !$canc): ?><a class="btn fill" href="<?= $h($book) ?>"><?= $h($T['book']) ?></a><?php endif ?>
         <a class="btn" href="<?= $h($allUrl) ?>"><?= $h($T['all']) ?></a>
       </div>
       <?php if ($past): ?><p class="past"><?= $h($T['past']) ?></p><?php endif ?>

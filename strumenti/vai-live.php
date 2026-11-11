@@ -3,6 +3,7 @@
    - cancella le prenotazioni di prova create dal vecchio pulsante «Genera prenotazioni di prova» (segnate example o source test), mai quelle vere
    - toglie dalla lista nera i numeri finti di quelle prove (000 000 0000, prova@example.com)
    - una volta sola: mette la copertina all'evento di San Martino (11 novembre 2026)
+   - una volta sola: segna San Martino 2026 come cancellato e chiude l'11 novembre (niente pranzo e cena dal sito)
    A mano:  sudo -u <utente> php strumenti/vai-live.php */
 declare(strict_types=1);
 if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
@@ -36,4 +37,17 @@ if (!is_file($mark) && is_file(__DIR__ . '/../uploads/' . SAN_MARTINO_COVER)) {
   }
   if ($n) { file_put_contents($mark, date('c') . "\n"); echo "Copertina di San Martino impostata\n"; }
   else echo "Evento di San Martino non trovato: carica la copertina dall'area staff (⚙ → Eventi)\n";
+}
+
+/* una volta sola (11 novembre 2026): San Martino cancellato e giornata chiusa (pranzo e cena non più prenotabili dal sito) */
+$mark = dataDir() . '/san-martino-2026-cancellato.fatto';
+if (!is_file($mark)) {
+  $n = 0;
+  foreach (load('events') as $id => $e) {
+    if (($e['date'] ?? '') !== '2026-11-11' || stripos((string)($e['title_it'] ?? '') . ' ' . $id, 'martino') === false) continue;
+    $e['cancelled'] = true; $e['openLunch'] = false; $e['openDinner'] = false;
+    putDoc('events', (string)$id, $e); $n++;
+  }
+  file_put_contents($mark, date('c') . "\n");
+  echo $n ? "San Martino 2026: segnato come cancellato, l'11 novembre risulta chiuso\n" : "San Martino 2026 non trovato: segnalo come cancellato dall'area staff (⚙ → Eventi)\n";
 }

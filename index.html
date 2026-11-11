@@ -172,6 +172,13 @@ label.tick input{width:auto;margin-top:.2rem;flex:0 0 auto}
 .evs{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.75rem}
 .ev{display:flex;flex-direction:column;text-align:left;border:1px solid var(--line);background:var(--card);border-radius:10px;overflow:hidden;cursor:pointer;padding:0;font:inherit;color:inherit}
 .ev:hover{border-color:var(--wine)}
+/* evento cancellato: striscia rossa in diagonale sull'angolo */
+.evx{position:relative;overflow:hidden}
+dialog.evxd{overflow:hidden}
+.evx>.rib,.evxd>.rib{position:absolute;z-index:3;top:1.3rem;left:-3.4rem;width:12rem;transform:rotate(-35deg);background:#B3261E;color:#fff;text-align:center;font:600 .74rem/2 var(--sans,inherit);letter-spacing:.2em;text-transform:uppercase;box-shadow:0 2px 8px rgba(0,0,0,.3);pointer-events:none}
+.evx .pic img,.evxd .pic img{filter:grayscale(.55)}
+.ev.evx .ttl{text-decoration:line-through;text-decoration-color:#B3261E}
+.pill.evc-pill{background:#B3261E;color:#fff}
 .ev .pic{aspect-ratio:4/3;background:var(--alt);display:flex;align-items:center;justify-content:center;max-width:100%}
 .ev .pic img{width:100%;height:100%;object-fit:cover;display:block}
 .ev .pic span{font-family:var(--serif);font-size:2.4rem;color:var(--wine)}
@@ -706,6 +713,7 @@ html.staff .cm-inbox{background:var(--card);border-radius:12px}
         <h2>Eventi</h2>
         <p class="small muted">Cene a tema, feste e celebrazioni. Gli ospiti li vedono in cima alla pagina di prenotazione e, da soli, sulla pagina Eventi di osteriadvor.com. Ogni evento ha la sua pagina con un link da condividere in email, sui social e su WhatsApp: «Copia link» accanto all'evento.</p>
         <div id="ev-list"></div>
+        <p class="small" id="ev-list-msg" aria-live="polite"></p>
         <form id="ev-form" class="stack">
           <h3 id="ev-form-title">Nuovo evento</h3>
           <div class="row">
@@ -721,6 +729,7 @@ html.staff .cm-inbox{background:var(--card);border-radius:12px}
             <span class="small muted" style="flex-basis:100%">Apri le prenotazioni dal sito in questo giorno, anche se di solito è chiuso:</span>
             <label style="flex:0 1 auto;flex-direction:row;align-items:center;gap:.5rem"><input type="checkbox" id="e-open-l" style="width:auto">A pranzo (12:00–15:00)</label>
             <label style="flex:0 1 auto;flex-direction:row;align-items:center;gap:.5rem"><input type="checkbox" id="e-open-d" style="width:auto">A cena (19:00–21:30, senza minimo di ospiti)</label>
+            <label style="flex:0 1 100%;flex-direction:row;align-items:center;gap:.5rem;color:#B3261E;font-weight:500"><input type="checkbox" id="e-canc" style="width:auto">Evento cancellato (striscia rossa «Cancellato» sul sito, niente prenotazioni dall'evento)</label>
             <label>Prezzo (facoltativo)<input id="e-price" placeholder="45 € a persona, vini inclusi"></label>
           </div>
           <label>Descrizione (italiano)<textarea id="e-desc-it" rows="4"></textarea></label>
@@ -1289,7 +1298,7 @@ function fmtDay(s,long){return parseD(s).toLocaleDateString(LOC[S.lang]||"it-IT"
 function today(){return ymd(new Date())}
 
 /* ---------- core logic ---------- */
-function openingEvent(dateStr){return S.events.filter(function(e){return e.date===dateStr&&(e.openLunch||e.openDinner)})[0]||null}
+function openingEvent(dateStr){return S.events.filter(function(e){return e.date===dateStr&&!e.cancelled&&(e.openLunch||e.openDinner)})[0]||null}
 function slotsFor(dateStr){
   var w=(WINDOWS[wd(dateStr)]||[]).slice(),ev=openingEvent(dateStr);
   if(ev){if(ev.openLunch)w.push(["12:00","15:00"]);if(ev.openDinner)w.push(["19:00","21:30"])}
@@ -1304,7 +1313,7 @@ function seatsUsedAt(dateStr,time){
   var T0=mins(time),H=S.settings.holdMin||120;
   return dayBookings(dateStr).reduce(function(a,b){var m=mins(b.time);return (m<T0+H&&T0<m+H)?a+(+b.party||0):a},0);
 }
-function weekdayPromo(dateStr){if(S.events.some(function(e){return e.date===dateStr}))return false;return (S.settings.discountDays||["mon","tue","fri"]).indexOf(wd(dateStr))>=0}
+function weekdayPromo(dateStr){if(S.events.some(function(e){return e.date===dateStr&&!e.cancelled}))return false;return (S.settings.discountDays||["mon","tue","fri"]).indexOf(wd(dateStr))>=0}
 /* base capacity is a share of the total seats; once a time is full, an extra share opens automatically */
 function baseCap(dateStr){var st=S.settings,we=wd(dateStr)==="sat"||wd(dateStr)==="sun";return Math.max(1,Math.round((+st.seats||74)*(+(we?st.weekendPct:st.weekdayPct)||100)/100))}
 function extraCap(){return Math.round((+S.settings.seats||74)*(+S.settings.overflowPct||0)/100)}
@@ -1351,7 +1360,7 @@ function check(dateStr,time,party,now){
   now=now||new Date();party=Math.max(1,Math.round(+party||1));
   var r={date:dateStr,time:time,party:party,ok:false,reason:"",service:time?svcOf(time):null,seatsLeft:null,dinner:null,offer:null,discount:0,suggestion:null,events:[],alternatives:[]};
   if(!dateStr||dateStr<today()){r.reason="past_date";return r}
-  r.events=S.events.filter(function(e){return e.date===dateStr}).map(function(e){return {title:e.title_it,time:e.allDay?"all day":(e.time||""),price:e.price||"",link:e.link||""}});
+  r.events=S.events.filter(function(e){return e.date===dateStr}).map(function(e){return {title:e.title_it,cancelled:!!e.cancelled,time:e.allDay?"all day":(e.time||""),price:e.price||"",link:e.link||""}});
   var slots=slotsFor(dateStr);
   if(!slots.length){r.reason="closed_day";addAlternatives(r,now);return r}
   if(!time||slots.indexOf(time)<0){var n=nearestSlot(dateStr,time||"20:00");r.reason="not_a_slot";r.alternatives.push({date:dateStr,time:n,why:"nearest_time"});addAlternatives(r,now);return r}
@@ -1477,7 +1486,8 @@ function hello(){var x=el("hello-msg");if(!x){x=bubble("bot",HELLO[S.lang]||HELL
 function eventsText(){
   var ev=S.events.slice(0,12);if(!ev.length)return "";
   return "Upcoming special events (a listed opening overrides the normal closed days):\n"+ev.map(function(e){
-    var o=[e.openLunch?"lunch 12:00-15:00":"",e.openDinner?"dinner 19:00-21:30":""].filter(Boolean).join(" and ");
+    var o=e.cancelled?"":[e.openLunch?"lunch 12:00-15:00":"",e.openDinner?"dinner 19:00-21:30":""].filter(Boolean).join(" and ");
+    if(e.cancelled)return "- "+e.date+" ("+WD[parseD(e.date).getDay()]+"): "+(e.title_it||"")+(e.title_en?" / "+e.title_en:"")+". CANCELLED: this event will not take place, do not offer it; follow the normal opening days.";
     return "- "+e.date+" ("+WD[parseD(e.date).getDay()]+"): "+(e.title_it||"")+(e.title_en?" / "+e.title_en:"")+(e.allDay?", all day":e.time?", from "+e.time:"")+(e.price?", "+e.price:"")+(o?". OPEN for table bookings: "+o:". Book via the event page")+(e.link?" ("+e.link+")":"");
   }).join("\n")+"\n";
 }
@@ -2308,8 +2318,9 @@ function renderCal(){
     var d=ymd(new Date(m.getFullYear(),m.getMonth(),dn)),inf=dayInfo(d,party);
     var cls="cd "+inf.state+(inf.events.length?" evd":"")+(d===S.selDate?" sel":"")+(d===today()?" today":"");
     var kids=[h("span",{class:"n",text:String(dn)})];
-    if(inf.events.length)kids.push(h("span",{class:"tag ev-dot",text:"✦ "+evTitle(inf.events[0])}));
-    if(inf.state==="closed"&&!inf.events.length)kids.push(h("span",{class:"tag",text:t("closed")}));
+    var liveEv=inf.events.filter(function(e){return !e.cancelled});
+    if(inf.events.length)kids.push(h("span",{class:"tag ev-dot",text:(liveEv.length?"✦ ":"✕ ")+evTitle(liveEv[0]||inf.events[0])+(liveEv.length?"":" · "+(EVX[S.lang]||EVX.it))}));
+    if(inf.state==="closed"&&!liveEv.length)kids.push(h("span",{class:"tag",text:t("closed")}));
     if(inf.state==="full")kids.push(h("span",{class:"tag long",text:t("notAvail")}));
     if(inf.state==="open"&&inf.promo)kids.push(h("span",{class:"tag promo",text:"−"+S.settings.discountPct+"%"}));
     if(inf.state==="open"&&inf.few)kids.push(h("span",{class:"tag few long",text:t("lastSeats")}));
@@ -2351,6 +2362,9 @@ function renderSlots(){
 }
 
 /* ---------- events ---------- */
+var EVX={it:"Cancellato",en:"Cancelled",de:"Abgesagt",sl:"Odpovedano",nl:"Geannuleerd"};
+function evCancelled(e){return !!(e&&e.cancelled)}
+function evRib(){return h("span",{class:"rib",text:EVX[S.lang]||EVX.it})}
 function evTitle(e){return (S.lang!=="it"&&e.title_en)?e.title_en:e.title_it}
 function evDesc(e){return (S.lang!=="it"&&e.desc_en)?e.desc_en:(e.desc_it||"")}
 function evWhen(e){return fmtDay(e.date,true)+(e.allDay?" · "+t("allDay"):(e.time?" · "+e.time:""))}
@@ -2360,11 +2374,12 @@ function renderEvents(){
   el("g-events").hidden=!S.events.length;
   S.events.forEach(function(e){
     var pic=h("div",{class:"pic"});evPic(e,pic);
-    wrap.append(h("button",{class:"ev",type:"button",onclick:function(){openEvent(e)}},[pic,h("div",{class:"body"},[h("span",{class:"when",text:evWhen(e)}),h("span",{class:"ttl",text:evTitle(e)})])]));
+    wrap.append(h("button",{class:"ev"+(e.cancelled?" evx":""),type:"button",onclick:function(){openEvent(e)}},[e.cancelled?evRib():null,pic,h("div",{class:"body"},[h("span",{class:"when",text:evWhen(e)+(e.cancelled?" · "+(EVX[S.lang]||EVX.it):"")}),h("span",{class:"ttl",text:evTitle(e)})])]));
   });
 }
 function openEvent(e){
   var d=el("evdlg");evPic(e,el("evd-pic"));if(!e.imageId)el("evd-pic").textContent="";
+  d.classList.toggle("evxd",!!e.cancelled);var ob=d.querySelector(":scope>.rib");if(ob)ob.remove();if(e.cancelled)d.prepend(evRib());
   el("evd-when").textContent=evWhen(e);el("evd-title").textContent=evTitle(e);
   el("evd-price").textContent=e.price||"";el("evd-price").hidden=!e.price;
   el("evd-desc").textContent=evDesc(e);
@@ -2378,9 +2393,11 @@ function renderEvAdmin(){
   if(!S.events.length){box.append(h("p",{class:"muted small",text:"Nessun evento in programma. Aggiungi il primo con il modulo qui sotto."}));return}
   S.events.forEach(function(e){
     box.append(h("div",{class:"evrow"},[
-      h("div",{},[h("div",{class:"small muted",text:evWhen(e)}),h("div",{text:e.title_it||""}),(e.openLunch||e.openDinner)?h("div",{class:"small",text:"Prenotabile dal sito: "+[e.openLunch?"pranzo":"",e.openDinner?"cena":""].filter(Boolean).join(" e ")}):null,evLinkRow(e)]),
+      h("div",{},[h("div",{class:"small muted",text:evWhen(e)}),h("div",{},[e.cancelled?h("span",{class:"pill evc-pill",text:"Cancellato"}):null,e.cancelled?" ":null,e.title_it||""]),!e.cancelled&&(e.openLunch||e.openDinner)?h("div",{class:"small",text:"Prenotabile dal sito: "+[e.openLunch?"pranzo":"",e.openDinner?"cena":""].filter(Boolean).join(" e ")}):null,evLinkRow(e)]),
       h("div",{class:"row"},[
         h("button",{class:"btn ghost small",type:"button",text:"Modifica",onclick:function(){editEvent(e)}}),
+        e.cancelled?h("button",{class:"btn ghost small",type:"button",text:"Ripristina evento",title:"Toglie la striscia «Cancellato». Riapri pranzo o cena con Modifica, se servono.",onclick:function(){cancelEvent(e,false,this)}})
+          :h("button",{class:"btn ghost small",type:"button",style:"color:#B3261E;border-color:#B3261E",text:"Annulla evento",title:"Striscia rossa «Cancellato» sul sito e niente più prenotazioni per questo evento",onclick:function(){cancelEvent(e,true,this)}}),
         h("button",{class:"btn ghost small",type:"button",text:"Elimina",onclick:function(){delEvent(e,this)}})
       ])
     ]));
@@ -2399,20 +2416,32 @@ function evLinkRow(e){
 }
 function editEvent(e){
   S.editEv=e;el("ev-form-title").textContent="Modifica evento";el("e-cancel").hidden=false;
-  el("e-title-it").value=e.title_it||"";el("e-title-en").value=e.title_en||"";el("e-date").value=e.date||"";el("e-time").value=e.allDay?"":(e.time||"");el("e-allday").checked=!!e.allDay;el("e-open-l").checked=!!e.openLunch;el("e-open-d").checked=!!e.openDinner;el("e-time").disabled=!!e.allDay;
+  el("e-title-it").value=e.title_it||"";el("e-title-en").value=e.title_en||"";el("e-date").value=e.date||"";el("e-time").value=e.allDay?"":(e.time||"");el("e-allday").checked=!!e.allDay;el("e-open-l").checked=!!e.openLunch;el("e-open-d").checked=!!e.openDinner;el("e-canc").checked=!!e.cancelled;el("e-time").disabled=!!e.allDay;
   el("e-price").value=e.price||"";el("e-desc-it").value=e.desc_it||"";el("e-desc-en").value=e.desc_en||"";el("e-link").value=e.link||"";el("e-img").value="";
   el("ev-form").scrollIntoView({behavior:"smooth",block:"start"});
 }
 function resetEvForm(){S.editEv=null;el("ev-form").reset();el("e-time").disabled=false;el("ev-form-title").textContent="Nuovo evento";el("e-cancel").hidden=true}
 el("e-cancel").addEventListener("click",resetEvForm);
 el("e-allday").addEventListener("change",function(){el("e-time").disabled=this.checked;if(this.checked)el("e-time").value=""});
+/* annulla (o ripristina) un evento con un clic: striscia rossa «Cancellato» su sito e pagina dell'evento; il pranzo e la cena
+   che l'evento apriva non sono più prenotabili (le prenotazioni già fatte restano: si annullano dal giorno, con l'email al cliente) */
+async function cancelEvent(e,on,btn){
+  if(on&&btn.dataset.sure!=="1"){btn.dataset.sure="1";btn.textContent="Confermi? Annulla l'evento";return}
+  if(!db)return;btn.disabled=true;
+  var v=Object.assign({},e);delete v.id;v.cancelled=!!on;if(on){v.openLunch=false;v.openDinner=false}
+  try{await db.doc("events/"+e.id).set(v);
+    var n=on?S.bookings.filter(function(b){return b.date===e.date&&active(b)}).length:0;
+    el("ev-list-msg").textContent=on?"Evento annullato: sul sito compare la striscia «Cancellato» entro un minuto."+(n?" Attenzione: per quel giorno ci sono ancora "+n+" prenotazioni attive, annullale dal Calendario se serve (il cliente riceve l'email).":""):"Evento ripristinato. Se deve aprire pranzo o cena, attivali con Modifica.";
+    if(window.reloadData)reloadData();
+  }catch(x){el("ev-list-msg").textContent="Non salvato: "+(x&&(x.message||x.code)||"errore");btn.disabled=false}
+}
 async function delEvent(e,btn){
   if(btn.dataset.sure!=="1"){btn.dataset.sure="1";btn.textContent="Conferma eliminazione";return}
   if(!db)return;try{await db.doc("events/"+e.id).delete()}catch(x){el("e-msg").textContent="Non eliminato: solo chi modifica la pagina può farlo."}
 }
 el("ev-form").addEventListener("submit",async function(ev){
   ev.preventDefault();var m=el("e-msg");if(!db)return;
-  var v={title_it:el("e-title-it").value.trim(),title_en:el("e-title-en").value.trim(),date:el("e-date").value,allDay:el("e-allday").checked,openLunch:el("e-open-l").checked,openDinner:el("e-open-d").checked,time:el("e-allday").checked?"":el("e-time").value,price:el("e-price").value.trim(),desc_it:el("e-desc-it").value.trim(),desc_en:el("e-desc-en").value.trim(),link:el("e-link").value.trim()};
+  var v={title_it:el("e-title-it").value.trim(),title_en:el("e-title-en").value.trim(),date:el("e-date").value,allDay:el("e-allday").checked,openLunch:el("e-open-l").checked,openDinner:el("e-open-d").checked,cancelled:el("e-canc").checked,time:el("e-allday").checked?"":el("e-time").value,price:el("e-price").value.trim(),desc_it:el("e-desc-it").value.trim(),desc_en:el("e-desc-en").value.trim(),link:el("e-link").value.trim()};
   if(!v.title_it||!v.date){m.textContent="Servono almeno titolo e data.";return}
   if(v.link&&!/^https:\/\//.test(v.link)){m.textContent="Il link deve iniziare con https://";return}
   el("e-save").disabled=true;m.textContent="Salvo…";
