@@ -581,6 +581,7 @@ html.staff .cm-inbox{background:var(--card);border-radius:12px}
           <strong id="pl-title" style="flex:1;text-align:center"></strong>
           <button class="btn ghost small" type="button" id="pl-next" aria-label="Successivo">›</button>
           <button class="btn ghost small" type="button" id="pl-today">Oggi</button>
+          <label class="small" style="display:flex;align-items:center;gap:.35rem">Vai al giorno<input type="date" id="pl-jump" style="width:auto"></label>
         </div>
         <div id="pl-body" class="stack"></div>
         <p class="small muted">Ogni prenotazione è un tavolo. Gli orari sono gli arrivi; "in sala" conta le persone sedute in quel momento (il tavolo resta 2 ore).</p>
@@ -1403,7 +1404,9 @@ var db=null,sample=null,user=null,perms=null,assets=null;
 function el(id){return document.getElementById(id)}
 function h(tag,attrs,kids){var e=document.createElement(tag);if(attrs)for(var k in attrs){if(k==="text")e.textContent=attrs[k];else if(k==="class")e.className=attrs[k];else if(k.slice(0,2)==="on")e.addEventListener(k.slice(2),attrs[k]);else e.setAttribute(k,attrs[k])}(kids||[]).forEach(function(c){if(c!=null)e.append(c)});return e}
 
-function applyBookings(q,src){S.bookings=q.docs.map(function(d){return Object.assign({},d.data()||{},{id:d.id})});S.bkSrc=src;S.bkErr="";dbStatus(S.bookings.length+" prenotazioni caricate · aggiornato alle "+hm(new Date().getHours()*60+new Date().getMinutes()));render()}
+/* the live list starts at the Monday of last week; older days are fetched only when the staff opens them (S.pastBk) */
+function liveFrom(){return addDays(mondayOf(today()),-7)}
+function applyBookings(q,src){S.liveBk=q.docs.map(function(d){return Object.assign({},d.data()||{},{id:d.id})});var lf=liveFrom();S.bookings=S.liveBk.concat((S.pastBk||[]).filter(function(b){return b.date<lf}));S.bkSrc=src;S.bkErr="";dbStatus(S.bookings.length+" prenotazioni caricate · aggiornato alle "+hm(new Date().getHours()*60+new Date().getMinutes()));render()}
 function applyEvents(q,src){S.evLoaded=true;S.evSrc=src;S.evErr="";S.events=q.docs.map(function(d){return Object.assign({},d.data()||{},{id:d.id})}).filter(function(e){return e.date>=today()}).sort(function(a,b){return (a.date+(a.time||"")).localeCompare(b.date+(b.time||""))});fillTimes();render();evDeepLink()}
 /* ?evento=natale-2026 (from the event page, the website or a campaign): that day is already chosen in the form */
 var EV_DEEP=(function(){try{var q=new URLSearchParams(location.search);return {ev:q.get("evento")||"",lang:q.get("lang")||""}}catch(e){return {ev:"",lang:""}}})();
@@ -1798,9 +1801,11 @@ function renderPlanner(){
   if(!S.plRef)S.plRef=today();if(!S.plMode)S.plMode="week";
   el("pl-week").setAttribute("aria-pressed",String(S.plMode==="week"));el("pl-day").setAttribute("aria-pressed",String(S.plMode==="day"));
   var body=el("pl-body");body.textContent="";
-  var min=S.plMode==="week"?mondayOf(today()):today();
   var start=S.plMode==="week"?mondayOf(S.plRef):S.plRef;
-  el("pl-prev").disabled=start<=min;
+  el("pl-prev").disabled=false;el("pl-jump").value=S.plMode==="week"?"":S.plRef;
+  needPast(start);
+  if(S.pastErr&&start<(S.pastFrom||liveFrom()))body.append(h("p",{class:"small",style:"color:var(--bad)",text:"Non riesco a caricare le prenotazioni passate: "+S.pastErr}));
+  else if(start<(S.pastFrom||liveFrom()))body.append(h("p",{class:"small muted",text:"Carico le prenotazioni di questo periodo…"}));
   if(S.plMode==="week")weekView(body,start);else dayPlan(body,S.plRef);
 }
 function weekView(body,mon){
@@ -1855,6 +1860,18 @@ function dayPlan(body,d){
   body.append(tl);
   body.append(h("p",{class:"small muted",text:"Dettagli, email e annullamenti di questo giorno sono più sotto."}));
 }
+/* past days: loads the bookings from the first of that month up to where the loaded ones start */
+function needPast(d){
+  if(!db||S.view!=="staff"||!d||S.pastBusy||(S.pastErr&&Date.now()-S.pastErrAt<30000))return;
+  var have=S.pastFrom||liveFrom();if(d>=have)return;
+  var from=d.slice(0,8)+"01";S.pastBusy=true;S.pastErr="";
+  db.collection("bookings").where("date",">=",from).where("date","<",have).limit(5000).get().then(function(q){
+    var lf=liveFrom(),add=q.docs.map(function(x){return Object.assign({},x.data()||{},{id:x.id})}).filter(function(b){return b.date<lf});
+    S.pastBk=(S.pastBk||[]).concat(add);S.pastFrom=from;S.bookings=(S.liveBk||S.bookings.filter(function(b){return b.date>=lf})).concat(S.pastBk.filter(function(b){return b.date<lf}));
+  },function(e){S.pastErr=String((e&&(e.message||e.code))||"errore");S.pastErrAt=Date.now()}).then(function(){S.pastBusy=false;render()});
+}
+/* days before the live list are an archive: read only, nothing to edit or send */
+function isArchive(d){return d<liveFrom()}
 function plMove(n){if(S.plMode==="week")S.plRef=addDays(mondayOf(S.plRef||today()),7*n);else{S.plRef=addDays(S.plRef||today(),n);S.selDay=S.plRef}render()}
 /* ---------- staff: bookings taken by phone, WhatsApp or in person ---------- */
 var SRC={phone:"📞 Telefono",whatsapp:"💬 WhatsApp",walkin:"🚶 Di persona"};
@@ -2223,8 +2240,10 @@ function renderBoard(){
 function renderDay(){
   var box=el("dayview");box.textContent="";var d=S.selDay;
   if(!d){box.append(h("p",{class:"muted",text:"Seleziona un giorno per vedere le prenotazioni e decidere sulla cena."}));return}
-  var ds=dinnerState(d),list=S.bookings.filter(function(b){return b.date===d}).sort(function(a,b){return a.time.localeCompare(b.time)});
+  var ds=dinnerState(d),list=S.bookings.filter(function(b){return b.date===d}).sort(function(a,b){return a.time.localeCompare(b.time)}),ro=isArchive(d);
+  needPast(d);
   box.append(h("div",{class:"row",style:"justify-content:space-between;align-items:center"},[h("h2",{text:fmtDay(d,true)}),ds!=="none"?h("span",{class:"pill s-"+ds,text:"Cena: "+SLBL[ds]}):null]));
+  if(ro)box.append(h("p",{class:"small muted",text:S.pastFrom&&d>=S.pastFrom?"Giorno passato: solo consultazione.":S.pastErr?"Non riesco a caricare le prenotazioni passate: "+S.pastErr:"Carico le prenotazioni di questo giorno…"}));
   if(ds!=="none"&&ds!=="past"){
     var bt=h("div",{class:"row"},[
       h("button",{class:"btn small",type:"button",text:"Apri la cena comunque",onclick:function(){setOverride(d,"open")}}),
@@ -2243,8 +2262,8 @@ function renderDay(){
         h("td",{class:"num",text:b.time}),h("td",{text:svcOf(b.time)==="dinner"?"Cena":"Pranzo"}),h("td",{class:"num",text:String(b.party)}),h("td",{class:"small",text:(b.menuTasting!=null||b.menuCarta!=null)?("Carta "+(+b.menuCarta||0)+" · Degust. "+(+b.menuTasting||0)):"—"}),
         h("td",{},[h("div",{text:b.name||""}),blFind(b)?h("span",{class:"pill s-closed",text:"⚠ Lista nera · "+(blFind(b).count||1)+" no show"}):null,h("div",{class:"small muted",text:[b.phone,b.email].filter(Boolean).join(" · ")})]),
         h("td",{class:"small",text:[b.notes,b.offer?"Offerta: "+b.offer:"",b.discount?"Sconto "+b.discount+"%":"",b.eventTitle?"Evento: "+b.eventTitle:"",b.retained?"Spostata invece di annullare":"",b.source==="assistant"?"Via assistente":"",SRC[b.source]||"",b.insight?"Cosa cercava: "+b.insight:""].filter(Boolean).join(" · ")}),
-        h("td",{},[b.status==="cancelled"||!b.email?null:h("a",{class:"btn small"+(b.emailSentAt?" ghost":""),style:"display:inline-block;text-decoration:none;margin-bottom:.3rem",href:mailtoFor(b),text:b.emailSentAt?"✉ Rinvia":"✉ Conferma",onclick:function(ev){if(window.DVOR_RESEND){ev.preventDefault();DVOR_RESEND(b,this)}else markMailed(b)}}),b.emailSentAt?h("div",{class:"small muted",text:"Email inviata"}):null,b.reminderSentAt&&b.reminderFor===b.date+" "+b.time?h("div",{class:"small muted",text:"⏰ Promemoria inviato"}):b.reminderError?h("div",{class:"small",style:"color:var(--bad)",text:"Promemoria non partito"}):null]),
-        h("td",{},[h("div",{class:"stack",style:"gap:.3rem"},[arrivalCell(b),editBtn(b),b.status==="cancelled"?h("span",{class:"pill s-closed",text:"Annullata"}):b.arrival?null:h("button",{class:"btn ghost small",type:"button",style:"align-self:flex-start",text:"Annulla prenotazione",onclick:function(){twoStep(this,"Confermi annullamento?",function(){setStatus(b,"cancelled")})}})])])
+        ro?h("td",{class:"small muted",text:b.emailSentAt?"Email inviata":"—"}):h("td",{},[b.status==="cancelled"||!b.email?null:h("a",{class:"btn small"+(b.emailSentAt?" ghost":""),style:"display:inline-block;text-decoration:none;margin-bottom:.3rem",href:mailtoFor(b),text:b.emailSentAt?"✉ Rinvia":"✉ Conferma",onclick:function(ev){if(window.DVOR_RESEND){ev.preventDefault();DVOR_RESEND(b,this)}else markMailed(b)}}),b.emailSentAt?h("div",{class:"small muted",text:"Email inviata"}):null,b.reminderSentAt&&b.reminderFor===b.date+" "+b.time?h("div",{class:"small muted",text:"⏰ Promemoria inviato"}):b.reminderError?h("div",{class:"small",style:"color:var(--bad)",text:"Promemoria non partito"}):null]),
+        ro?h("td",{},[b.status==="cancelled"?h("span",{class:"pill s-closed",text:"Annullata"}):b.arrival==="in"?h("span",{class:"pill s-confirmed",text:"✓ Arrivato"}):b.arrival==="noshow"?h("span",{class:"pill s-closed",text:"No show"}):h("span",{class:"small muted",text:"—"})]):h("td",{},[h("div",{class:"stack",style:"gap:.3rem"},[arrivalCell(b),editBtn(b),b.status==="cancelled"?h("span",{class:"pill s-closed",text:"Annullata"}):b.arrival?null:h("button",{class:"btn ghost small",type:"button",style:"align-self:flex-start",text:"Annulla prenotazione",onclick:function(){twoStep(this,"Confermi annullamento?",function(){setStatus(b,"cancelled")})}})])])
       ]));
     });
     var tl=list.filter(function(b){return active(b)&&svcOf(b.time)==="lunch"}).reduce(function(x,b){return x+(+b.menuTasting||0)},0),td=list.filter(function(b){return active(b)&&svcOf(b.time)==="dinner"}).reduce(function(x,b){return x+(+b.menuTasting||0)},0);
@@ -2270,6 +2289,7 @@ async function setOverride(d,state){
 el("mb-form").addEventListener("submit",manualBook);["mb-date","mb-time","mb-party","mb-phone","mb-email"].forEach(function(k){el(k).addEventListener("input",mbInfo)});el("mb-date").value=today();
 el("pl-week").addEventListener("click",function(){S.plMode="week";render()});el("pl-day").addEventListener("click",function(){S.plMode="day";S.plRef=S.selDay||S.plRef||today();render()});
 el("pl-prev").addEventListener("click",function(){plMove(-1)});el("pl-next").addEventListener("click",function(){plMove(1)});el("pl-today").addEventListener("click",function(){S.plRef=today();S.selDay=today();render()});
+el("pl-jump").addEventListener("change",function(){var v=this.value;if(!/^\d{4}-\d{2}-\d{2}$/.test(v))return;S.plMode="day";S.plRef=v;S.selDay=v;render()});
 SPS.forEach(function(k){el("sp-b-"+k).addEventListener("click",function(){setSp(k==="set"&&S.sp==="set"?"today":k)})});el("set-back").addEventListener("click",function(){setSp("today")});
 el("st-logout").addEventListener("click",function(){if(window.DVOR_LOGOUT)DVOR_LOGOUT();else setView("guest")});
 function fillSettings(){var s=S.settings;el("s-min").value=s.minGuests;el("s-ext").value=s.extendIfAtLeast;el("s-hide").value=s.hideIfAtMost;el("s-seats").value=s.seats;el("s-wdpct").value=s.weekdayPct;el("s-wepct").value=s.weekendPct;el("s-ovpct").value=s.overflowPct;el("s-fullfrom").value=s.showFullFrom;el("s-disc").value=s.discountPct;el("s-offer").value=s.offer||"";el("s-remh").value=s.reminderHours;fillHours();botUI()}
