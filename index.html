@@ -188,6 +188,7 @@ dialog.evxd{overflow:hidden}
 .ev .body{padding:.7rem .85rem;display:flex;flex-direction:column;gap:.15rem}
 .ev .when{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
 .ev .ttl{font-family:var(--serif);font-size:1.2rem;line-height:1.2}
+.ev .sum{font-size:.88rem;line-height:1.45;color:var(--muted);margin-top:.25rem;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 dialog{border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);padding:0;max-width:min(560px,calc(100vw - 32px));width:100%}
 dialog::backdrop{background:rgba(20,12,8,.55)}
 dialog .pic img{width:100%;max-height:420px;object-fit:contain;display:block;background:var(--alt)}
@@ -203,7 +204,7 @@ dialog .ptrk img{flex:0 0 100%;scroll-snap-align:start;height:420px;max-height:n
 .pdots button{pointer-events:auto;width:.65rem;height:.65rem;border-radius:50%;border:1px solid #fff;background:rgba(0,0,0,.3);padding:0;cursor:pointer}
 .pdots button.on{background:#fff}
 .ev .pic{position:relative}
-.pcount{position:absolute;right:.45rem;bottom:.45rem;background:rgba(20,12,8,.7);color:#fff;font-size:.72rem;letter-spacing:.04em;border-radius:999px;padding:.1rem .5rem}
+.ev .pic .pcount{position:absolute;right:.45rem;bottom:.45rem;background:rgba(20,12,8,.7);color:#fff;font-family:inherit;font-size:.72rem;line-height:1.5;letter-spacing:.04em;border-radius:999px;padding:.1rem .5rem}
 /* staff: elenco delle immagini dell'evento */
 .eimgs{display:flex;flex-wrap:wrap;gap:.6rem}
 .eimgs:empty{display:none}
@@ -757,6 +758,11 @@ html.staff .cm-inbox{background:var(--card);border-radius:12px}
             <label style="flex:0 1 auto;flex-direction:row;align-items:center;gap:.5rem"><input type="checkbox" id="e-open-d" style="width:auto">A cena (19:00–21:30, senza minimo di ospiti)</label>
             <label style="flex:0 1 100%;flex-direction:row;align-items:center;gap:.5rem;color:#B3261E;font-weight:500"><input type="checkbox" id="e-canc" style="width:auto">Evento cancellato (striscia rossa «Cancellato» sul sito, niente prenotazioni dall'evento)</label>
             <label>Prezzo (facoltativo)<input id="e-price" placeholder="45 € a persona, vini inclusi"></label>
+          </div>
+          <div class="row">
+            <label>Anteprima breve (italiano)<input id="e-sum-it" maxlength="160" placeholder="Cinque portate e cinque vini del Collio, con il produttore a tavola"><span class="small muted"><span id="e-sum-it-n">0</span>/160</span></label>
+            <label>Anteprima breve (inglese)<input id="e-sum-en" maxlength="160"><span class="small muted"><span id="e-sum-en-n">0</span>/160</span></label>
+            <span class="small muted" style="flex-basis:100%;margin-top:-.4rem">Una o due righe sotto il titolo, nelle schede degli eventi del sito e della pagina di prenotazione e nelle anteprime di WhatsApp e Facebook. La descrizione qui sotto resta il testo completo.</span>
           </div>
           <label>Descrizione (italiano)<textarea id="e-desc-it" rows="4"></textarea></label>
           <label>Descrizione (inglese)<textarea id="e-desc-en" rows="3"></textarea></label>
@@ -2415,6 +2421,7 @@ var EVX={it:"Cancellato",en:"Cancelled",de:"Abgesagt",sl:"Odpovedano",nl:"Geannu
 function evCancelled(e){return !!(e&&e.cancelled)}
 function evRib(){return h("span",{class:"rib",text:EVX[S.lang]||EVX.it})}
 function evTitle(e){return (S.lang!=="it"&&e.title_en)?e.title_en:e.title_it}
+function evSum(e){return ((S.lang!=="it"&&e.summary_en)?e.summary_en:(e.summary_it||e.summary_en||"")).trim()}
 function evDesc(e){return (S.lang!=="it"&&e.desc_en)?e.desc_en:(e.desc_it||"")}
 function evWhen(e){return fmtDay(e.date,true)+(e.allDay?" · "+t("allDay"):(e.time?" · "+e.time:""))}
 /* le immagini della locandina: images = tutte, in ordine (la prima è la copertina); i vecchi eventi hanno solo imageId */
@@ -2431,7 +2438,7 @@ function renderEvents(){
   el("g-events").hidden=!S.events.length;
   S.events.forEach(function(e){
     var pic=h("div",{class:"pic"});evPic(e,pic);
-    wrap.append(h("button",{class:"ev"+(e.cancelled?" evx":""),type:"button",onclick:function(){openEvent(e)}},[e.cancelled?evRib():null,pic,h("div",{class:"body"},[h("span",{class:"when",text:evWhen(e)+(e.cancelled?" · "+(EVX[S.lang]||EVX.it):"")}),h("span",{class:"ttl",text:evTitle(e)})])]));
+    wrap.append(h("button",{class:"ev"+(e.cancelled?" evx":""),type:"button",onclick:function(){openEvent(e)}},[e.cancelled?evRib():null,pic,h("div",{class:"body"},[h("span",{class:"when",text:evWhen(e)+(e.cancelled?" · "+(EVX[S.lang]||EVX.it):"")}),h("span",{class:"ttl",text:evTitle(e)}),evSum(e)?h("span",{class:"sum",text:evSum(e)}):null])]));
   });
 }
 function openEvent(e){
@@ -2474,7 +2481,7 @@ function evLinkRow(e){
 function editEvent(e){
   S.editEv=e;el("ev-form-title").textContent="Modifica evento";el("e-cancel").hidden=false;
   el("e-title-it").value=e.title_it||"";el("e-title-en").value=e.title_en||"";el("e-date").value=e.date||"";el("e-time").value=e.allDay?"":(e.time||"");el("e-allday").checked=!!e.allDay;el("e-open-l").checked=!!e.openLunch;el("e-open-d").checked=!!e.openDinner;el("e-canc").checked=!!e.cancelled;el("e-time").disabled=!!e.allDay;
-  el("e-price").value=e.price||"";el("e-desc-it").value=e.desc_it||"";el("e-desc-en").value=e.desc_en||"";el("e-link").value=e.link||"";el("e-img").value="";S.evImgs=evImgs(e).map(function(id){return {id:id}});renderEvImgs();
+  el("e-price").value=e.price||"";el("e-desc-it").value=e.desc_it||"";el("e-desc-en").value=e.desc_en||"";el("e-sum-it").value=e.summary_it||"";el("e-sum-en").value=e.summary_en||"";evSumN();el("e-link").value=e.link||"";el("e-img").value="";S.evImgs=evImgs(e).map(function(id){return {id:id}});renderEvImgs();
   el("ev-form").scrollIntoView({behavior:"smooth",block:"start"});
 }
 /* le immagini nel modulo: quelle già salvate ({id}) e quelle appena scelte ({file,url}), caricate quando premi «Salva evento» */
@@ -2490,7 +2497,9 @@ el("e-img").addEventListener("change",function(){var fs=[].slice.call(this.files
   fs=fs.filter(function(f){return /^image\//.test(f.type)||/\.(jpe?g|png|webp|gif|heic)$/i.test(f.name||"")});
   if(fs.length>room){m.textContent="Al massimo "+EV_MAXIMG+" immagini per evento: ne aggiungo "+Math.max(0,room)+".";fs=fs.slice(0,Math.max(0,room))}else m.textContent="";
   fs.forEach(function(f){S.evImgs.push({file:f,url:URL.createObjectURL(f)})});this.value="";renderEvImgs()});
-function resetEvForm(){S.editEv=null;el("ev-form").reset();S.evImgs.forEach(function(it){if(it.url)URL.revokeObjectURL(it.url)});S.evImgs=[];renderEvImgs();el("e-time").disabled=false;el("ev-form-title").textContent="Nuovo evento";el("e-cancel").hidden=true}
+function evSumN(){["it","en"].forEach(function(l){el("e-sum-"+l+"-n").textContent=el("e-sum-"+l).value.length})}
+["it","en"].forEach(function(l){el("e-sum-"+l).addEventListener("input",evSumN)});
+function resetEvForm(){S.editEv=null;el("ev-form").reset();evSumN();S.evImgs.forEach(function(it){if(it.url)URL.revokeObjectURL(it.url)});S.evImgs=[];renderEvImgs();el("e-time").disabled=false;el("ev-form-title").textContent="Nuovo evento";el("e-cancel").hidden=true}
 el("e-cancel").addEventListener("click",resetEvForm);
 el("e-allday").addEventListener("change",function(){el("e-time").disabled=this.checked;if(this.checked)el("e-time").value=""});
 /* annulla (o ripristina) un evento con un clic: striscia rossa «Cancellato» su sito e pagina dell'evento; il pranzo e la cena
@@ -2511,7 +2520,7 @@ async function delEvent(e,btn){
 }
 el("ev-form").addEventListener("submit",async function(ev){
   ev.preventDefault();var m=el("e-msg");if(!db)return;
-  var v={title_it:el("e-title-it").value.trim(),title_en:el("e-title-en").value.trim(),date:el("e-date").value,allDay:el("e-allday").checked,openLunch:el("e-open-l").checked,openDinner:el("e-open-d").checked,cancelled:el("e-canc").checked,time:el("e-allday").checked?"":el("e-time").value,price:el("e-price").value.trim(),desc_it:el("e-desc-it").value.trim(),desc_en:el("e-desc-en").value.trim(),link:el("e-link").value.trim()};
+  var v={title_it:el("e-title-it").value.trim(),title_en:el("e-title-en").value.trim(),date:el("e-date").value,allDay:el("e-allday").checked,openLunch:el("e-open-l").checked,openDinner:el("e-open-d").checked,cancelled:el("e-canc").checked,time:el("e-allday").checked?"":el("e-time").value,price:el("e-price").value.trim(),desc_it:el("e-desc-it").value.trim(),summary_it:el("e-sum-it").value.trim().slice(0,160),summary_en:el("e-sum-en").value.trim().slice(0,160),desc_en:el("e-desc-en").value.trim(),link:el("e-link").value.trim()};
   if(!v.title_it||!v.date){m.textContent="Servono almeno titolo e data.";return}
   if(v.link&&!/^https:\/\//.test(v.link)){m.textContent="Il link deve iniziare con https://";return}
   el("e-save").disabled=true;m.textContent="Salvo…";
