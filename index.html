@@ -183,17 +183,38 @@ dialog.evxd{overflow:hidden}
 .ev.evx .ttl{text-decoration:line-through;text-decoration-color:#B3261E}
 .pill.evc-pill{background:#B3261E;color:#fff}
 .ev .pic{aspect-ratio:4/3;background:var(--alt);display:flex;align-items:center;justify-content:center;max-width:100%}
-.ev .pic img{width:100%;height:100%;object-fit:cover;display:block}
+.ev .pic img{width:100%;height:100%;object-fit:contain;display:block}
 .ev .pic span{font-family:var(--serif);font-size:2.4rem;color:var(--wine)}
 .ev .body{padding:.7rem .85rem;display:flex;flex-direction:column;gap:.15rem}
 .ev .when{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
 .ev .ttl{font-family:var(--serif);font-size:1.2rem;line-height:1.2}
 dialog{border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);padding:0;max-width:min(560px,calc(100vw - 32px));width:100%}
 dialog::backdrop{background:rgba(20,12,8,.55)}
-dialog .pic img{width:100%;max-height:320px;object-fit:cover;display:block}
+dialog .pic img{width:100%;max-height:420px;object-fit:contain;display:block;background:var(--alt)}
 dialog .in{padding:1.1rem 1.25rem;display:flex;flex-direction:column;gap:.6rem}
 dialog .desc{white-space:pre-wrap}
 dialog p{margin:0}
+/* locandina con più immagini: nell'anteprima dell'evento si scorrono */
+dialog .pic.car{position:relative}
+.ptrk{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.ptrk::-webkit-scrollbar{display:none}
+dialog .ptrk img{flex:0 0 100%;scroll-snap-align:start;height:420px;max-height:none;object-fit:contain;background:var(--alt)}
+.pdots{position:absolute;bottom:.55rem;left:0;right:0;display:flex;gap:.45rem;justify-content:center;pointer-events:none}
+.pdots button{pointer-events:auto;width:.65rem;height:.65rem;border-radius:50%;border:1px solid #fff;background:rgba(0,0,0,.3);padding:0;cursor:pointer}
+.pdots button.on{background:#fff}
+.ev .pic{position:relative}
+.pcount{position:absolute;right:.45rem;bottom:.45rem;background:rgba(20,12,8,.7);color:#fff;font-size:.72rem;letter-spacing:.04em;border-radius:999px;padding:.1rem .5rem}
+/* staff: elenco delle immagini dell'evento */
+.eimgs{display:flex;flex-wrap:wrap;gap:.6rem}
+.eimgs:empty{display:none}
+.eimg{position:relative;width:116px;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--alt);display:flex;flex-direction:column}
+.eimg img{width:100%;height:140px;object-fit:contain;display:block;background:var(--alt)}
+.eimg .tag{position:absolute;top:.3rem;left:.3rem;background:var(--wine,#6b1e2a);color:#fff;font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;border-radius:4px;padding:.05rem .35rem}
+.eimg .new{position:absolute;bottom:2.2rem;right:.3rem;background:var(--gold);color:#fff;font-size:.62rem;border-radius:4px;padding:.05rem .35rem}
+.eimg .ctl{display:flex;justify-content:space-between;border-top:1px solid var(--line);background:var(--card)}
+.eimg .ctl button{flex:1;border:0;background:none;color:var(--ink);font:inherit;font-size:.95rem;padding:.25rem 0;cursor:pointer}
+.eimg .ctl button:disabled{opacity:.3;cursor:default}
+.eimg .ctl .del{color:#B3261E}
 #eddlg{max-height:calc(100vh - 32px);overflow:auto}
 a.btn{display:inline-block;text-decoration:none;font:400 .8rem var(--sans);letter-spacing:.14em;text-transform:uppercase;border:1px solid var(--wine);background:var(--wine);color:var(--on-wine);padding:.65rem 1.1rem;border-radius:6px}
 .evrow{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--line)}
@@ -739,7 +760,9 @@ html.staff .cm-inbox{background:var(--card);border-radius:12px}
           <label>Descrizione (italiano)<textarea id="e-desc-it" rows="4"></textarea></label>
           <label>Descrizione (inglese)<textarea id="e-desc-en" rows="3"></textarea></label>
           <label>Altro link (facoltativo)<input id="e-link" type="url" placeholder="Vuoto = la pagina dell'evento"><span class="small muted">Ogni evento ha già la sua pagina. Metti un link qui solo per mandare gli ospiti altrove dall'anteprima della pagina di prenotazione.</span></label>
-          <label>Immagine o locandina (facoltativa)<input id="e-img" type="file" accept="image/*"></label>
+          <label>Immagini o locandine (facoltative, puoi sceglierne più di una)<input id="e-img" type="file" accept="image/*" multiple></label>
+          <div id="e-imgs" class="eimgs" aria-live="polite"></div>
+          <span class="small muted" id="e-imgs-hint" hidden>La prima è la copertina: compare nell'anteprima, nelle email e su WhatsApp. Sulla pagina dell'evento e su osteriadvor.com/eventi.html si scorrono tutte. Con ‹ › cambi l'ordine, con ✕ ne togli una.</span>
           <div class="row"><button class="btn" type="submit" id="e-save">Salva evento</button><button class="btn ghost" type="button" id="e-cancel" hidden>Annulla modifica</button><span class="small muted" id="e-msg"></span></div>
         </form>
       </div>
@@ -2374,7 +2397,15 @@ function evRib(){return h("span",{class:"rib",text:EVX[S.lang]||EVX.it})}
 function evTitle(e){return (S.lang!=="it"&&e.title_en)?e.title_en:e.title_it}
 function evDesc(e){return (S.lang!=="it"&&e.desc_en)?e.desc_en:(e.desc_it||"")}
 function evWhen(e){return fmtDay(e.date,true)+(e.allDay?" · "+t("allDay"):(e.time?" · "+e.time:""))}
-function evPic(e,box){box.textContent="";if(e.imageId)box.append(h("img",{src:"uploads/"+e.imageId,alt:evTitle(e)}));else box.append(h("span",{text:"✦","aria-hidden":"true"}));}
+/* le immagini della locandina: images = tutte, in ordine (la prima è la copertina); i vecchi eventi hanno solo imageId */
+function evImgs(e){var a=e&&Array.isArray(e.images)&&e.images.length?e.images:(e&&e.imageId?[e.imageId]:[]);return a.filter(function(x,i){return x&&a.indexOf(x)===i})}
+function evPic(e,box){box.textContent="";var a=evImgs(e);if(a.length){box.append(h("img",{src:"uploads/"+a[0],alt:evTitle(e)}));if(a.length>1)box.append(h("span",{class:"pcount",text:"1/"+a.length}))}else box.append(h("span",{text:"✦","aria-hidden":"true"}));}
+function evCarousel(e,box){var a=evImgs(e);box.textContent="";box.classList.toggle("car",a.length>1);if(a.length<2){if(a.length)box.append(h("img",{src:"uploads/"+a[0],alt:evTitle(e)}));return}
+  var tr=h("div",{class:"ptrk"}),dots=h("div",{class:"pdots"}),bs=[];
+  a.forEach(function(id,k){tr.append(h("img",{src:"uploads/"+id,alt:evTitle(e)+" ("+(k+1)+"/"+a.length+")",loading:k?"lazy":"eager"}));
+    var d=h("button",{type:"button","aria-label":(k+1)+"/"+a.length,onclick:function(){tr.scrollTo({left:k*tr.clientWidth,behavior:"smooth"})}});bs.push(d);dots.append(d)});
+  var upd=function(){var c=Math.round(tr.scrollLeft/Math.max(1,tr.clientWidth));bs.forEach(function(d,k){d.className=k===c?"on":""})};
+  tr.addEventListener("scroll",function(){clearTimeout(tr._t);tr._t=setTimeout(upd,60)});box.append(tr,dots);upd()}
 function renderEvents(){
   var wrap=el("evs");wrap.textContent="";
   el("g-events").hidden=!S.events.length;
@@ -2384,7 +2415,7 @@ function renderEvents(){
   });
 }
 function openEvent(e){
-  var d=el("evdlg");evPic(e,el("evd-pic"));if(!e.imageId)el("evd-pic").textContent="";
+  var d=el("evdlg");evCarousel(e,el("evd-pic"));
   d.classList.toggle("evxd",!!e.cancelled);var ob=d.querySelector(":scope>.rib");if(ob)ob.remove();if(e.cancelled)d.prepend(evRib());
   el("evd-when").textContent=evWhen(e);el("evd-title").textContent=evTitle(e);
   el("evd-price").textContent=e.price||"";el("evd-price").hidden=!e.price;
@@ -2423,10 +2454,23 @@ function evLinkRow(e){
 function editEvent(e){
   S.editEv=e;el("ev-form-title").textContent="Modifica evento";el("e-cancel").hidden=false;
   el("e-title-it").value=e.title_it||"";el("e-title-en").value=e.title_en||"";el("e-date").value=e.date||"";el("e-time").value=e.allDay?"":(e.time||"");el("e-allday").checked=!!e.allDay;el("e-open-l").checked=!!e.openLunch;el("e-open-d").checked=!!e.openDinner;el("e-canc").checked=!!e.cancelled;el("e-time").disabled=!!e.allDay;
-  el("e-price").value=e.price||"";el("e-desc-it").value=e.desc_it||"";el("e-desc-en").value=e.desc_en||"";el("e-link").value=e.link||"";el("e-img").value="";
+  el("e-price").value=e.price||"";el("e-desc-it").value=e.desc_it||"";el("e-desc-en").value=e.desc_en||"";el("e-link").value=e.link||"";el("e-img").value="";S.evImgs=evImgs(e).map(function(id){return {id:id}});renderEvImgs();
   el("ev-form").scrollIntoView({behavior:"smooth",block:"start"});
 }
-function resetEvForm(){S.editEv=null;el("ev-form").reset();el("e-time").disabled=false;el("ev-form-title").textContent="Nuovo evento";el("e-cancel").hidden=true}
+/* le immagini nel modulo: quelle già salvate ({id}) e quelle appena scelte ({file,url}), caricate quando premi «Salva evento» */
+var EV_MAXIMG=12;S.evImgs=[];
+function renderEvImgs(){var box=el("e-imgs");box.textContent="";var L=S.evImgs;el("e-imgs-hint").hidden=!L.length;
+  L.forEach(function(it,k){var mv=function(d){var j=k+d;if(j<0||j>=L.length)return;var x=L[k];L[k]=L[j];L[j]=x;renderEvImgs()};
+    box.append(h("div",{class:"eimg"},[h("img",{src:it.url||("uploads/"+it.id),alt:"Immagine "+(k+1)}),k===0?h("span",{class:"tag",text:"Copertina"}):null,it.file?h("span",{class:"new",text:"nuova"}):null,
+      h("div",{class:"ctl"},[evImgBtn("‹","Sposta prima",k===0,function(){mv(-1)}),
+        h("button",{type:"button",class:"del",text:"✕",title:"Togli questa immagine",onclick:function(){if(it.url)URL.revokeObjectURL(it.url);L.splice(k,1);renderEvImgs()}}),
+        evImgBtn("›","Sposta dopo",k===L.length-1,function(){mv(1)})])]))})}
+function evImgBtn(t,ti,off,fn){var b=h("button",{type:"button",text:t,title:ti,"aria-label":ti,onclick:fn});b.disabled=off;return b}
+el("e-img").addEventListener("change",function(){var fs=[].slice.call(this.files||[]),m=el("e-msg"),room=EV_MAXIMG-S.evImgs.length;
+  fs=fs.filter(function(f){return /^image\//.test(f.type)||/\.(jpe?g|png|webp|gif|heic)$/i.test(f.name||"")});
+  if(fs.length>room){m.textContent="Al massimo "+EV_MAXIMG+" immagini per evento: ne aggiungo "+Math.max(0,room)+".";fs=fs.slice(0,Math.max(0,room))}else m.textContent="";
+  fs.forEach(function(f){S.evImgs.push({file:f,url:URL.createObjectURL(f)})});this.value="";renderEvImgs()});
+function resetEvForm(){S.editEv=null;el("ev-form").reset();S.evImgs.forEach(function(it){if(it.url)URL.revokeObjectURL(it.url)});S.evImgs=[];renderEvImgs();el("e-time").disabled=false;el("ev-form-title").textContent="Nuovo evento";el("e-cancel").hidden=true}
 el("e-cancel").addEventListener("click",resetEvForm);
 el("e-allday").addEventListener("change",function(){el("e-time").disabled=this.checked;if(this.checked)el("e-time").value=""});
 /* annulla (o ripristina) un evento con un clic: striscia rossa «Cancellato» su sito e pagina dell'evento; il pranzo e la cena
@@ -2452,9 +2496,14 @@ el("ev-form").addEventListener("submit",async function(ev){
   if(v.link&&!/^https:\/\//.test(v.link)){m.textContent="Il link deve iniziare con https://";return}
   el("e-save").disabled=true;m.textContent="Salvo…";
   try{
-    var f=el("e-img").files&&el("e-img").files[0];
-    if(f){if(!assets)throw {message:"caricamento immagini non disponibile"};var up=await assets.upload(f,function(t){m.textContent=t});v.imageId=up.id;m.textContent="Salvo l'evento…"}
-    else if(S.editEv&&S.editEv.imageId)v.imageId=S.editEv.imageId;
+    var L=S.evImgs,ids=[],nNew=L.filter(function(it){return it.file}).length,iNew=0;
+    for(var k=0;k<L.length;k++){var it=L[k];
+      if(it.file){if(!assets)throw {message:"caricamento immagini non disponibile"};iNew++;
+        var up=await assets.upload(it.file,function(t){m.textContent=(nNew>1?"Immagine "+iNew+" di "+nNew+": ":"")+t});
+        if(it.url)URL.revokeObjectURL(it.url);L[k]={id:up.id};renderEvImgs()} /* già caricata: se il salvataggio non riesce non si ricarica */
+      ids.push(L[k].id)}
+    if(ids.length){v.imageId=ids[0];v.images=ids}
+    m.textContent="Salvo l'evento…";
     if(S.editEv)await db.doc("events/"+S.editEv.id).set(v);else await db.collection("events").add(v);
     m.textContent=S.editEv?"Evento salvato.":"Evento salvato: il link da condividere è accanto all'evento, qui sopra. Sul sito compare da solo entro un minuto.";resetEvForm();if(window.reloadData)reloadData();
   }catch(x){m.textContent="Non salvato: "+(x&&(x.message||x.code)||"errore");}
@@ -3062,7 +3111,7 @@ function cmBlock(b,i,redraw){
     var file=h("input",{type:"file",accept:"image/jpeg,image/png,image/webp,image/gif"});
     file.addEventListener("change",async function(){var f2=file.files[0];if(!f2)return;if(!assets){msg.textContent="Caricamento immagini non disponibile";return}
       msg.textContent="Carico…";try{var up=await assets.upload(f2);b.src="uploads/"+up.id;msg.textContent="✓ Caricata";drawT();cmChange()}catch(e){msg.textContent="Non caricata: "+cmMsg(e)}});
-    var evs=S.events.filter(function(e){return e.imageId});
+    var evs=[];S.events.forEach(function(e){var a=evImgs(e);a.forEach(function(id,k){evs.push({imageId:id,title_it:(e.title_it||e.id)+(a.length>1?" ("+(k+1)+"/"+a.length+")":"")})})});
     box.append.apply(box,[h("div",{class:"row",style:"align-items:center"},[th,h("label",{style:"flex:2 1 200px"},["Foto (JPG o PNG, larga almeno 1100 pixel)",file]),msg]),
       evs.length?cmSelect("Oppure la foto di un evento",[["","—"]].concat(evs.map(function(e){return ["uploads/"+e.imageId,e.title_it||e.id]})),b.src||"",function(v){if(v){b.src=v;drawT();cmChange()}}):null,
       h("div",{class:"row"},[cmField("Descrizione (per chi non vede le immagini)",b,"alt",{max:200})[0],cmField("Link quando la toccano (facoltativo)",b,"href",{type:"url",ph:"https://www.osteriadvor.com"})[0]])].filter(Boolean));
