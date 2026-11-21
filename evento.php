@@ -34,6 +34,7 @@ if (isset($_GET['json'])) {
       'id' => eventSlug($id, $ev), 'date' => $ev['date'], 'time' => !empty($ev['allDay']) ? '' : (string)($ev['time'] ?? ''), 'allDay' => !empty($ev['allDay']),
       'title_it' => (string)($ev['title_it'] ?? ''), 'title_en' => (string)($ev['title_en'] ?? ''),
       'desc_it' => (string)($ev['desc_it'] ?? ''), 'desc_en' => (string)($ev['desc_en'] ?? ''),
+      'summary_it' => (string)($ev['summary_it'] ?? ''), 'summary_en' => (string)($ev['summary_en'] ?? ''),
       'price' => (string)($ev['price'] ?? ''), 'flyer' => evImg($base, $ev), 'flyer2' => evImgs($base, $ev)[1] ?? '', 'flyers' => evImgs($base, $ev),
       'link' => eventBookUrl($C, $id, $ev), 'page' => eventPageUrl($C, $id, $ev), 'source' => 'prenota', 'cancelled' => !empty($ev['cancelled']),
     ];
@@ -68,7 +69,7 @@ $qs = $keep ? '&' . http_build_query($keep) : '';
 if ($found) {
   [$id, $ev] = $found;
   $pick = fn($k) => trim((string)($ev[$k . '_' . $lang] ?? '')) ?: trim((string)($ev[$k . '_it'] ?? '') ?: (string)($ev[$k . '_en'] ?? ''));
-  $title = $pick('title'); $desc = $pick('desc'); $imgs = evImgs($base, $ev); $img = $imgs[0] ?? ''; $slug = eventSlug($id, $ev);
+  $title = $pick('title'); $desc = $pick('desc'); $sum = $pick('summary'); $imgs = evImgs($base, $ev); $img = $imgs[0] ?? ''; $slug = eventSlug($id, $ev);
   $ts = strtotime((string)$ev['date'] . ' 12:00');
   $WD = $lang === 'it' ? ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'] : ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   $MO = $lang === 'it' ? ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'] : ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -80,7 +81,7 @@ if ($found) {
   $canon = eventPageUrl($C, $id, $ev) . ($lang === 'en' ? '&l=en' : '');
   $book = eventBookUrl($C, $id, $ev) . '&lang=' . $lang . $qs;
   $allUrl = $site . '/eventi.html#ev-' . $slug;
-  $short = trim((string)preg_replace('/\s+/', ' ', $desc)); if (mb_strlen($short) > 200) $short = rtrim(mb_substr($short, 0, 195)) . '…';
+  $short = trim((string)preg_replace('/\s+/', ' ', $sum !== '' ? $sum : $desc)); if (mb_strlen($short) > 200) $short = rtrim(mb_substr($short, 0, 195)) . '…';
   $metaDesc = trim(($canc ? $T['canc'] . ' · ' : '') . $when . '. ' . (!empty($ev['price']) ? $ev['price'] . '. ' : '') . $short);
   $pageTitle = $title . ' · Osteria Enoteca Dvor';
   $ld = ['@context' => 'https://schema.org', '@type' => 'Event', 'name' => $title, 'startDate' => $ev['date'] . (!empty($ev['time']) && empty($ev['allDay']) ? 'T' . $ev['time'] . ':00' : ''),
@@ -155,6 +156,7 @@ main{max-width:1180px;margin:0 auto;padding:3rem 16px 4rem}
 .cd{margin-left:.9rem;color:var(--gold);font-size:.8rem;letter-spacing:.18em;text-transform:uppercase}
 h1{font-family:var(--serif);font-weight:300;font-size:clamp(2.1rem,4.4vw,3.2rem);line-height:1.12;margin:1rem 0 .6rem}
 .dt{font-size:1.05rem;color:var(--gold);letter-spacing:.04em;margin:0 0 1.2rem}
+.lead{font-family:var(--serif);font-size:1.35rem;line-height:1.45;margin:0 0 1rem}
 .desc{color:var(--muted);line-height:1.8}.desc p{margin:0 0 .9rem}
 .pr{display:inline-block;border:1px solid var(--line);padding:.3rem .8rem;margin:.4rem 0 1rem;font-size:.92rem}
 .bt{display:flex;gap:.8rem;flex-wrap:wrap;margin-top:1.2rem}
@@ -194,6 +196,7 @@ footer a{text-decoration:none;border-bottom:1px solid var(--line)}
       <h1><?= $h($title) ?></h1>
       <p class="dt"><?= $h($when) ?></p>
       <?php if ($canc): ?><p class="cnote"><?= $h($T['cancText']) ?></p><?php endif ?>
+      <?php if ($sum !== ''): ?><p class="lead"><?= $h($sum) ?></p><?php endif ?>
       <div class="desc"><?= $paras ?></div>
       <?php if (!empty($ev['price'])): ?><span class="pr"><?= $h($ev['price']) ?></span><?php endif ?>
       <div class="bt">

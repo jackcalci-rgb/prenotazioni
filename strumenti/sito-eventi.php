@@ -6,7 +6,8 @@
    un evento nuovo dell'area staff compare da solo; quelli che il sito ha già restano come sono.
    Poi prepara eventi.html e la home (index.html nella stessa cartella) per gli eventi cancellati: striscia rossa «Cancellato»,
    e aggiunge alle pagine del sito l'avviso a comparsa avviso-eventi.js (copiato da strumenti/sito/).
-   Infine mostra le locandine intere (anche nelle schede della home) e fa scorrere tutte le immagini di un evento. */
+   Infine mostra le locandine intere (anche nelle schede della home), fa scorrere tutte le immagini di un evento
+   e mette l'anteprima breve (scritta nell'area staff) sotto il titolo delle schede. */
 declare(strict_types=1);
 $f = $argv[1] ?? ''; $bk = $argv[2] ?? dirname($f);
 if ($f === '' || !is_file($f)) { fwrite(STDERR, "Non trovo $f\n"); exit(1); }
@@ -161,6 +162,42 @@ foreach ($gal as $file => $own) {
   if (!$ok) { fwrite(STDERR, "$name del sito: la pagina è cambiata e non so dove mettere le locandine con più immagini. Manda questo messaggio a Claude.\n"); continue; }
   writeSite($file, $s, $bk);
   echo "$name del sito: locandine intere e più immagini per evento\n";
+}
+
+/* anteprima breve dell'evento (summary_it / summary_en dall'area staff): sotto il titolo nelle schede della home e di eventi.html;
+   nelle schede di eventi.html la descrizione intera si apre con «Leggi tutto» */
+$SCSS = <<<'EOT'
+<style id="evs-css">
+.evsum{margin:0 0 .9rem;font-size:1rem;line-height:1.6;color:var(--ink,inherit)}
+.evc .evd.evhid:not(.open){display:none!important}
+.evhome .evc .evsum{margin:.2rem 0 0;font-size:.95rem;color:var(--muted,inherit)}
+.evfeat .evsum{font-size:1.15rem;line-height:1.55}
+</style>
+</head>
+EOT;
+$SJS = "function sm(r){var l=L();return String(l==='it'?(r.summary_it||r.summary_en||''):(r.summary_en||r.summary_it||'')).trim()}\nfunction onLang(f){";
+$SF_OLD = "'price','time','flyer'].forEach(function(k){if(!s[k]&&p[k])s[k]=p[k]});";
+$SF_NEW = "'price','time','flyer','summary_it','summary_en'].forEach(function(k){if(!s[k]&&p[k])s[k]=p[k]});";
+$scommon = [['</head>', $SCSS], ['function onLang(f){', $SJS], [$SF_OLD, $SF_NEW]];
+$sum = [
+  $f => [
+    ["var d=el('div','evd');d.appendChild(paras(dsc(r)));b.appendChild(d);if(dsc(r).length>140)b.appendChild(moreBtn(d));",
+     "if(sm(r))b.appendChild(el('p','evsum',sm(r)));var d=el('div','evd'+(sm(r)?' evhid':''));d.appendChild(paras(dsc(r)));b.appendChild(d);if(sm(r)?dsc(r):dsc(r).length>140)b.appendChild(moreBtn(d));"],
+    ["x.appendChild(el('p','evdt',when(r)));", "x.appendChild(el('p','evdt',when(r)));if(sm(r))x.appendChild(el('p','evsum',sm(r)));"],
+  ],
+  dirname($f) . '/index.html' => [["b.appendChild(el('p','evdt',when(r)));c.appendChild(b);return c}", "b.appendChild(el('p','evdt',when(r)));if(sm(r))b.appendChild(el('p','evsum',sm(r)));c.appendChild(b);return c}"]],
+];
+foreach ($sum as $file => $own) {
+  $name = basename($file);
+  if (!is_file($file)) continue;
+  $s = (string)file_get_contents($file);
+  if (str_contains($s, 'id="evs-css"')) { echo "$name del sito: anteprima breve degli eventi già pronta\n"; continue; }
+  if (!str_contains($s, 'evento.php?json=1')) continue;
+  $ok = true;
+  foreach (array_merge($scommon, $own) as [$a, $b]) { if (substr_count($s, $a) !== 1) { $ok = false; break; } $s = str_replace($a, $b, $s); }
+  if (!$ok) { fwrite(STDERR, "$name del sito: la pagina è cambiata e non so dove mettere l'anteprima breve degli eventi. Manda questo messaggio a Claude.\n"); continue; }
+  writeSite($file, $s, $bk);
+  echo "$name del sito: anteprima breve degli eventi\n";
 }
 
 /* avviso a comparsa sul sito quando un evento è annullato: copia avviso-eventi.js e lo aggiunge alle pagine che hanno notice.js */
