@@ -12,7 +12,14 @@ header_remove('Content-Type');
 $site = rtrim((string)($C['site_url'] ?? 'https://www.osteriadvor.com'), '/');
 $base = rtrim((string)($C['booking_url'] ?? ''), '/');
 $h = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
-function evImg(string $base, array $ev): string { $i = (string)($ev['imageId'] ?? ''); return preg_match('/^[A-Za-z0-9_-]{1,64}\.(jpg|jpeg|png|webp|gif)$/', $i) ? $base . '/uploads/' . $i : ''; }
+/* le immagini della locandina: images = tutte, in ordine (la prima è la copertina); i vecchi eventi hanno solo imageId */
+function evImgs(string $base, array $ev): array {
+  $ids = is_array($ev['images'] ?? null) && $ev['images'] ? $ev['images'] : [$ev['imageId'] ?? ''];
+  $out = [];
+  foreach ($ids as $i) { $i = (string)$i; if (preg_match('/^[A-Za-z0-9_-]{1,64}\.(jpg|jpeg|png|webp|gif)$/', $i)) $out[] = $base . '/uploads/' . $i; }
+  return array_values(array_unique($out));
+}
+function evImg(string $base, array $ev): string { return evImgs($base, $ev)[0] ?? ''; }
 
 /* ---------- the list for the website ---------- */
 if (isset($_GET['json'])) {
@@ -27,7 +34,7 @@ if (isset($_GET['json'])) {
       'id' => eventSlug($id, $ev), 'date' => $ev['date'], 'time' => !empty($ev['allDay']) ? '' : (string)($ev['time'] ?? ''), 'allDay' => !empty($ev['allDay']),
       'title_it' => (string)($ev['title_it'] ?? ''), 'title_en' => (string)($ev['title_en'] ?? ''),
       'desc_it' => (string)($ev['desc_it'] ?? ''), 'desc_en' => (string)($ev['desc_en'] ?? ''),
-      'price' => (string)($ev['price'] ?? ''), 'flyer' => evImg($base, $ev),
+      'price' => (string)($ev['price'] ?? ''), 'flyer' => evImg($base, $ev), 'flyer2' => evImgs($base, $ev)[1] ?? '', 'flyers' => evImgs($base, $ev),
       'link' => eventBookUrl($C, $id, $ev), 'page' => eventPageUrl($C, $id, $ev), 'source' => 'prenota', 'cancelled' => !empty($ev['cancelled']),
     ];
   }
@@ -61,7 +68,7 @@ $qs = $keep ? '&' . http_build_query($keep) : '';
 if ($found) {
   [$id, $ev] = $found;
   $pick = fn($k) => trim((string)($ev[$k . '_' . $lang] ?? '')) ?: trim((string)($ev[$k . '_it'] ?? '') ?: (string)($ev[$k . '_en'] ?? ''));
-  $title = $pick('title'); $desc = $pick('desc'); $img = evImg($base, $ev); $slug = eventSlug($id, $ev);
+  $title = $pick('title'); $desc = $pick('desc'); $imgs = evImgs($base, $ev); $img = $imgs[0] ?? ''; $slug = eventSlug($id, $ev);
   $ts = strtotime((string)$ev['date'] . ' 12:00');
   $WD = $lang === 'it' ? ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'] : ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   $MO = $lang === 'it' ? ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'] : ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -80,11 +87,11 @@ if ($found) {
     'eventStatus' => $canc ? 'https://schema.org/EventCancelled' : 'https://schema.org/EventScheduled', 'eventAttendanceMode' => 'https://schema.org/OfflineEventAttendanceMode', 'description' => $desc ?: null, 'url' => $canon,
     'location' => ['@type' => 'Place', 'name' => 'Osteria Enoteca Dvor', 'address' => ['@type' => 'PostalAddress', 'streetAddress' => 'Via Castello 5', 'addressLocality' => 'San Floriano del Collio', 'postalCode' => '34070', 'addressCountry' => 'IT']],
     'organizer' => ['@type' => 'Organization', 'name' => 'Osteria Enoteca Dvor', 'url' => $site]];
-  if ($img) $ld['image'] = [$img];
+  if ($imgs) $ld['image'] = $imgs;
   if (!empty($ev['price']) && !$canc) $ld['offers'] = ['@type' => 'Offer', 'description' => $ev['price'], 'url' => eventBookUrl($C, $id, $ev)];
   $ld = array_filter($ld, fn($v) => $v !== null);
 } else {
-  $title = $T['nf']; $pageTitle = $T['nf'] . ' · Osteria Enoteca Dvor'; $metaDesc = $T['nfText']; $canon = ''; $img = '';
+  $title = $T['nf']; $pageTitle = $T['nf'] . ' · Osteria Enoteca Dvor'; $metaDesc = $T['nfText']; $canon = ''; $img = ''; $imgs = [];
 }
 
 $paras = '';
@@ -134,6 +141,16 @@ main{max-width:1180px;margin:0 auto;padding:3rem 16px 4rem}
 .ev{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:2.6rem;align-items:start;border:1px solid var(--gold);padding:1.6rem;box-shadow:0 24px 60px rgba(0,0,0,.08)}
 .ev.noimg{grid-template-columns:1fr;max-width:760px;margin:0 auto}
 .pic img{display:block;width:100%;height:auto;background:var(--alt)}
+/* più immagini: si scorrono col dito o con le frecce */
+.car{position:relative}
+.trk{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.trk::-webkit-scrollbar{display:none}
+.sl{flex:0 0 100%;scroll-snap-align:start;display:flex;align-items:center;justify-content:center;background:var(--alt)}
+.arr{position:absolute;top:50%;transform:translateY(-50%);width:2.6rem;height:2.6rem;border-radius:50%;border:0;background:rgba(19,16,14,.55);color:#fff;font-size:1.6rem;line-height:1;cursor:pointer}
+.arr.p{left:.6rem}.arr.n{right:.6rem}.arr[hidden]{display:none}
+.dots{display:flex;gap:.5rem;justify-content:center;padding:.7rem 0 .2rem}
+.dot{width:.7rem;height:.7rem;border-radius:50%;border:1px solid var(--gold);background:transparent;padding:0;cursor:pointer}
+.dot.on{background:var(--gold)}
 .caps{display:inline-block;font-size:.76rem;letter-spacing:.24em;text-transform:uppercase;font-weight:400}
 .cd{margin-left:.9rem;color:var(--gold);font-size:.8rem;letter-spacing:.18em;text-transform:uppercase}
 h1{font-family:var(--serif);font-weight:300;font-size:clamp(2.1rem,4.4vw,3.2rem);line-height:1.12;margin:1rem 0 .6rem}
@@ -168,7 +185,10 @@ footer a{text-decoration:none;border-bottom:1px solid var(--line)}
 <?php if ($found): ?>
   <article class="ev<?= $img ? '' : ' noimg' ?><?= $canc ? ' canc' : '' ?>">
     <?php if ($canc): ?><span class="rib"><?= $h($T['canc']) ?></span><?php endif ?>
-    <?php if ($img): ?><div class="pic"><img src="<?= $h($img) ?>" alt="<?= $h($title) ?>"></div><?php endif ?>
+    <?php if (count($imgs) > 1): ?><div class="pic car" id="car"><div class="trk"><?php foreach ($imgs as $k => $u): ?><div class="sl"><img src="<?= $h($u) ?>" alt="<?= $h($title) ?> (<?= $k + 1 ?>/<?= count($imgs) ?>)"<?= $k ? ' loading="lazy"' : '' ?>></div><?php endforeach ?></div>
+      <button class="arr p" type="button" aria-label="‹" hidden>&lsaquo;</button><button class="arr n" type="button" aria-label="›">&rsaquo;</button>
+      <div class="dots"><?php foreach ($imgs as $k => $u): ?><button class="dot<?= $k ? '' : ' on' ?>" type="button" aria-label="<?= $k + 1 ?>/<?= count($imgs) ?>"></button><?php endforeach ?></div></div>
+    <?php elseif ($img): ?><div class="pic"><img src="<?= $h($img) ?>" alt="<?= $h($title) ?>"></div><?php endif ?>
     <div>
       <span class="caps"><?= $h($T['event']) ?></span><?php if (!$past && !$canc): ?><span class="cd" id="cd" data-date="<?= $h($ev['date']) ?>"></span><?php endif ?>
       <h1><?= $h($title) ?></h1>
@@ -208,6 +228,13 @@ footer a{text-decoration:none;border-bottom:1px solid var(--line)}
   if(b)b.addEventListener("click",function(){var u=b.getAttribute("data-url");
     if(navigator.share){navigator.share({title:document.title,url:u}).catch(function(){});return}
     (navigator.clipboard?navigator.clipboard.writeText(u):Promise.reject()).then(function(){b.textContent=b.getAttribute("data-done")},function(){prompt("",u)})});
+  var w=document.getElementById("car");
+  if(w){var tr=w.querySelector(".trk"),ds=w.querySelectorAll(".dot"),pv=w.querySelector(".arr.p"),nx=w.querySelector(".arr.n"),n=ds.length,cur=0;
+    var go=function(k){k=Math.max(0,Math.min(n-1,k));tr.scrollTo({left:k*tr.clientWidth,behavior:"smooth"})};
+    var upd=function(){cur=Math.round(tr.scrollLeft/Math.max(1,tr.clientWidth));ds.forEach(function(d,k){d.className="dot"+(k===cur?" on":"")});pv.hidden=cur===0;nx.hidden=cur===n-1};
+    ds.forEach(function(d,k){d.addEventListener("click",function(){go(k)})});
+    pv.addEventListener("click",function(){go(cur-1)});nx.addEventListener("click",function(){go(cur+1)});
+    tr.addEventListener("scroll",function(){clearTimeout(tr._t);tr._t=setTimeout(upd,60)})}
 })();
 </script>
 <script src="analytics.js" defer></script>
